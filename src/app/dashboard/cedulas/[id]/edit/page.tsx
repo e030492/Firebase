@@ -240,7 +240,7 @@ export default function EditCedulaPage() {
           equipment: equipmentName,
           technician: technicianName,
           supervisor: supervisorName,
-          creationDate: creationDate ? format(finalDateTime, 'yyyy-MM-dd HH:mm') : '',
+          creationDate: creationDate ? finalDateTime.toISOString() : '',
           status: status as Cedula['status'],
           description,
           semaforo: semaforo as Cedula['semaforo'],

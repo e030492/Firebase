@@ -199,7 +199,7 @@ export default function NewCedulaPage() {
       equipment: equipmentName,
       technician: technicianName,
       supervisor: supervisorName,
-      creationDate: format(finalDate, 'yyyy-MM-dd HH:mm'),
+      creationDate: finalDate.toISOString(),
       status: status as Cedula['status'],
       description,
       semaforo: semaforo as Cedula['semaforo'],
