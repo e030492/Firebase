@@ -18,7 +18,7 @@ import { Badge } from './ui/badge';
 
 const allNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/users', label: 'Usuarios', icon: Users, disabled: true },
+  { href: '/dashboard/users', label: 'Usuarios', icon: Users },
   { href: '/dashboard/clients', label: 'Clientes', icon: Building },
   { href: '/dashboard/systems', label: 'Sistemas', icon: Shield },
   { href: '/dashboard/equipments', label: 'Equipos', icon: HardHat, disabled: true },
@@ -34,9 +34,8 @@ export function DashboardNav({ isMobile = false }: { isMobile?: boolean }) {
     if (href === '/dashboard') {
       return pathname === href;
     }
-    // Match /dashboard/systems with /dashboard/systems/new
-    const parentPath = href.split('/').slice(0, -1).join('/');
-    return pathname.startsWith(parentPath === '/dashboard' ? href : parentPath);
+    const basePath = href.split('/').slice(0, 3).join('/');
+    return pathname.startsWith(basePath);
   };
 
   const navLinkClasses = (href: string, disabled?: boolean) =>
