@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,15 +33,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { mockEquipments } from '@/lib/mock-data';
 
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 type Equipment = typeof mockEquipments[0];
+type SortableKey = keyof Equipment;
 
 export default function EquipmentsPage() {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
 
   useEffect(() => {
     const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
@@ -52,6 +54,40 @@ export default function EquipmentsPage() {
       setEquipments(mockEquipments);
     }
   }, []);
+
+  const sortedEquipments = useMemo(() => {
+    let sortableItems = [...equipments];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [equipments, sortConfig]);
+
+  const requestSort = (key: SortableKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortableKey) => {
+    if (sortConfig?.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+        return <ArrowUp className="ml-2 h-4 w-4 text-foreground" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
+  };
 
   const handleDeleteEquipment = () => {
     if (equipmentToDelete) {
@@ -97,19 +133,49 @@ export default function EquipmentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="hidden md:table-cell">Cliente</TableHead>
-                  <TableHead className="hidden lg:table-cell">Sistema</TableHead>
-                  <TableHead className="hidden md:table-cell">Estado</TableHead>
-                  <TableHead className="hidden lg:table-cell">Inicio Mant.</TableHead>
-                  <TableHead className="hidden lg:table-cell">Próximo Mant.</TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('name')}>
+                      Nombre
+                      {getSortIcon('name')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                     <Button variant="ghost" onClick={() => requestSort('client')}>
+                        Cliente
+                        {getSortIcon('client')}
+                     </Button>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('system')}>
+                      Sistema
+                      {getSortIcon('system')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('status')}>
+                      Estado
+                      {getSortIcon('status')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('maintenanceStartDate')}>
+                      Inicio Mant.
+                      {getSortIcon('maintenanceStartDate')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('nextMaintenanceDate')}>
+                      Próximo Mant.
+                      {getSortIcon('nextMaintenanceDate')}
+                    </Button>
+                  </TableHead>
                   <TableHead>
                     <span className="sr-only">Acciones</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {equipments.map((equipment) => (
+                {sortedEquipments.map((equipment) => (
                   <TableRow key={equipment.id}>
                     <TableCell className="font-medium">{equipment.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
