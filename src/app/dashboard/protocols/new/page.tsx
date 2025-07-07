@@ -52,9 +52,10 @@ const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 type Equipment = typeof mockEquipments[0];
 type Client = typeof mockClients[0];
 type System = typeof mockSystems[0];
+type ProtocolStep = SuggestMaintenanceProtocolOutput[0] & { imageUrl?: string };
 type Protocol = {
   equipmentId: string;
-  steps: SuggestMaintenanceProtocolOutput;
+  steps: ProtocolStep[];
 };
 type State = {
   result: SuggestMaintenanceProtocolOutput | null;
@@ -230,19 +231,24 @@ export default function NewProtocolPage() {
     
     const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
     let protocols: Protocol[] = storedProtocols ? JSON.parse(storedProtocols) : [];
-
-    const newProtocol: Protocol = {
-      equipmentId: selectedEquipmentId,
-      steps: selectedSteps,
-    };
     
     const existingProtocolIndex = protocols.findIndex(p => p.equipmentId === selectedEquipmentId);
+    
     if (existingProtocolIndex > -1) {
-      protocols[existingProtocolIndex].steps.push(...selectedSteps);
-      const uniqueSteps = Array.from(new Map(protocols[existingProtocolIndex].steps.map(item => [item.step, item])).values());
-      protocols[existingProtocolIndex].steps = uniqueSteps;
-
+      const stepMap = new Map(protocols[existingProtocolIndex].steps.map(item => [item.step, item]));
+      selectedSteps.forEach(newStep => {
+        const existingStep = stepMap.get(newStep.step);
+        stepMap.set(newStep.step, {
+          ...newStep,
+          imageUrl: existingStep?.imageUrl || '',
+        });
+      });
+      protocols[existingProtocolIndex].steps = Array.from(stepMap.values());
     } else {
+      const newProtocol: Protocol = {
+        equipmentId: selectedEquipmentId,
+        steps: selectedSteps.map(s => ({ ...s, imageUrl: '' })),
+      };
       protocols.push(newProtocol);
     }
 

@@ -1,8 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera } from 'lucide-react';
 import { mockEquipments, mockProtocols, mockClients, mockSystems } from '@/lib/mock-data';
 import { suggestMaintenanceProtocol } from '@/ai/flows/suggest-maintenance-protocol';
 import {
@@ -63,7 +64,7 @@ const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 
-type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number };
+type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string };
 type Protocol = { equipmentId: string; steps: ProtocolStep[] };
 type Equipment = typeof mockEquipments[0];
 type Client = typeof mockClients[0];
@@ -80,6 +81,7 @@ type DeletingStepInfo = {
 
 export default function ProtocolsPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [editingStep, setEditingStep] = useState<EditingStepInfo | null>(null);
@@ -116,14 +118,14 @@ export default function ProtocolsPage() {
   const filteredEquipments = useMemo(() => {
     let equipments = [...allEquipments];
     
-    if (selectedClientId) {
+    if (selectedClientId && selectedClientId !== 'all') {
       const clientName = clients.find(c => c.id === selectedClientId)?.name;
       if (clientName) {
         equipments = equipments.filter(eq => eq.client === clientName);
       }
     }
     
-    if (selectedSystemId) {
+    if (selectedSystemId && selectedSystemId !== 'all') {
       const systemName = systems.find(s => s.id === selectedSystemId)?.name;
       if (systemName) {
         equipments = equipments.filter(eq => eq.system === systemName);
@@ -160,6 +162,23 @@ export default function ProtocolsPage() {
         [field]: value,
       },
     });
+  };
+
+  const handleImageChangeInDialog = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && editingStep) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditingStep({
+            ...editingStep,
+            currentData: {
+                ...editingStep.currentData,
+                imageUrl: reader.result as string,
+            },
+        });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSaveEdit = () => {
@@ -221,7 +240,7 @@ export default function ProtocolsPage() {
       if (result && result.length > 0) {
         const newProtocol: Protocol = {
           equipmentId: equipment.id,
-          steps: result,
+          steps: result.map(step => ({ ...step, imageUrl: '' })),
         };
         
         setProtocols(prevProtocols => {
@@ -266,7 +285,7 @@ export default function ProtocolsPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
                  <div className="grid gap-2">
                    <Label htmlFor="client">Filtrar por Cliente</Label>
-                   <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? '' : value)} value={selectedClientId || 'all'}>
+                   <Select onValueChange={(value) => setSelectedClientId(value)} value={selectedClientId || 'all'}>
                      <SelectTrigger id="client">
                        <SelectValue placeholder="Todos los clientes" />
                      </SelectTrigger>
@@ -280,7 +299,7 @@ export default function ProtocolsPage() {
                  </div>
                  <div className="grid gap-2">
                    <Label htmlFor="system">Filtrar por Sistema</Label>
-                   <Select onValueChange={(value) => setSelectedSystemId(value === 'all' ? '' : value)} value={selectedSystemId || 'all'}>
+                   <Select onValueChange={(value) => setSelectedSystemId(value)} value={selectedSystemId || 'all'}>
                      <SelectTrigger id="system">
                        <SelectValue placeholder="Todos los sistemas" />
                      </SelectTrigger>
@@ -356,6 +375,7 @@ export default function ProtocolsPage() {
                           <Table>
                             <TableHeader>
                               <TableRow>
+                                <TableHead className="w-16 hidden sm:table-cell">Imagen</TableHead>
                                 <TableHead className="w-[50%]">Paso del Protocolo</TableHead>
                                 <TableHead>Prioridad</TableHead>
                                 <TableHead>% Estimado</TableHead>
@@ -365,6 +385,15 @@ export default function ProtocolsPage() {
                             <TableBody>
                               {equipmentProtocols.map((protocolStep, index) => (
                                 <TableRow key={index}>
+                                  <TableCell className="hidden sm:table-cell">
+                                    {protocolStep.imageUrl ? (
+                                        <Image src={protocolStep.imageUrl} alt={protocolStep.step} width={48} height={48} data-ai-hint="protocol step photo" className="rounded-md object-cover aspect-square" />
+                                    ) : (
+                                        <div className="h-12 w-12 bg-muted rounded-md flex items-center justify-center">
+                                            <Camera className="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                    )}
+                                  </TableCell>
                                   <TableCell>{protocolStep.step}</TableCell>
                                   <TableCell>
                                     <Badge variant={getPriorityBadgeVariant(protocolStep.priority)} className="capitalize">
@@ -415,12 +444,35 @@ export default function ProtocolsPage() {
       
       {/* Edit Dialog */}
       <Dialog open={!!editingStep} onOpenChange={(open) => !open && setEditingStep(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
                 <DialogTitle>Editar Paso del Protocolo</DialogTitle>
                 <DialogDescription>Modifique los detalles de este paso del mantenimiento.</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-6 py-4">
+                <div className="grid gap-2">
+                    <Label>Imagen del Paso</Label>
+                    {editingStep?.currentData.imageUrl ? (
+                        <Image src={editingStep.currentData.imageUrl} alt="Vista previa del paso" width={400} height={300} data-ai-hint="protocol step photo" className="rounded-md object-cover aspect-video" />
+                    ) : (
+                        <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
+                            <Camera className="h-10 w-10 text-muted-foreground" />
+                        </div>
+                    )}
+                    <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        onChange={handleImageChangeInDialog}
+                        className="hidden"
+                    />
+                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        <Camera className="mr-2 h-4 w-4" />
+                        {editingStep?.currentData.imageUrl ? 'Cambiar Imagen' : 'Subir Imagen'}
+                    </Button>
+                </div>
+
                 <div className="grid gap-2">
                     <Label htmlFor="step-text">Descripción del Paso</Label>
                     <Textarea id="step-text" value={editingStep?.currentData.step || ''} onChange={(e) => handleEditChange('step', e.target.value)} className="min-h-32" />
