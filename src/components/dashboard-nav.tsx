@@ -15,6 +15,7 @@ import {
 
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
+import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 
 const allNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -27,7 +28,7 @@ const allNavItems = [
   { href: '/dashboard/reports', label: 'Reportes', icon: LineChart, disabled: true },
 ];
 
-export function DashboardNav({ isMobile = false }: { isMobile?: boolean }) {
+export function DashboardNav() {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
@@ -38,22 +39,30 @@ export function DashboardNav({ isMobile = false }: { isMobile?: boolean }) {
     return pathname.startsWith(basePath);
   };
 
-  const navLinkClasses = (href: string, disabled?: boolean) =>
-    cn(
-      'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-      isActive(href) && 'bg-primary/10 text-primary',
-      disabled && 'cursor-not-allowed opacity-50 hover:text-muted-foreground',
-      isMobile && 'text-lg'
-    );
-
   return (
     <>
       {allNavItems.map((item) => (
-        <Link key={item.label} href={item.disabled ? '#' : item.href} className={navLinkClasses(item.href, item.disabled)}>
-          <item.icon className="h-5 w-5" />
-          {item.label}
-          {item.ai && <Badge variant="outline" className="ml-auto bg-accent/20 text-accent-foreground border-accent">AI</Badge>}
-        </Link>
+        <SidebarMenuItem key={item.label}>
+          <Link href={item.disabled ? '#' : item.href} passHref legacyBehavior>
+            <SidebarMenuButton
+              isActive={isActive(item.href)}
+              disabled={item.disabled}
+              tooltip={item.label}
+              className={cn(item.disabled && 'cursor-not-allowed opacity-50')}
+            >
+              <item.icon />
+              <span>{item.label}</span>
+              {item.ai && (
+                <Badge
+                  variant="outline"
+                  className="ml-auto bg-accent/20 text-accent-foreground border-accent"
+                >
+                  AI
+                </Badge>
+              )}
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
       ))}
     </>
   );
