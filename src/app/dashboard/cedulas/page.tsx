@@ -56,6 +56,7 @@ export default function CedulasPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   const [cedulaToDelete, setCedulaToDelete] = useState<Cedula | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'folio', direction: 'ascending' });
@@ -104,6 +105,10 @@ export default function CedulasPage() {
       }
     }
     
+    if (selectedStatus) {
+        filteredCedulas = filteredCedulas.filter(c => c.status === selectedStatus);
+    }
+
     let sortableItems = filteredCedulas;
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
@@ -117,7 +122,7 @@ export default function CedulasPage() {
       });
     }
     return sortableItems;
-  }, [cedulas, sortConfig, selectedClientId, selectedWarehouse, clients, allEquipments]);
+  }, [cedulas, sortConfig, selectedClientId, selectedWarehouse, selectedStatus, clients, allEquipments]);
 
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -208,6 +213,20 @@ export default function CedulasPage() {
                      {clientWarehouses.map(warehouse => (
                        <SelectItem key={warehouse} value={warehouse}>{warehouse}</SelectItem>
                      ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+               <div className="grid gap-2">
+                 <Label htmlFor="status">Filtrar por Estado</Label>
+                 <Select onValueChange={(value) => setSelectedStatus(value === 'all' ? '' : value)} value={selectedStatus || 'all'}>
+                   <SelectTrigger id="status">
+                     <SelectValue placeholder="Todos los estados" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Todos los estados</SelectItem>
+                     <SelectItem value="Pendiente">Pendiente</SelectItem>
+                     <SelectItem value="En Progreso">En Progreso</SelectItem>
+                     <SelectItem value="Completada">Completada</SelectItem>
                    </SelectContent>
                  </Select>
                </div>
