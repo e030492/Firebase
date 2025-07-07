@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useEffect } from 'react';
+import { useActionState, useState, useEffect, Suspense } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -41,6 +41,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Terminal, Loader2, Save, ArrowLeft } from 'lucide-react';
 import { mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Keys for localStorage
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
@@ -99,7 +100,7 @@ function SubmitButton() {
 }
 
 // Main Page Component
-export default function NewProtocolPage() {
+function ProtocolGenerator() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
@@ -440,4 +441,46 @@ export default function NewProtocolPage() {
       )}
     </div>
   );
+}
+
+export default function NewProtocolPage() {
+    return (
+        <Suspense fallback={
+          <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+             <div className="flex items-center gap-4">
+                <Skeleton className="h-7 w-7 rounded-md" />
+                <div className="grid gap-2">
+                  <Skeleton className="h-6 w-64" />
+                  <Skeleton className="h-4 w-80" />
+                </div>
+            </div>
+            <Card>
+                <CardHeader>
+                  <CardTitle>Detalles del Equipo</CardTitle>
+                  <CardDescription>
+                    <Skeleton className="h-4 w-full max-w-lg" />
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6">
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="grid gap-3">
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                   <div className="grid gap-3">
+                    <Skeleton className="h-32 w-full" />
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t px-6 py-4">
+                  <Skeleton className="h-10 w-40" />
+                </CardFooter>
+            </Card>
+          </div>
+        }>
+            <ProtocolGenerator />
+        </Suspense>
+    )
 }
