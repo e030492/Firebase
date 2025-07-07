@@ -1,3 +1,4 @@
+
 export const mockUsers = [
   {
     id: '1',
@@ -5,6 +6,14 @@ export const mockUsers = [
     email: 'admin@guardianshield.com',
     role: 'Administrador',
     password: 'admin',
+    permissions: {
+        clients: { create: true, update: true, delete: true },
+        equipments: { create: true, update: true, delete: true },
+        systems: { create: true, update: true, delete: true },
+        users: { create: true, update: true, delete: true },
+        protocols: { create: true, update: true, delete: true },
+        cedulas: { create: true, update: true, delete: true },
+    }
   },
   {
     id: '2',
@@ -12,6 +21,14 @@ export const mockUsers = [
     email: 'tech1@guardianshield.com',
     role: 'Técnico',
     password: 'tech1',
+    permissions: {
+        clients: { create: false, update: false, delete: false },
+        equipments: { create: false, update: true, delete: false },
+        systems: { create: false, update: false, delete: false },
+        users: { create: false, update: false, delete: false },
+        protocols: { create: true, update: true, delete: false },
+        cedulas: { create: true, update: true, delete: false },
+    }
   },
   {
     id: '3',
@@ -19,6 +36,14 @@ export const mockUsers = [
     email: 'tech2@guardianshield.com',
     role: 'Técnico',
     password: 'tech2',
+    permissions: {
+        clients: { create: false, update: false, delete: false },
+        equipments: { create: false, update: true, delete: false },
+        systems: { create: false, update: false, delete: false },
+        users: { create: false, update: false, delete: false },
+        protocols: { create: true, update: true, delete: false },
+        cedulas: { create: true, update: true, delete: false },
+    }
   },
     {
     id: '4',
@@ -26,6 +51,14 @@ export const mockUsers = [
     email: 'supervisor@guardianshield.com',
     role: 'Supervisor',
     password: 'super',
+    permissions: {
+        clients: { create: true, update: true, delete: false },
+        equipments: { create: true, update: true, delete: false },
+        systems: { create: true, update: true, delete: false },
+        users: { create: false, update: false, delete: false },
+        protocols: { create: true, update: true, delete: true },
+        cedulas: { create: true, update: true, delete: true },
+    }
   },
 ];
 
