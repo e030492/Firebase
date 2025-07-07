@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -33,17 +33,32 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
-import { mockUsers as initialUsers } from '@/lib/mock-data';
+import { mockUsers } from '@/lib/mock-data';
 
-type User = typeof initialUsers[0];
+const USERS_STORAGE_KEY = 'guardian_shield_users';
+type User = typeof mockUsers[0];
+
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
+  useEffect(() => {
+    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (storedUsers) {
+      setUsers(JSON.parse(storedUsers));
+    } else {
+      // Initialize with mock data if not present
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(mockUsers));
+      setUsers(mockUsers);
+    }
+  }, []);
 
   const handleDeleteUser = () => {
     if (userToDelete) {
-      setUsers(users.filter((user) => user.id !== userToDelete.id));
+      const updatedUsers = users.filter((user) => user.id !== userToDelete.id)
+      setUsers(updatedUsers);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
       setUserToDelete(null); // Close the dialog
     }
   };

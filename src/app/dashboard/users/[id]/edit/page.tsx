@@ -24,10 +24,19 @@ import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockUsers } from '@/lib/mock-data';
 
+const USERS_STORAGE_KEY = 'guardian_shield_users';
+type User = typeof mockUsers[0];
+
 const roleToValueMap: { [key: string]: string } = {
   'Administrador': 'admin',
   'Técnico': 'tecnico',
   'Supervisor': 'supervisor',
+};
+
+const valueToRoleMap: { [key: string]: string } = {
+  'admin': 'Administrador',
+  'tecnico': 'Técnico',
+  'supervisor': 'Supervisor',
 };
 
 export default function EditUserPage() {
@@ -43,7 +52,10 @@ export default function EditUserPage() {
 
   useEffect(() => {
     if (userId) {
-      const foundUser = mockUsers.find(u => u.id === userId);
+      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      const users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
+      const foundUser = users.find(u => u.id === userId);
+
       if (foundUser) {
         setName(foundUser.name);
         setEmail(foundUser.email);
@@ -57,9 +69,23 @@ export default function EditUserPage() {
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically handle the form submission, e.g., send data to an API.
-    // For this mock, we'll just show an alert and navigate back.
-    alert('Usuario actualizado (simulación).');
+    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
+
+    const updatedUsers = users.map(u => {
+      if (u.id === userId) {
+        return {
+          ...u,
+          name,
+          email,
+          role: valueToRoleMap[role] || u.role,
+        };
+      }
+      return u;
+    });
+
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    alert('Usuario actualizado con éxito.');
     router.push('/dashboard/users');
   }
 
