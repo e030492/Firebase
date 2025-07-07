@@ -66,6 +66,7 @@ export default function EditCedulaPage() {
   const [creationTime, setCreationTime] = useState<string>('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('');
+  const [semaforo, setSemaforo] = useState('');
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -110,6 +111,7 @@ export default function EditCedulaPage() {
         setFolio(foundCedula.folio);
         setDescription(foundCedula.description);
         setStatus(foundCedula.status);
+        setSemaforo(foundCedula.semaforo || '');
         if (foundCedula.creationDate) {
           const dateObj = new Date(foundCedula.creationDate);
           setCreationDate(dateObj);
@@ -241,6 +243,7 @@ export default function EditCedulaPage() {
           creationDate: creationDate ? format(finalDateTime, 'yyyy-MM-dd HH:mm') : '',
           status: status as Cedula['status'],
           description,
+          semaforo: semaforo as Cedula['semaforo'],
           protocolSteps: protocolSteps.map(step => ({
             step: step.step,
             priority: step.priority,
@@ -570,6 +573,43 @@ export default function EditCedulaPage() {
             </CardContent>
           </Card>
         )}
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Evaluación Final del Equipo</CardTitle>
+                <CardDescription>Seleccione el estado final del equipo después del mantenimiento.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="grid gap-3">
+                    <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
+                    <Select value={semaforo} onValueChange={setSemaforo}>
+                        <SelectTrigger id="semaforo" className="w-full">
+                            <SelectValue placeholder="Seleccione un estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Verde">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-3 w-3 rounded-full bg-green-500" />
+                                    <span>Verde (Óptimo)</span>
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="Naranja">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-3 w-3 rounded-full bg-orange-500" />
+                                    <span>Naranja (Con Observaciones)</span>
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="Rojo">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-3 w-3 rounded-full bg-red-500" />
+                                    <span>Rojo (Crítico)</span>
+                                </div>
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </CardContent>
+        </Card>
 
         <div className="flex justify-start">
             <Button type="submit">Guardar Cambios</Button>

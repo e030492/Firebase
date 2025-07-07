@@ -204,7 +204,8 @@ export const mockCedulas = [
     protocolSteps: [
       { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, completion: 50, imageUrl: 'https://placehold.co/400x300.png', notes: 'Carcasa con algo de polvo, se limpió.' },
       { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, completion: 25, imageUrl: '', notes: '' },
-    ]
+    ],
+    semaforo: '' as const,
   },
   {
     id: '2',
@@ -216,7 +217,8 @@ export const mockCedulas = [
     creationDate: '2024-07-18 14:00',
     status: 'Completada' as const,
     description: 'Cambio de batería y limpieza de lector.',
-    protocolSteps: []
+    protocolSteps: [],
+    semaforo: 'Verde' as const,
   },
   {
     id: '3',
@@ -228,7 +230,8 @@ export const mockCedulas = [
     creationDate: '2024-07-15 09:00',
     status: 'En Progreso' as const,
     description: 'Pruebas de funcionamiento y limpieza de sensores.',
-    protocolSteps: []
+    protocolSteps: [],
+    semaforo: 'Naranja' as const,
   },
   {
     id: '4',
@@ -240,7 +243,8 @@ export const mockCedulas = [
     creationDate: '2024-07-21 16:45',
     status: 'Pendiente' as const,
     description: 'Alineación de haces infrarrojos y prueba de alcance.',
-    protocolSteps: []
+    protocolSteps: [],
+    semaforo: '' as const,
   },
 ];
 

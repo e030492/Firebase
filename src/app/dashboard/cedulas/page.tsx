@@ -51,7 +51,7 @@ const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
-type SortableKey = keyof Omit<Cedula, 'id' | 'description'>;
+type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo';
 
 export default function CedulasPage() {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
@@ -62,6 +62,7 @@ export default function CedulasPage() {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedSemaforo, setSelectedSemaforo] = useState<string>('');
 
   const [cedulaToDelete, setCedulaToDelete] = useState<Cedula | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'folio', direction: 'ascending' });
@@ -115,6 +116,10 @@ export default function CedulasPage() {
     if (selectedStatus) {
         filteredCedulas = filteredCedulas.filter(c => c.status === selectedStatus);
     }
+    
+    if (selectedSemaforo) {
+        filteredCedulas = filteredCedulas.filter(c => c.semaforo === selectedSemaforo);
+    }
 
     let sortableItems = filteredCedulas;
     if (sortConfig !== null) {
@@ -129,7 +134,7 @@ export default function CedulasPage() {
       });
     }
     return sortableItems;
-  }, [cedulas, sortConfig, selectedClientId, selectedWarehouse, selectedStatus, clients, allEquipments]);
+  }, [cedulas, sortConfig, selectedClientId, selectedWarehouse, selectedStatus, selectedSemaforo, clients, allEquipments]);
 
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -208,7 +213,7 @@ export default function CedulasPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
-             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                <div className="grid gap-2">
                  <Label htmlFor="client">Filtrar por Cliente</Label>
                  <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? '' : value)} value={selectedClientId || 'all'}>
@@ -255,6 +260,20 @@ export default function CedulasPage() {
                    </SelectContent>
                  </Select>
                </div>
+                <div className="grid gap-2">
+                 <Label htmlFor="semaforo">Filtrar por Semáforo</Label>
+                 <Select onValueChange={(value) => setSelectedSemaforo(value === 'all' ? '' : value)} value={selectedSemaforo || 'all'}>
+                   <SelectTrigger id="semaforo">
+                     <SelectValue placeholder="Todos" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Todos</SelectItem>
+                     <SelectItem value="Verde">Verde</SelectItem>
+                     <SelectItem value="Naranja">Naranja</SelectItem>
+                     <SelectItem value="Rojo">Rojo</SelectItem>
+                   </SelectContent>
+                 </Select>
+               </div>
             </div>
             <Separator className="mb-6"/>
             <Table>
@@ -296,6 +315,12 @@ export default function CedulasPage() {
                       {getSortIcon('creationDate')}
                     </Button>
                   </TableHead>
+                   <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('semaforo')}>
+                      Semáforo
+                      {getSortIcon('semaforo')}
+                    </Button>
+                  </TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('status')}>
                       Estado
@@ -321,6 +346,20 @@ export default function CedulasPage() {
                       <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
                        <TableCell className="hidden md:table-cell">
                         {new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </TableCell>
+                       <TableCell>
+                          {cedula.semaforo ? (
+                              <div className="flex items-center gap-2">
+                                  <div className={cn("h-2.5 w-2.5 rounded-full", {
+                                      'bg-green-500': cedula.semaforo === 'Verde',
+                                      'bg-orange-500': cedula.semaforo === 'Naranja',
+                                      'bg-red-500': cedula.semaforo === 'Rojo',
+                                  })} />
+                                  <span className="hidden xl:inline">{cedula.semaforo}</span>
+                              </div>
+                          ) : (
+                              <span className="text-muted-foreground text-xs">N/A</span>
+                          )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>
@@ -356,13 +395,31 @@ export default function CedulasPage() {
                     </TableRow>
                     {expandedCedulaId === cedula.id && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={9} className="p-0">
+                            <TableCell colSpan={10} className="p-0">
                                 <div className="p-4">
                                 <Card className="shadow-inner">
                                     <CardHeader>
                                         <CardTitle>Detalles de la Cédula: {cedula.folio}</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-6">
+                                        <div className="flex items-center gap-6">
+                                          <div>
+                                              <Label className="text-base">Evaluación Final</Label>
+                                              {cedula.semaforo ? (
+                                                  <div className="flex items-center gap-2 mt-1">
+                                                      <div className={cn("h-2.5 w-2.5 rounded-full", {
+                                                          'bg-green-500': cedula.semaforo === 'Verde',
+                                                          'bg-orange-500': cedula.semaforo === 'Naranja',
+                                                          'bg-red-500': cedula.semaforo === 'Rojo',
+                                                      })} />
+                                                      <span className="text-sm text-muted-foreground">{cedula.semaforo}</span>
+                                                  </div>
+                                              ) : (
+                                                  <p className="text-sm text-muted-foreground mt-1">Sin evaluación.</p>
+                                              )}
+                                          </div>
+                                        </div>
+                                        <Separator />
                                         <div>
                                             <Label className="text-base">Descripción del Trabajo</Label>
                                             <p className="text-sm text-muted-foreground mt-1">{cedula.description || 'Sin descripción.'}</p>
