@@ -179,3 +179,25 @@ export const mockCedulas = [
     description: 'Alineación de haces infrarrojos y prueba de alcance.'
   },
 ];
+
+export const mockProtocols = [
+  {
+    equipmentId: '1', // Cámara Domo PTZ
+    steps: [
+      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, percentage: 10 },
+      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, percentage: 25 },
+      { step: 'Comprobar la nitidez de la imagen y el enfoque automático.', priority: 'media' as const, percentage: 20 },
+      { step: 'Asegurar que la conexión de red y alimentación esté firme.', priority: 'baja' as const, percentage: 15 },
+      { step: 'Actualizar firmware si hay una nueva versión disponible.', priority: 'media' as const, percentage: 30 },
+    ]
+  },
+  {
+    equipmentId: '2', // Lector de Tarjetas RFID
+    steps: [
+        { step: 'Limpiar la superficie del lector con un paño suave.', priority: 'baja' as const, percentage: 20 },
+        { step: 'Probar la lectura con varias tarjetas de prueba.', priority: 'alta' as const, percentage: 40 },
+        { step: 'Verificar que los LEDs indicadores (acceso concedido/denegado) funcionen.', priority: 'media' as const, percentage: 30 },
+        { step: 'Inspeccionar el cableado por posibles daños.', priority: 'baja' as const, percentage: 10 },
+    ]
+  }
+];

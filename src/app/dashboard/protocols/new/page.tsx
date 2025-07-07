@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState } from 'react';
+import { useActionState, useState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
+import { useRouter } from 'next/navigation';
+
 import {
   suggestMaintenanceProtocol,
   type SuggestMaintenanceProtocolOutput,
@@ -21,6 +23,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -29,7 +38,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { Terminal, Loader2 } from 'lucide-react';
+import { Terminal, Loader2, Save } from 'lucide-react';
+import { mockEquipments } from '@/lib/mock-data';
+
+const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
+const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
+
+type Equipment = typeof mockEquipments[0];
+type Protocol = {
+  equipmentId: string;
+  steps: SuggestMaintenanceProtocolOutput;
+};
 
 type State = {
   result: SuggestMaintenanceProtocolOutput | null;
@@ -71,7 +90,56 @@ function SubmitButton() {
 }
 
 export default function NewProtocolPage() {
+  const router = useRouter();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
+
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
+  const [equipmentName, setEquipmentName] = useState('');
+  const [equipmentDescription, setEquipmentDescription] = useState('');
+  
+  useEffect(() => {
+    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
+    setEquipments(storedEquipments ? JSON.parse(storedEquipments) : []);
+  }, []);
+
+  const handleEquipmentChange = (equipmentId: string) => {
+    setSelectedEquipmentId(equipmentId);
+    const selected = equipments.find(e => e.id === equipmentId);
+    if (selected) {
+      setEquipmentName(selected.name);
+      setEquipmentDescription(selected.description);
+    } else {
+      setEquipmentName('');
+      setEquipmentDescription('');
+    }
+  };
+
+  const handleSaveProtocol = () => {
+    if (!selectedEquipmentId || !state.result) {
+      alert("Por favor, seleccione un equipo y genere un protocolo antes de guardar.");
+      return;
+    }
+    
+    const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
+    let protocols: Protocol[] = storedProtocols ? JSON.parse(storedProtocols) : [];
+
+    const newProtocol: Protocol = {
+      equipmentId: selectedEquipmentId,
+      steps: state.result,
+    };
+    
+    const existingProtocolIndex = protocols.findIndex(p => p.equipmentId === selectedEquipmentId);
+    if (existingProtocolIndex > -1) {
+      protocols[existingProtocolIndex] = newProtocol;
+    } else {
+      protocols.push(newProtocol);
+    }
+
+    localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(protocols));
+    alert('Protocolo guardado con éxito.');
+    router.push('/dashboard/protocols');
+  };
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
@@ -91,7 +159,7 @@ export default function NewProtocolPage() {
       <div className="grid gap-2">
         <h1 className="font-headline text-3xl font-bold">Generador de Protocolos (IA)</h1>
         <p className="text-muted-foreground">
-          Describa el equipo para que la IA sugiera un protocolo de mantenimiento.
+          Seleccione un equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.
         </p>
       </div>
 
@@ -99,13 +167,29 @@ export default function NewProtocolPage() {
         <form action={formAction}>
           <CardHeader>
             <CardTitle>Detalles del Equipo</CardTitle>
+            <CardDescription>Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
+            <div className="grid gap-3">
+              <Label htmlFor="equipment">Seleccionar Equipo Existente (Opcional)</Label>
+              <Select onValueChange={handleEquipmentChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccione un equipo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {equipments.map(eq => (
+                    <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid gap-3">
               <Label htmlFor="equipmentName">Nombre del Equipo</Label>
               <Input
                 id="equipmentName"
                 name="equipmentName"
+                value={equipmentName}
+                onChange={e => setEquipmentName(e.target.value)}
                 placeholder="Ej. Cámara IP Domo PTZ"
                 required
               />
@@ -115,6 +199,8 @@ export default function NewProtocolPage() {
               <Textarea
                 id="equipmentDescription"
                 name="equipmentDescription"
+                value={equipmentDescription}
+                onChange={e => setEquipmentDescription(e.target.value)}
                 placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
                 required
                 className="min-h-32"
@@ -139,6 +225,7 @@ export default function NewProtocolPage() {
         <Card>
           <CardHeader>
             <CardTitle>Protocolo Sugerido</CardTitle>
+            <CardDescription>Este es el protocolo sugerido por la IA. Puede guardarlo para el equipo seleccionado.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -164,6 +251,12 @@ export default function NewProtocolPage() {
               </TableBody>
             </Table>
           </CardContent>
+          <CardFooter className="border-t px-6 py-4">
+             <Button onClick={handleSaveProtocol} disabled={!selectedEquipmentId}>
+               <Save className="mr-2 h-4 w-4" />
+               Guardar Protocolo para Equipo Seleccionado
+             </Button>
+          </CardFooter>
         </Card>
       )}
     </div>
