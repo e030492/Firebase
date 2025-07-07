@@ -56,7 +56,7 @@ export default function DashboardLayout({
   };
 
   const getInitials = (name: string) => {
-    if (!name) return 'GS';
+    if (!name) return 'ET';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
@@ -72,7 +72,7 @@ export default function DashboardLayout({
               <ShieldCheck className="h-6 w-6" />
             </div>
             <span className="font-headline text-foreground group-data-[collapsible=icon]:hidden">
-              Guardian Shield
+              Escuadra Tecnology
             </span>
           </Link>
         </SidebarHeader>

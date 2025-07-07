@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ShieldCheck, Printer, X, Camera } from 'lucide-react';
 import { mockCedulas, mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
@@ -23,6 +23,7 @@ type EnrichedCedula = Cedula & { equipmentDetails?: Equipment; clientDetails?: C
 
 function ReportContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [reportCedulas, setReportCedulas] = useState<EnrichedCedula[]>([]);
   const [loading, setLoading] = useState(true);
   const [reportDate, setReportDate] = useState('');
@@ -113,7 +114,7 @@ function ReportContent() {
                              <ShieldCheck className="h-12 w-12 text-primary" />
                              <div>
                                 <h2 className="text-2xl font-bold text-gray-800">Reporte de Mantenimiento</h2>
-                                <p className="text-sm text-gray-500">Guardian Shield - Control de Seguridad</p>
+                                <p className="text-sm text-gray-500">Escuadra Tecnology - Control de Seguridad</p>
                              </div>
                         </div>
                         <div className="text-left sm:text-right mt-4 sm:mt-0">

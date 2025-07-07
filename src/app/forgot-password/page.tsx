@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
             <ShieldCheck className="h-10 w-10" />
           </div>
           <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground">
-            Guardian Shield
+            Escuadra Tecnology
           </h1>
           <p className="text-muted-foreground">Control de Mantenimiento de Seguridad</p>
         </div>

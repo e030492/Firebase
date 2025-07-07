@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Guardian Shield',
+  title: 'Escuadra Tecnology',
   description: 'Sistema de Control de Mantenimiento de Equipos de Seguridad',
 };
 

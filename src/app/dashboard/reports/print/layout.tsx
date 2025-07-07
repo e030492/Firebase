@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Reporte de Mantenimiento - Guardian Shield',
+  title: 'Reporte de Mantenimiento - Escuadra Tecnology',
   description: 'Documento para impresión de cédulas de mantenimiento.',
 };
 
