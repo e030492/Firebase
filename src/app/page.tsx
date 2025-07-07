@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -83,8 +84,11 @@ export default function LoginPage() {
               </div>
               {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full">Acceder</Button>
+               <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
+                ¿Olvidó su contraseña?
+              </Link>
             </CardFooter>
           </form>
         </Card>
