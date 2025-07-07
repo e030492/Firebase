@@ -259,6 +259,12 @@ export default function CedulasPage() {
                       {getSortIcon('technician')}
                     </Button>
                   </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('supervisor' as SortableKey)}>
+                      Supervisor
+                      {getSortIcon('supervisor' as SortableKey)}
+                    </Button>
+                  </TableHead>
                    <TableHead className="hidden md:table-cell">
                     <Button variant="ghost" onClick={() => requestSort('creationDate')}>
                       Fecha
@@ -283,6 +289,7 @@ export default function CedulasPage() {
                     <TableCell>{cedula.client}</TableCell>
                     <TableCell className="hidden md:table-cell">{cedula.equipment}</TableCell>
                     <TableCell className="hidden lg:table-cell">{cedula.technician}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
                      <TableCell className="hidden md:table-cell">
                       {new Date(cedula.creationDate + 'T00:00:00').toLocaleDateString('es-ES')}
                     </TableCell>

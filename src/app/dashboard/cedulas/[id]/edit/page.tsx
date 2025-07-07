@@ -57,6 +57,7 @@ export default function EditCedulaPage() {
   const [systemId, setSystemId] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
   const [technicianId, setTechnicianId] = useState('');
+  const [supervisorId, setSupervisorId] = useState('');
   const [creationDate, setCreationDate] = useState<Date>();
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('');
@@ -66,6 +67,7 @@ export default function EditCedulaPage() {
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
+  const [supervisors, setSupervisors] = useState<User[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -80,6 +82,7 @@ export default function EditCedulaPage() {
     setSystems(allSystemsData);
     const allUsersData: User[] = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) || '[]');
     setTechnicians(allUsersData.filter(u => u.role === 'Técnico'));
+    setSupervisors(allUsersData.filter(u => u.role === 'Supervisor'));
 
     if (cedulaId) {
       const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
@@ -104,6 +107,9 @@ export default function EditCedulaPage() {
 
         const foundTechnician = allUsersData.find(u => u.name === foundCedula.technician);
         if (foundTechnician) setTechnicianId(foundTechnician.id);
+
+        const foundSupervisor = allUsersData.find(u => u.name === foundCedula.supervisor);
+        if (foundSupervisor) setSupervisorId(foundSupervisor.id);
         
         setLoading(false);
       } else {
@@ -145,6 +151,7 @@ export default function EditCedulaPage() {
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
     const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
+    const supervisorName = supervisors.find(s => s.id === supervisorId)?.name || '';
 
     const updatedCedulas = cedulas.map(c => {
       if (c.id === cedulaId) {
@@ -154,6 +161,7 @@ export default function EditCedulaPage() {
           client: clientName,
           equipment: equipmentName,
           technician: technicianName,
+          supervisor: supervisorName,
           creationDate: creationDate ? format(creationDate, 'yyyy-MM-dd') : '',
           status: status as Cedula['status'],
           description,
@@ -330,6 +338,19 @@ export default function EditCedulaPage() {
                       <SelectItem value="Pendiente">Pendiente</SelectItem>
                       <SelectItem value="En Progreso">En Progreso</SelectItem>
                       <SelectItem value="Completada">Completada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                 </div>
+                 <div className="grid gap-3">
+                   <Label htmlFor="supervisor">Supervisor</Label>
+                   <Select value={supervisorId} onValueChange={setSupervisorId} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un supervisor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {supervisors.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                  </div>

@@ -51,6 +51,7 @@ export default function NewCedulaPage() {
   const [systemId, setSystemId] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
   const [technicianId, setTechnicianId] = useState('');
+  const [supervisorId, setSupervisorId] = useState('');
   const [creationDate, setCreationDate] = useState<Date>(new Date());
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Pendiente');
@@ -60,6 +61,7 @@ export default function NewCedulaPage() {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
+  const [supervisors, setSupervisors] = useState<User[]>([]);
 
   useEffect(() => {
     const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
@@ -74,6 +76,7 @@ export default function NewCedulaPage() {
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const allUsers: User[] = storedUsers ? JSON.parse(storedUsers) : [];
     setTechnicians(allUsers.filter(user => user.role === 'Técnico'));
+    setSupervisors(allUsers.filter(user => user.role === 'Supervisor'));
   }, []);
 
   useEffect(() => {
@@ -106,7 +109,7 @@ export default function NewCedulaPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!folio || !clientId || !equipmentId || !technicianId || !creationDate || !description) {
+    if (!folio || !clientId || !equipmentId || !technicianId || !supervisorId || !creationDate || !description) {
         alert('Por favor, complete todos los campos.');
         return;
     }
@@ -117,6 +120,7 @@ export default function NewCedulaPage() {
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = equipments.find(eq => eq.id === equipmentId)?.name || '';
     const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
+    const supervisorName = supervisors.find(s => s.id === supervisorId)?.name || '';
 
     const newCedula: Cedula = {
       id: new Date().getTime().toString(),
@@ -124,6 +128,7 @@ export default function NewCedulaPage() {
       client: clientName,
       equipment: equipmentName,
       technician: technicianName,
+      supervisor: supervisorName,
       creationDate: format(creationDate, 'yyyy-MM-dd'),
       status: status as Cedula['status'],
       description,
@@ -256,6 +261,19 @@ export default function NewCedulaPage() {
                       <SelectItem value="Pendiente">Pendiente</SelectItem>
                       <SelectItem value="En Progreso">En Progreso</SelectItem>
                       <SelectItem value="Completada">Completada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                 </div>
+                 <div className="grid gap-3">
+                   <Label htmlFor="supervisor">Supervisor</Label>
+                   <Select onValueChange={setSupervisorId} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un supervisor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {supervisors.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                  </div>
