@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { ShieldCheck, Printer, X } from 'lucide-react';
+import { ShieldCheck, Printer, X, Camera } from 'lucide-react';
 import { mockCedulas, mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -135,38 +135,53 @@ function ReportGenerator() {
                     {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
                         <div className="mt-8">
                             <h3 className="text-lg font-bold text-gray-800 mb-4">Protocolo de Mantenimiento Ejecutado</h3>
-                             <div className="border rounded-lg overflow-hidden">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 text-gray-600">
-                                        <tr>
-                                            <th className="text-left p-3 font-semibold">Paso del Protocolo y Notas</th>
-                                            <th className="text-center p-3 font-semibold w-32">Progreso</th>
-                                            <th className="text-center p-3 font-semibold w-28">Prioridad</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {cedula.protocolSteps.map((step, index) => (
-                                        <tr key={index}>
-                                            <td className="p-3 align-top">
-                                                <p className="font-medium">{step.step}</p>
-                                                {step.notes && <p className="text-xs text-gray-600 mt-2 pl-2 border-l-2"><strong>Notas:</strong> {step.notes}</p>}
-                                                {step.imageUrl && (
-                                                    <div className="mt-3">
-                                                        <p className="text-xs font-semibold mb-1">Evidencia:</p>
-                                                        <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={250} height={180} data-ai-hint="protocol evidence" className="rounded-md object-cover border"/>
+                            <div className="border rounded-lg divide-y divide-gray-200">
+                                {cedula.protocolSteps.map((step, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4">
+                                        <div className="md:col-span-2 space-y-3">
+                                            <div>
+                                                <p className="font-semibold text-gray-600 text-sm">Paso del Protocolo</p>
+                                                <p className="text-gray-800">{step.step}</p>
+                                            </div>
+                                            {step.notes && (
+                                                <div>
+                                                    <p className="font-semibold text-gray-600 text-sm">Notas del Técnico</p>
+                                                    <p className="text-gray-700 italic text-sm">"{step.notes}"</p>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-4 pt-2">
+                                                <div>
+                                                    <p className="font-semibold text-gray-600 text-sm">Progreso</p>
+                                                    <Badge variant="secondary">{step.completion}%</Badge>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-600 text-sm">Prioridad</p>
+                                                    <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="font-semibold text-gray-600 text-sm">Evidencia Fotográfica</p>
+                                            {step.imageUrl ? (
+                                                <Image 
+                                                    src={step.imageUrl} 
+                                                    alt={`Evidencia para ${step.step}`} 
+                                                    width={300} 
+                                                    height={225} 
+                                                    data-ai-hint="protocol evidence" 
+                                                    className="rounded-md object-cover border w-full aspect-[4/3]"
+                                                />
+                                            ) : (
+                                                <div className="w-full aspect-[4/3] bg-gray-100 rounded-md flex items-center justify-center border text-center">
+                                                    <div>
+                                                        <Camera className="h-8 w-8 text-gray-400 mx-auto"/>
+                                                        <p className="text-xs text-gray-400 mt-1">Sin evidencia</p>
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="p-3 text-center align-middle">
-                                                <Badge variant="secondary">{step.completion}%</Badge>
-                                            </td>
-                                            <td className="p-3 text-center align-middle">
-                                                <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge>
-                                            </td>
-                                        </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
