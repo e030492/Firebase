@@ -19,7 +19,7 @@ export const mockUsers = [
   },
     {
     id: '4',
-    name: 'Supervisor',
+    name: 'Supervisor General',
     email: 'supervisor@guardianshield.com',
     role: 'Supervisor',
   },
@@ -160,7 +160,7 @@ export const mockCedulas = [
     client: 'Acme Corp',
     equipment: 'Cámara Domo PTZ',
     technician: 'Technician Uno',
-    supervisor: 'Supervisor',
+    supervisor: 'Supervisor General',
     creationDate: '2024-07-20',
     status: 'Pendiente' as const,
     description: 'Revisión trimestral de la cámara de la entrada principal.'
@@ -171,7 +171,7 @@ export const mockCedulas = [
     client: 'Soluciones Tech',
     equipment: 'Lector de Tarjetas RFID',
     technician: 'Technician Dos',
-    supervisor: 'Supervisor',
+    supervisor: 'Supervisor General',
     creationDate: '2024-07-18',
     status: 'Completada' as const,
     description: 'Cambio de batería y limpieza de lector.'
@@ -182,7 +182,7 @@ export const mockCedulas = [
     client: 'Innovate Co.',
     equipment: 'Detector de Humo Fotoeléctrico',
     technician: 'Technician Uno',
-    supervisor: 'Supervisor',
+    supervisor: 'Supervisor General',
     creationDate: '2024-07-15',
     status: 'En Progreso' as const,
     description: 'Pruebas de funcionamiento y limpieza de sensores.'
@@ -193,7 +193,7 @@ export const mockCedulas = [
     client: 'Guardianes Nocturnos Ltda.',
     equipment: 'Barrera Infrarroja Perimetral',
     technician: 'Technician Dos',
-    supervisor: 'Supervisor',
+    supervisor: 'Supervisor General',
     creationDate: '2024-07-21',
     status: 'Pendiente' as const,
     description: 'Alineación de haces infrarrojos y prueba de alcance.'
