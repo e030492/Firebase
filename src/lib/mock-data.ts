@@ -132,3 +132,46 @@ export const mockEquipments = [
     nextMaintenanceDate: '2024-05-10',
   },
 ];
+
+export const mockCedulas = [
+  {
+    id: '1',
+    folio: 'C-2024-001',
+    client: 'Acme Corp',
+    equipment: 'Cámara Domo PTZ',
+    technician: 'Technician Uno',
+    creationDate: '2024-07-20',
+    status: 'Pendiente' as const,
+    description: 'Revisión trimestral de la cámara de la entrada principal.'
+  },
+  {
+    id: '2',
+    folio: 'C-2024-002',
+    client: 'Soluciones Tech',
+    equipment: 'Lector de Tarjetas RFID',
+    technician: 'Technician Dos',
+    creationDate: '2024-07-18',
+    status: 'Completada' as const,
+    description: 'Cambio de batería y limpieza de lector.'
+  },
+  {
+    id: '3',
+    folio: 'C-2024-003',
+    client: 'Innovate Co.',
+    equipment: 'Detector de Humo Fotoeléctrico',
+    technician: 'Technician Uno',
+    creationDate: '2024-07-15',
+    status: 'En Progreso' as const,
+    description: 'Pruebas de funcionamiento y limpieza de sensores.'
+  },
+  {
+    id: '4',
+    folio: 'C-2024-004',
+    client: 'Guardianes Nocturnos Ltda.',
+    equipment: 'Barrera Infrarroja Perimetral',
+    technician: 'Technician Dos',
+    creationDate: '2024-07-21',
+    status: 'Pendiente' as const,
+    description: 'Alineación de haces infrarrojos y prueba de alcance.'
+  },
+];

@@ -23,7 +23,7 @@ const allNavItems = [
   { href: '/dashboard/systems', label: 'Sistemas', icon: Shield },
   { href: '/dashboard/equipments', label: 'Equipos', icon: HardHat },
   { href: '/dashboard/protocols/new', label: 'Protocolos', icon: ClipboardList, ai: true },
-  { href: '/dashboard/cedulas', label: 'Cédulas', icon: FileText, disabled: true },
+  { href: '/dashboard/cedulas', label: 'Cédulas', icon: FileText },
   { href: '/dashboard/reports', label: 'Reportes', icon: LineChart, disabled: true },
 ];
 
