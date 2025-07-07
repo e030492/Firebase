@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { mockUsers } from '@/lib/mock-data';
 
 const USERS_STORAGE_KEY = 'guardian_shield_users';
+const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
 type User = typeof mockUsers[0];
 
 
@@ -31,6 +32,8 @@ export default function LoginPage() {
     if (!localStorage.getItem(USERS_STORAGE_KEY)) {
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(mockUsers));
     }
+    // Clear any previous active user on login page load
+    localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -43,6 +46,7 @@ export default function LoginPage() {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
     if (user && user.password === password) {
+      localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
       router.push('/dashboard');
     } else {
       setError('Email o contraseña incorrectos.');

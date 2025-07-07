@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,12 +24,42 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
+import type { mockUsers } from '@/lib/mock-data';
+
+const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
+type User = (typeof mockUsers)[0];
+
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const [activeUser, setActiveUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
+    if (storedUser) {
+      try {
+        setActiveUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Failed to parse active user from localStorage", error);
+        setActiveUser(null);
+      }
+    }
+  }, []);
+  
+  const handleLogout = () => {
+      localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+      router.push('/');
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return 'GS';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -52,30 +86,33 @@ export default function DashboardLayout({
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
           <SidebarTrigger />
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-                <Avatar>
-                  <AvatarImage
-                    src="https://placehold.co/32x32.png"
-                    alt="User avatar"
-                    data-ai-hint="user avatar"
-                  />
-                  <AvatarFallback>GS</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Configuración</DropdownMenuItem>
-              <DropdownMenuItem>Soporte</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/">Cerrar Sesión</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+           <div className="flex items-center gap-3">
+            {activeUser && <span className="hidden text-sm font-medium text-foreground sm:inline-block">{activeUser.name}</span>}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
+                  <Avatar>
+                    <AvatarImage
+                      src="https://placehold.co/32x32.png"
+                      alt="User avatar"
+                      data-ai-hint="user avatar"
+                    />
+                    <AvatarFallback>{getInitials(activeUser?.name || '')}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Configuración</DropdownMenuItem>
+                <DropdownMenuItem>Soporte</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={handleLogout}>
+                  Cerrar Sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
