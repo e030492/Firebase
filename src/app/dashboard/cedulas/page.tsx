@@ -313,7 +313,7 @@ export default function CedulasPage() {
               <TableBody>
                 {filteredAndSortedCedulas.map((cedula) => (
                   <Fragment key={cedula.id}>
-                    <TableRow>
+                    <TableRow onClick={() => handleToggleDetails(cedula.id)} className="cursor-pointer">
                       <TableCell className="font-medium">{cedula.folio}</TableCell>
                       <TableCell>{cedula.client}</TableCell>
                       <TableCell className="hidden md:table-cell">{cedula.equipment}</TableCell>
@@ -325,7 +325,7 @@ export default function CedulasPage() {
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -347,7 +347,7 @@ export default function CedulasPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(cedula.id)}>
                             <ChevronDown className={cn("h-4 w-4 transition-transform", expandedCedulaId === cedula.id && "rotate-180")} />
                             <span className="sr-only">Ver detalles</span>
@@ -443,3 +443,5 @@ export default function CedulasPage() {
     </>
   );
 }
+
+    
