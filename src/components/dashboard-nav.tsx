@@ -19,7 +19,7 @@ import { Badge } from './ui/badge';
 const allNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/users', label: 'Usuarios', icon: Users, disabled: true },
-  { href: '/dashboard/clients/new', label: 'Clientes', icon: Building },
+  { href: '/dashboard/clients', label: 'Clientes', icon: Building },
   { href: '/dashboard/systems', label: 'Sistemas', icon: Shield },
   { href: '/dashboard/equipments', label: 'Equipos', icon: HardHat, disabled: true },
   { href: '/dashboard/protocols/new', label: 'Protocolos', icon: ClipboardList, ai: true },
