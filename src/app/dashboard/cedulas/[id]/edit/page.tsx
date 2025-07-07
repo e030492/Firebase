@@ -2,7 +2,6 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
@@ -33,6 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems } from '@/lib/mock-data';
+import Link from 'next/link';
 
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
@@ -171,12 +171,10 @@ export default function EditCedulaPage() {
     return (
        <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Link href="/dashboard/cedulas">
-             <Button variant="outline" size="icon" className="h-7 w-7" disabled>
+            <Button variant="outline" size="icon" className="h-7 w-7" disabled>
                <ArrowLeft className="h-4 w-4" />
                <span className="sr-only">Atrás</span>
-             </Button>
-           </Link>
+            </Button>
           <div className="grid gap-2">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-4 w-48" />
@@ -206,12 +204,10 @@ export default function EditCedulaPage() {
       <div className="flex flex-col items-center justify-center gap-4 text-center h-full mt-10">
          <h1 className="text-2xl font-bold">Cédula no encontrada</h1>
          <p className="text-muted-foreground">No se pudo encontrar la cédula que buscas.</p>
-         <Link href="/dashboard/cedulas">
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver a Cédulas
-            </Button>
-         </Link>
+         <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver
+         </Button>
       </div>
     )
   }
@@ -220,12 +216,10 @@ export default function EditCedulaPage() {
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Link href="/dashboard/cedulas">
-             <Button variant="outline" size="icon" className="h-7 w-7">
-               <ArrowLeft className="h-4 w-4" />
-               <span className="sr-only">Atrás</span>
-             </Button>
-           </Link>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+             <ArrowLeft className="h-4 w-4" />
+             <span className="sr-only">Atrás</span>
+           </Button>
            <div className="grid gap-0.5">
              <h1 className="font-headline text-2xl font-bold">Editar Cédula</h1>
              <p className="text-muted-foreground">Modifique los datos de la cédula de mantenimiento.</p>
@@ -354,5 +348,3 @@ export default function EditCedulaPage() {
     </form>
   );
 }
-
-    

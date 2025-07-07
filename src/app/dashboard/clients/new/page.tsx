@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { mockClients } from '@/lib/mock-data';
+import { ArrowLeft } from 'lucide-react';
 
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 type Client = typeof mockClients[0];
@@ -62,11 +63,17 @@ export default function NewClientPage() {
   return (
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-4xl auto-rows-max items-start gap-4 lg:gap-8">
-        <div className="grid gap-2">
-          <h1 className="font-headline text-3xl font-bold">Registrar Nuevo Cliente</h1>
-          <p className="text-muted-foreground">
-            Complete los datos para agregar un nuevo cliente al sistema.
-          </p>
+        <div className="flex items-center gap-4">
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+             <ArrowLeft className="h-4 w-4" />
+             <span className="sr-only">Atrás</span>
+           </Button>
+           <div className="grid gap-0.5">
+            <h1 className="font-headline text-2xl font-bold">Registrar Nuevo Cliente</h1>
+            <p className="text-muted-foreground">
+                Complete los datos para agregar un nuevo cliente al sistema.
+            </p>
+           </div>
         </div>
         <Card>
           <CardHeader>

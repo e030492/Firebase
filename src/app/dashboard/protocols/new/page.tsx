@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft } from 'lucide-react';
 import { mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
 
 // Keys for localStorage
@@ -277,14 +277,20 @@ export default function NewProtocolPage() {
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
       {/* Page Header */}
-      <div className="grid gap-2">
-        <h1 className="font-headline text-3xl font-bold">{isModificationMode ? 'Modificar Protocolo (IA)' : 'Generador de Protocolos (IA)'}</h1>
-        <p className="text-muted-foreground">
-          {isModificationMode 
-            ? 'La IA sugerirá pasos adicionales para el equipo seleccionado. Puede agregarlos al protocolo existente.' 
-            : 'Filtre por equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.'
-          }
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+          <span className="sr-only">Atrás</span>
+        </Button>
+        <div className="grid gap-0.5">
+            <h1 className="font-headline text-2xl font-bold">{isModificationMode ? 'Modificar Protocolo (IA)' : 'Generador de Protocolos (IA)'}</h1>
+            <p className="text-muted-foreground">
+            {isModificationMode 
+                ? 'La IA sugerirá pasos adicionales para el equipo seleccionado. Puede agregarlos al protocolo existente.' 
+                : 'Filtre por equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.'
+            }
+            </p>
+        </div>
       </div>
 
       {/* Form Card */}

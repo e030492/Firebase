@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -15,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { mockSystems } from '@/lib/mock-data';
+import { ArrowLeft } from 'lucide-react';
 
 const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 type System = typeof mockSystems[0];
@@ -51,11 +51,17 @@ export default function NewSystemPage() {
   return (
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-2xl auto-rows-max items-start gap-4 lg:gap-8">
-        <div className="grid gap-2">
-          <h1 className="font-headline text-3xl font-bold">Crear Sistema de Seguridad</h1>
-          <p className="text-muted-foreground">
-            Defina un nuevo tipo de sistema de seguridad.
-          </p>
+        <div className="flex items-center gap-4">
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+             <ArrowLeft className="h-4 w-4" />
+             <span className="sr-only">Atrás</span>
+           </Button>
+           <div className="grid gap-0.5">
+            <h1 className="font-headline text-2xl font-bold">Crear Sistema de Seguridad</h1>
+            <p className="text-muted-foreground">
+                Defina un nuevo tipo de sistema de seguridad.
+            </p>
+           </div>
         </div>
         <Card>
           <CardContent className="pt-6">

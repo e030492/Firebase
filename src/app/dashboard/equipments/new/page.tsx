@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Camera } from 'lucide-react';
+import { Calendar as CalendarIcon, Camera, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -114,11 +114,17 @@ export default function NewEquipmentPage() {
   return (
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
-        <div className="grid gap-2">
-          <h1 className="font-headline text-3xl font-bold">Registrar Nuevo Equipo</h1>
-          <p className="text-muted-foreground">
-            Complete los datos para agregar un nuevo equipo al sistema.
-          </p>
+        <div className="flex items-center gap-4">
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+             <ArrowLeft className="h-4 w-4" />
+             <span className="sr-only">Atrás</span>
+           </Button>
+           <div className="grid gap-0.5">
+            <h1 className="font-headline text-2xl font-bold">Registrar Nuevo Equipo</h1>
+            <p className="text-muted-foreground">
+                Complete los datos para agregar un nuevo equipo al sistema.
+            </p>
+           </div>
         </div>
         <Card>
           <CardHeader>

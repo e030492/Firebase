@@ -2,7 +2,6 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -93,12 +92,10 @@ export default function EditUserPage() {
     return (
        <div className="mx-auto grid max-w-2xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Link href="/dashboard/users">
-             <Button variant="outline" size="icon" className="h-7 w-7" disabled>
-               <ArrowLeft className="h-4 w-4" />
-               <span className="sr-only">Atrás</span>
-             </Button>
-           </Link>
+           <Button variant="outline" size="icon" className="h-7 w-7" disabled>
+             <ArrowLeft className="h-4 w-4" />
+             <span className="sr-only">Atrás</span>
+           </Button>
           <div className="grid gap-2">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-4 w-48" />
@@ -137,12 +134,10 @@ export default function EditUserPage() {
       <div className="flex flex-col items-center justify-center gap-4 text-center h-full mt-10">
          <h1 className="text-2xl font-bold">Usuario no encontrado</h1>
          <p className="text-muted-foreground">No se pudo encontrar al usuario que buscas.</p>
-         <Link href="/dashboard/users">
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver a Usuarios
-            </Button>
-         </Link>
+         <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver
+         </Button>
       </div>
     )
   }
@@ -151,12 +146,10 @@ export default function EditUserPage() {
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-2xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Link href="/dashboard/users">
-             <Button variant="outline" size="icon" className="h-7 w-7">
-               <ArrowLeft className="h-4 w-4" />
-               <span className="sr-only">Atrás</span>
-             </Button>
-           </Link>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+             <ArrowLeft className="h-4 w-4" />
+             <span className="sr-only">Atrás</span>
+           </Button>
            <div className="grid gap-0.5">
              <h1 className="font-headline text-2xl font-bold">Editar Usuario</h1>
              <p className="text-muted-foreground">Modifique los datos del usuario.</p>
