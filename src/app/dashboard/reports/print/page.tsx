@@ -27,12 +27,14 @@ function ReportGenerator() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const ids = searchParams.get('ids')?.split(',') || [];
+    const idsParam = searchParams.get('ids');
+    const ids = idsParam ? idsParam.split(',').filter(id => id) : [];
+    
     if (ids.length > 0) {
-      const allCedulas: Cedula[] = JSON.parse(localStorage.getItem(CEDULAS_STORAGE_KEY) || '[]');
-      const allEquipments: Equipment[] = JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || '[]');
-      const allClients: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]');
-      const allSystems: System[] = JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]');
+      const allCedulas: Cedula[] = JSON.parse(localStorage.getItem(CEDULAS_STORAGE_KEY) || JSON.stringify(mockCedulas));
+      const allEquipments: Equipment[] = JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || JSON.stringify(mockEquipments));
+      const allClients: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || JSON.stringify(mockClients));
+      const allSystems: System[] = JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || JSON.stringify(mockSystems));
 
       const enrichedData = ids.map(id => {
         const cedula = allCedulas.find(c => c.id === id);
