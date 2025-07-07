@@ -38,29 +38,36 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from "@/components/ui/checkbox";
 import { Terminal, Loader2, Save } from 'lucide-react';
-import { mockEquipments } from '@/lib/mock-data';
+import { mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
 
+// Keys for localStorage
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
+const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
+const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 
+// Types
 type Equipment = typeof mockEquipments[0];
+type Client = typeof mockClients[0];
+type System = typeof mockSystems[0];
 type Protocol = {
   equipmentId: string;
   steps: SuggestMaintenanceProtocolOutput;
 };
-
 type State = {
   result: SuggestMaintenanceProtocolOutput | null;
   error: string | null;
 };
 
+// Server Action
 async function generateProtocolAction(prevState: State, formData: FormData): Promise<State> {
   const equipmentName = formData.get('equipmentName') as string;
   const equipmentDescription = formData.get('equipmentDescription') as string;
 
   if (!equipmentName || !equipmentDescription) {
-    return { ...prevState, error: 'Por favor, complete todos los campos.', result: null };
+    return { ...prevState, error: 'Por favor, complete el nombre y la descripción del equipo.', result: null };
   }
 
   try {
@@ -79,6 +86,7 @@ async function generateProtocolAction(prevState: State, formData: FormData): Pro
   }
 }
 
+// Submit Button Component
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -89,23 +97,72 @@ function SubmitButton() {
   );
 }
 
+// Main Page Component
 export default function NewProtocolPage() {
   const router = useRouter();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
 
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  // Data states
+  const [clients, setClients] = useState<Client[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+
+  // Selection states
+  const [clientId, setClientId] = useState('');
+  const [systemId, setSystemId] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentDescription, setEquipmentDescription] = useState('');
+  const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   
+  // Load initial data from localStorage
   useEffect(() => {
-    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    setEquipments(storedEquipments ? JSON.parse(storedEquipments) : []);
+    setClients(JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]'));
+    setSystems(JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]'));
+    setAllEquipments(JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || '[]'));
   }, []);
+
+  // Filter equipments when client or system changes
+  useEffect(() => {
+    if (clientId && systemId) {
+      const clientName = clients.find(c => c.id === clientId)?.name;
+      const systemName = systems.find(s => s.id === systemId)?.name;
+      if (clientName && systemName) {
+        setFilteredEquipments(allEquipments.filter(eq => eq.client === clientName && eq.system === systemName));
+      }
+    } else {
+      setFilteredEquipments([]);
+    }
+  }, [clientId, systemId, clients, systems, allEquipments]);
+
+  // Reset selections when AI result changes
+  useEffect(() => {
+    if (state.result) {
+      setSelectedSteps([]);
+    }
+  }, [state.result]);
+
+  // Handlers for dropdowns
+  const handleClientChange = (newClientId: string) => {
+    setClientId(newClientId);
+    setSystemId('');
+    setSelectedEquipmentId('');
+    setEquipmentName('');
+    setEquipmentDescription('');
+    setFilteredEquipments([]);
+  };
+
+  const handleSystemChange = (newSystemId: string) => {
+    setSystemId(newSystemId);
+    setSelectedEquipmentId('');
+    setEquipmentName('');
+    setEquipmentDescription('');
+  };
 
   const handleEquipmentChange = (equipmentId: string) => {
     setSelectedEquipmentId(equipmentId);
-    const selected = equipments.find(e => e.id === equipmentId);
+    const selected = allEquipments.find(e => e.id === equipmentId);
     if (selected) {
       setEquipmentName(selected.name);
       setEquipmentDescription(selected.description);
@@ -115,9 +172,33 @@ export default function NewProtocolPage() {
     }
   };
 
+  // Handlers for step selection
+  const handleSelectStep = (step: SuggestMaintenanceProtocolOutput[0], checked: boolean) => {
+    setSelectedSteps(prev => {
+      if (checked) {
+        return [...prev, step];
+      } else {
+        return prev.filter(s => s.step !== step.step);
+      }
+    });
+  };
+
+  const handleSelectAllSteps = (checked: boolean) => {
+    if (checked && state.result) {
+      setSelectedSteps(state.result);
+    } else {
+      setSelectedSteps([]);
+    }
+  };
+  
+  const isStepSelected = (step: SuggestMaintenanceProtocolOutput[0]) => {
+    return selectedSteps.some(s => s.step === step.step);
+  };
+  
+  // Save protocol logic
   const handleSaveProtocol = () => {
-    if (!selectedEquipmentId || !state.result) {
-      alert("Por favor, seleccione un equipo y genere un protocolo antes de guardar.");
+    if (!selectedEquipmentId || selectedSteps.length === 0) {
+      alert("Por favor, seleccione un equipo y al menos un paso del protocolo antes de guardar.");
       return;
     }
     
@@ -126,7 +207,7 @@ export default function NewProtocolPage() {
 
     const newProtocol: Protocol = {
       equipmentId: selectedEquipmentId,
-      steps: state.result,
+      steps: selectedSteps,
     };
     
     const existingProtocolIndex = protocols.findIndex(p => p.equipmentId === selectedEquipmentId);
@@ -140,7 +221,8 @@ export default function NewProtocolPage() {
     alert('Protocolo guardado con éxito.');
     router.push('/dashboard/protocols');
   };
-
+  
+  // Badge variant for priority
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
       case 'alta':
@@ -154,15 +236,20 @@ export default function NewProtocolPage() {
     }
   };
 
+  const areAllStepsSelected = state.result ? selectedSteps.length === state.result.length && state.result.length > 0 : false;
+
+  // JSX
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+      {/* Page Header */}
       <div className="grid gap-2">
         <h1 className="font-headline text-3xl font-bold">Generador de Protocolos (IA)</h1>
         <p className="text-muted-foreground">
-          Seleccione un equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.
+          Filtre por equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.
         </p>
       </div>
 
+      {/* Form Card */}
       <Card>
         <form action={formAction}>
           <CardHeader>
@@ -170,19 +257,49 @@ export default function NewProtocolPage() {
             <CardDescription>Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
-            <div className="grid gap-3">
-              <Label htmlFor="equipment">Seleccionar Equipo Existente (Opcional)</Label>
-              <Select onValueChange={handleEquipmentChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione un equipo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {equipments.map(eq => (
-                    <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Filters */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+               <div className="grid gap-3">
+                 <Label htmlFor="client">Cliente</Label>
+                 <Select onValueChange={handleClientChange}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Seleccione un cliente" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {clients.map(client => (
+                       <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+               <div className="grid gap-3">
+                 <Label htmlFor="system">Sistema</Label>
+                 <Select onValueChange={handleSystemChange} value={systemId} disabled={!clientId}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Seleccione un sistema" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {systems.map(system => (
+                       <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+               <div className="grid gap-3">
+                 <Label htmlFor="equipment">Seleccionar Equipo (Opcional)</Label>
+                 <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Seleccione un equipo..." />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {filteredEquipments.map(eq => (
+                       <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
             </div>
+            {/* Manual input */}
             <div className="grid gap-3">
               <Label htmlFor="equipmentName">Nombre del Equipo</Label>
               <Input
@@ -213,6 +330,7 @@ export default function NewProtocolPage() {
         </form>
       </Card>
 
+      {/* Error Alert */}
       {state.error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
@@ -221,16 +339,24 @@ export default function NewProtocolPage() {
         </Alert>
       )}
 
+      {/* Results Card */}
       {state.result && (
         <Card>
           <CardHeader>
             <CardTitle>Protocolo Sugerido</CardTitle>
-            <CardDescription>Este es el protocolo sugerido por la IA. Puede guardarlo para el equipo seleccionado.</CardDescription>
+            <CardDescription>Seleccione los pasos que desea guardar para el equipo.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      onCheckedChange={handleSelectAllSteps}
+                      checked={areAllStepsSelected}
+                      aria-label="Seleccionar todos los pasos"
+                    />
+                  </TableHead>
                   <TableHead className="w-[60%]">Paso</TableHead>
                   <TableHead>Prioridad</TableHead>
                   <TableHead className="text-right">% Estimado</TableHead>
@@ -238,7 +364,14 @@ export default function NewProtocolPage() {
               </TableHeader>
               <TableBody>
                 {state.result.map((item, index) => (
-                  <TableRow key={index}>
+                  <TableRow key={index} data-state={isStepSelected(item) ? "selected" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        onCheckedChange={(checked) => handleSelectStep(item, !!checked)}
+                        checked={isStepSelected(item)}
+                        aria-label={`Seleccionar paso: ${item.step}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{item.step}</TableCell>
                     <TableCell>
                       <Badge variant={getPriorityBadgeVariant(item.priority)} className="capitalize">
@@ -252,9 +385,9 @@ export default function NewProtocolPage() {
             </Table>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
-             <Button onClick={handleSaveProtocol} disabled={!selectedEquipmentId}>
+             <Button onClick={handleSaveProtocol} disabled={!selectedEquipmentId || selectedSteps.length === 0}>
                <Save className="mr-2 h-4 w-4" />
-               Guardar Protocolo para Equipo Seleccionado
+               Guardar Pasos Seleccionados
              </Button>
           </CardFooter>
         </Card>
@@ -262,3 +395,5 @@ export default function NewProtocolPage() {
     </div>
   );
 }
+
+    
