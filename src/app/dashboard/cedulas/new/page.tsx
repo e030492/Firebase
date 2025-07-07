@@ -65,16 +65,16 @@ export default function NewCedulaPage() {
 
   useEffect(() => {
     const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    setClients(storedClients ? JSON.parse(storedClients) : []);
+    setClients(storedClients ? JSON.parse(storedClients) : mockClients);
 
     const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    setSystems(storedSystems ? JSON.parse(storedSystems) : []);
+    setSystems(storedSystems ? JSON.parse(storedSystems) : mockSystems);
     
     const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    setEquipments(storedEquipments ? JSON.parse(storedEquipments) : []);
+    setEquipments(storedEquipments ? JSON.parse(storedEquipments) : mockEquipments);
 
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const allUsers: User[] = storedUsers ? JSON.parse(storedUsers) : [];
+    const allUsers: User[] = storedUsers ? JSON.parse(storedUsers) : mockUsers;
     setTechnicians(allUsers.filter(user => user.role === 'Técnico'));
     setSupervisors(allUsers.filter(user => user.role === 'Supervisor'));
   }, []);

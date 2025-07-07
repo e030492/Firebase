@@ -73,14 +73,21 @@ export default function EditCedulaPage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    // Load all data from localStorage
-    const allClientsData: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]');
+    // Load all data from localStorage or mock data
+    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
+    const allClientsData: Client[] = storedClients ? JSON.parse(storedClients) : mockClients;
     setClients(allClientsData);
-    const allEquipmentsData: Equipment[] = JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || '[]');
+    
+    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
+    const allEquipmentsData: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : mockEquipments;
     setAllEquipments(allEquipmentsData);
-    const allSystemsData: System[] = JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]');
+
+    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
+    const allSystemsData: System[] = storedSystems ? JSON.parse(storedSystems) : mockSystems;
     setSystems(allSystemsData);
-    const allUsersData: User[] = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) || '[]');
+
+    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const allUsersData: User[] = storedUsers ? JSON.parse(storedUsers) : mockUsers;
     setTechnicians(allUsersData.filter(u => u.role === 'Técnico'));
     setSupervisors(allUsersData.filter(u => u.role === 'Supervisor'));
 
