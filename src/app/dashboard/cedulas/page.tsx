@@ -51,7 +51,7 @@ const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
-type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo';
+type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo' | 'system';
 
 export default function CedulasPage() {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
@@ -97,7 +97,15 @@ export default function CedulasPage() {
   }, [selectedClientId, clients]);
 
   const filteredAndSortedCedulas = useMemo(() => {
-    let filteredCedulas = [...cedulas];
+    const augmentedCedulas = cedulas.map(cedula => {
+      const equipment = allEquipments.find(eq => eq.name === cedula.equipment && eq.client === cedula.client);
+      return {
+        ...cedula,
+        system: equipment?.system || '',
+      };
+    });
+  
+    let filteredCedulas = augmentedCedulas;
 
     if (selectedClientId) {
       const clientName = clients.find(c => c.id === selectedClientId)?.name;
@@ -121,20 +129,20 @@ export default function CedulasPage() {
         filteredCedulas = filteredCedulas.filter(c => c.semaforo === selectedSemaforo);
     }
 
-    let sortableItems = filteredCedulas;
     if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+      filteredCedulas.sort((a, b) => {
+        const key = sortConfig.key as keyof typeof a;
+        if (a[key] < b[key]) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (a[key] > b[key]) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
       });
     }
-    return sortableItems;
-  }, [cedulas, sortConfig, selectedClientId, selectedWarehouse, selectedStatus, selectedSemaforo, clients, allEquipments]);
+    return filteredCedulas;
+  }, [cedulas, allEquipments, clients, sortConfig, selectedClientId, selectedWarehouse, selectedStatus, selectedSemaforo]);
 
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -292,6 +300,12 @@ export default function CedulasPage() {
                      </Button>
                   </TableHead>
                   <TableHead className="hidden md:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('system' as SortableKey)}>
+                      Sistema
+                      {getSortIcon('system' as SortableKey)}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
                     <Button variant="ghost" onClick={() => requestSort('equipment')}>
                       Equipo
                       {getSortIcon('equipment')}
@@ -341,6 +355,7 @@ export default function CedulasPage() {
                     <TableRow onClick={() => handleToggleDetails(cedula.id)} className="cursor-pointer">
                       <TableCell className="font-medium">{cedula.folio}</TableCell>
                       <TableCell>{cedula.client}</TableCell>
+                      <TableCell className="hidden md:table-cell">{cedula.system}</TableCell>
                       <TableCell className="hidden md:table-cell">{cedula.equipment}</TableCell>
                       <TableCell className="hidden lg:table-cell">{cedula.technician}</TableCell>
                       <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
@@ -386,7 +401,7 @@ export default function CedulasPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                      <TableCell>
                           <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(cedula.id)}>
                             <ChevronDown className={cn("h-4 w-4 transition-transform", expandedCedulaId === cedula.id && "rotate-180")} />
                             <span className="sr-only">Ver detalles</span>
@@ -395,7 +410,7 @@ export default function CedulasPage() {
                     </TableRow>
                     {expandedCedulaId === cedula.id && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={10} className="p-0">
+                            <TableCell colSpan={11} className="p-0">
                                 <div className="p-4">
                                 <Card className="shadow-inner">
                                     <CardHeader>
@@ -442,11 +457,15 @@ export default function CedulasPage() {
                                                                 <div className="flex items-center gap-4">
                                                                     <div>
                                                                         <Label className="font-semibold">Progreso</Label>
-                                                                        <div><Badge variant="secondary">{step.completion}%</Badge></div>
+                                                                        <div>
+                                                                            <Badge variant="secondary">{step.completion}%</Badge>
+                                                                        </div>
                                                                     </div>
                                                                     <div>
                                                                         <Label className="font-semibold">Prioridad</Label>
-                                                                        <div><Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge></div>
+                                                                        <div>
+                                                                            <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -500,5 +519,3 @@ export default function CedulasPage() {
     </>
   );
 }
-
-    
