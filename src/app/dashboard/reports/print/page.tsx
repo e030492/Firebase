@@ -35,10 +35,17 @@ function ReportContent() {
     const ids = idsParam ? idsParam.split(',').filter(id => id) : [];
     
     if (ids.length > 0) {
-      const allCedulas: Cedula[] = JSON.parse(localStorage.getItem(CEDULAS_STORAGE_KEY) || JSON.stringify(mockCedulas));
-      const allEquipments: Equipment[] = JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || JSON.stringify(mockEquipments));
-      const allClients: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || JSON.stringify(mockClients));
-      const allSystems: System[] = JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || JSON.stringify(mockSystems));
+      const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
+      const allCedulas: Cedula[] = storedCedulas ? JSON.parse(storedCedulas) : mockCedulas;
+
+      const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
+      const allEquipments: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : mockEquipments;
+
+      const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
+      const allClients: Client[] = storedClients ? JSON.parse(storedClients) : mockClients;
+
+      const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
+      const allSystems: System[] = storedSystems ? JSON.parse(storedSystems) : mockSystems;
 
       const enrichedData = ids.map(id => {
         const cedula = allCedulas.find(c => c.id === id);
