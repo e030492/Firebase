@@ -484,7 +484,7 @@ export default function CedulasPage() {
                                                             <div className="space-y-2">
                                                                 <Label className="font-semibold">Evidencia Fotográfica</Label>
                                                                 {step.imageUrl ? (
-                                                                    <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video border" />
+                                                                    <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video border w-full" />
                                                                 ) : (
                                                                     <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
                                                                         <div className="text-center text-muted-foreground">
