@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, Fragment } from 'react';
@@ -39,7 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, Camera } from 'lucide-react';
-import { mockCedulas, mockClients, mockEquipments } from '@/lib/mock-data';
+import { mockCedulas, mockClients, mockEquipments, mockSystems } from '@/lib/mock-data';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -47,16 +46,19 @@ import { Separator } from '@/components/ui/separator';
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
+const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
+type System = typeof mockSystems[0];
 type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo' | 'system';
 
 export default function CedulasPage() {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
@@ -83,6 +85,9 @@ export default function CedulasPage() {
     
     const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
     setAllEquipments(storedEquipments ? JSON.parse(storedEquipments) : mockEquipments);
+
+    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
+    setSystems(storedSystems ? JSON.parse(storedSystems) : mockSystems);
   }, []);
 
   useEffect(() => {
@@ -99,9 +104,12 @@ export default function CedulasPage() {
   const filteredAndSortedCedulas = useMemo(() => {
     const augmentedCedulas = cedulas.map(cedula => {
       const equipment = allEquipments.find(eq => eq.name === cedula.equipment && eq.client === cedula.client);
+      const systemName = equipment?.system || '';
+      const systemInfo = systems.find(s => s.name === systemName);
       return {
         ...cedula,
-        system: equipment?.system || '',
+        system: systemName,
+        systemColor: systemInfo?.color,
       };
     });
   
@@ -142,7 +150,7 @@ export default function CedulasPage() {
       });
     }
     return filteredCedulas;
-  }, [cedulas, allEquipments, clients, sortConfig, selectedClientId, selectedWarehouse, selectedStatus, selectedSemaforo]);
+  }, [cedulas, allEquipments, clients, systems, sortConfig, selectedClientId, selectedWarehouse, selectedStatus, selectedSemaforo]);
 
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -355,7 +363,11 @@ export default function CedulasPage() {
                     <TableRow onClick={() => handleToggleDetails(cedula.id)} className="cursor-pointer">
                       <TableCell className="font-medium">{cedula.folio}</TableCell>
                       <TableCell>{cedula.client}</TableCell>
-                      <TableCell className="hidden md:table-cell">{cedula.system}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <span className="font-medium" style={{ color: cedula.systemColor }}>
+                          {cedula.system}
+                        </span>
+                      </TableCell>
                       <TableCell className="hidden md:table-cell">{cedula.equipment}</TableCell>
                       <TableCell className="hidden lg:table-cell">{cedula.technician}</TableCell>
                       <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
@@ -401,7 +413,7 @@ export default function CedulasPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(cedula.id)}>
                             <ChevronDown className={cn("h-4 w-4 transition-transform", expandedCedulaId === cedula.id && "rotate-180")} />
                             <span className="sr-only">Ver detalles</span>
