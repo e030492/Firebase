@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,6 +16,12 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Select,
   SelectContent,
@@ -39,6 +49,8 @@ export default function NewEquipmentPage() {
   const [systemId, setSystemId] = useState('');
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState('Activo');
+  const [maintenanceStartDate, setMaintenanceStartDate] = useState<Date>();
+  const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date>();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -72,6 +84,8 @@ export default function NewEquipmentPage() {
       system: systemName,
       location,
       status: status as Equipment['status'],
+      maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
+      nextMaintenanceDate: nextMaintenanceDate ? format(nextMaintenanceDate, 'yyyy-MM-dd') : '',
     };
 
     equipments.push(newEquipment);
@@ -151,6 +165,60 @@ export default function NewEquipmentPage() {
                   </Select>
                  </div>
                </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                    <Label htmlFor="maintenanceStartDate">Fecha de Inicio de Mantenimiento</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !maintenanceStartDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {maintenanceStartDate ? format(maintenanceStartDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={maintenanceStartDate}
+                                onSelect={setMaintenanceStartDate}
+                                initialFocus
+                                locale={es}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                <div className="grid gap-3">
+                    <Label htmlFor="nextMaintenanceDate">Siguiente Mantenimiento</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !nextMaintenanceDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {nextMaintenanceDate ? format(nextMaintenanceDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={nextMaintenanceDate}
+                                onSelect={setNextMaintenanceDate}
+                                initialFocus
+                                locale={es}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">

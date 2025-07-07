@@ -94,7 +94,9 @@ export const mockEquipments = [
     client: 'Acme Corp',
     system: 'Circuito Cerrado de Televisión (CCTV)',
     location: 'Almacén Central - Puerta Principal',
-    status: 'Activo',
+    status: 'Activo' as const,
+    maintenanceStartDate: '2024-01-15',
+    nextMaintenanceDate: '2025-01-15',
   },
   {
     id: '2',
@@ -103,7 +105,9 @@ export const mockEquipments = [
     client: 'Soluciones Tech',
     system: 'Sistema de Control de Acceso',
     location: 'Oficina Principal - Entrada',
-    status: 'Activo',
+    status: 'Activo' as const,
+    maintenanceStartDate: '2023-11-20',
+    nextMaintenanceDate: '2024-11-20',
   },
   {
     id: '3',
@@ -112,7 +116,9 @@ export const mockEquipments = [
     client: 'Innovate Co.',
     system: 'Sistema de Detección de Incendios',
     location: 'Sala de Servidores',
-    status: 'En Mantenimiento',
+    status: 'En Mantenimiento' as const,
+    maintenanceStartDate: '2024-07-01',
+    nextMaintenanceDate: '2025-01-01',
   },
     {
     id: '4',
@@ -121,6 +127,8 @@ export const mockEquipments = [
     client: 'Guardianes Nocturnos Ltda.',
     system: 'Alarma de Intrusión Perimetral',
     location: 'Barda Norte',
-    status: 'Inactivo',
+    status: 'Inactivo' as const,
+    maintenanceStartDate: '2022-05-10',
+    nextMaintenanceDate: '2024-05-10',
   },
 ];

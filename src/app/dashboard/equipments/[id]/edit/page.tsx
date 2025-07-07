@@ -3,6 +3,10 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -14,6 +18,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -21,7 +31,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
 
@@ -45,6 +54,8 @@ export default function EditEquipmentPage() {
   const [systemId, setSystemId] = useState('');
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
+  const [maintenanceStartDate, setMaintenanceStartDate] = useState<Date>();
+  const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date>();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -71,6 +82,13 @@ export default function EditEquipmentPage() {
         setDescription(foundEquipment.description);
         setLocation(foundEquipment.location);
         setStatus(foundEquipment.status);
+        
+        if (foundEquipment.maintenanceStartDate) {
+          setMaintenanceStartDate(new Date(foundEquipment.maintenanceStartDate + 'T00:00:00'));
+        }
+        if (foundEquipment.nextMaintenanceDate) {
+          setNextMaintenanceDate(new Date(foundEquipment.nextMaintenanceDate + 'T00:00:00'));
+        }
         
         const foundClient = allClients.find(c => c.name === foundEquipment.client);
         if (foundClient) setClientId(foundClient.id);
@@ -106,6 +124,8 @@ export default function EditEquipmentPage() {
           system: systemName,
           location,
           status: status as Equipment['status'],
+          maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
+          nextMaintenanceDate: nextMaintenanceDate ? format(nextMaintenanceDate, 'yyyy-MM-dd') : '',
         };
       }
       return eq;
@@ -165,6 +185,16 @@ export default function EditEquipmentPage() {
                    <Skeleton className="h-10 w-full" />
                  </div>
                </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid gap-3">
+                    <Label>Fecha de Inicio de Mantenimiento</Label>
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="grid gap-3">
+                    <Label>Siguiente Mantenimiento</Label>
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
@@ -266,6 +296,60 @@ export default function EditEquipmentPage() {
                   </Select>
                  </div>
                </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                    <Label htmlFor="maintenanceStartDate">Fecha de Inicio de Mantenimiento</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !maintenanceStartDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {maintenanceStartDate ? format(maintenanceStartDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={maintenanceStartDate}
+                                onSelect={setMaintenanceStartDate}
+                                initialFocus
+                                locale={es}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                <div className="grid gap-3">
+                    <Label htmlFor="nextMaintenanceDate">Siguiente Mantenimiento</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !nextMaintenanceDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {nextMaintenanceDate ? format(nextMaintenanceDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={nextMaintenanceDate}
+                                onSelect={setNextMaintenanceDate}
+                                initialFocus
+                                locale={es}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">

@@ -100,7 +100,9 @@ export default function EquipmentsPage() {
                   <TableHead>Nombre</TableHead>
                   <TableHead className="hidden md:table-cell">Cliente</TableHead>
                   <TableHead className="hidden lg:table-cell">Sistema</TableHead>
-                  <TableHead className="hidden lg:table-cell">Estado</TableHead>
+                  <TableHead className="hidden md:table-cell">Estado</TableHead>
+                  <TableHead className="hidden lg:table-cell">Inicio Mant.</TableHead>
+                  <TableHead className="hidden lg:table-cell">Próximo Mant.</TableHead>
                   <TableHead>
                     <span className="sr-only">Acciones</span>
                   </TableHead>
@@ -112,8 +114,14 @@ export default function EquipmentsPage() {
                     <TableCell className="font-medium">{equipment.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
                     <TableCell className="hidden lg:table-cell">{equipment.system}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell className="hidden md:table-cell">
                       <Badge variant={getStatusBadgeVariant(equipment.status)}>{equipment.status}</Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {equipment.maintenanceStartDate ? new Date(equipment.maintenanceStartDate + 'T00:00:00').toLocaleDateString('es-ES') : 'N/A'}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {equipment.nextMaintenanceDate ? new Date(equipment.nextMaintenanceDate + 'T00:00:00').toLocaleDateString('es-ES') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
