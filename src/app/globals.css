@@ -84,3 +84,18 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+@media print {
+  /* Hide dashboard navigation and header when printing */
+  div[data-sidebar="sidebar"],
+  header,
+  div[data-sidebar="rail"] {
+    display: none !important;
+  }
+
+  /* Make the main content take up the full page */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

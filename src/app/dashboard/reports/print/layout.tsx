@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import '@/app/globals.css';
 
 export const metadata: Metadata = {
   title: 'Reporte de Mantenimiento - Guardian Shield',
@@ -11,19 +10,8 @@ export default function PrintLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html lang="es">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="bg-gray-200 print:bg-white font-body antialiased">
-        {children}
-      </body>
-    </html>
-  );
+  // This layout is nested within the main dashboard layout.
+  // It must not contain <html>, <head>, or <body> tags.
+  // Print-specific styles are handled in globals.css
+  return <>{children}</>;
 }
