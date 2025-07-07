@@ -34,14 +34,29 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { mockCedulas } from '@/lib/mock-data';
+import { mockCedulas, mockClients, mockEquipments } from '@/lib/mock-data';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
+const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
+const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
+
 type Cedula = typeof mockCedulas[0];
+type Client = typeof mockClients[0];
+type Equipment = typeof mockEquipments[0];
 type SortableKey = keyof Omit<Cedula, 'id' | 'description'>;
 
 export default function CedulasPage() {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
+  const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
+
   const [cedulaToDelete, setCedulaToDelete] = useState<Cedula | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'folio', direction: 'ascending' });
 
@@ -53,10 +68,43 @@ export default function CedulasPage() {
       localStorage.setItem(CEDULAS_STORAGE_KEY, JSON.stringify(mockCedulas));
       setCedulas(mockCedulas);
     }
+    
+    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
+    setClients(storedClients ? JSON.parse(storedClients) : mockClients);
+    
+    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
+    setAllEquipments(storedEquipments ? JSON.parse(storedEquipments) : mockEquipments);
   }, []);
 
-  const sortedCedulas = useMemo(() => {
-    let sortableItems = [...cedulas];
+  useEffect(() => {
+    if (selectedClientId) {
+        const client = clients.find(c => c.id === selectedClientId);
+        setClientWarehouses(client?.almacenes.map(a => a.nombre) || []);
+        setSelectedWarehouse(''); // Reset warehouse selection
+    } else {
+        setClientWarehouses([]);
+        setSelectedWarehouse('');
+    }
+  }, [selectedClientId, clients]);
+
+  const filteredAndSortedCedulas = useMemo(() => {
+    let filteredCedulas = [...cedulas];
+
+    if (selectedClientId) {
+      const clientName = clients.find(c => c.id === selectedClientId)?.name;
+      if (clientName) {
+        filteredCedulas = filteredCedulas.filter(c => c.client === clientName);
+
+        if (selectedWarehouse) {
+          filteredCedulas = filteredCedulas.filter(cedula => {
+            const equipment = allEquipments.find(eq => eq.name === cedula.equipment && eq.client === clientName);
+            return equipment?.location === selectedWarehouse;
+          });
+        }
+      }
+    }
+    
+    let sortableItems = filteredCedulas;
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -69,7 +117,7 @@ export default function CedulasPage() {
       });
     }
     return sortableItems;
-  }, [cedulas, sortConfig]);
+  }, [cedulas, sortConfig, selectedClientId, selectedWarehouse, clients, allEquipments]);
 
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -130,6 +178,41 @@ export default function CedulasPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+               <div className="grid gap-2">
+                 <Label htmlFor="client">Filtrar por Cliente</Label>
+                 <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? '' : value)} value={selectedClientId || 'all'}>
+                   <SelectTrigger id="client">
+                     <SelectValue placeholder="Todos los clientes" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Todos los clientes</SelectItem>
+                     {clients.map(client => (
+                       <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+               <div className="grid gap-2">
+                 <Label htmlFor="warehouse">Filtrar por Almacén</Label>
+                 <Select 
+                    onValueChange={(value) => setSelectedWarehouse(value === 'all' ? '' : value)} 
+                    value={selectedWarehouse || 'all'}
+                    disabled={!selectedClientId}
+                  >
+                   <SelectTrigger id="warehouse">
+                     <SelectValue placeholder="Todos los almacenes" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">Todos los almacenes</SelectItem>
+                     {clientWarehouses.map(warehouse => (
+                       <SelectItem key={warehouse} value={warehouse}>{warehouse}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+            </div>
+            <Separator className="mb-6"/>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -175,7 +258,7 @@ export default function CedulasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedCedulas.map((cedula) => (
+                {filteredAndSortedCedulas.map((cedula) => (
                   <TableRow key={cedula.id}>
                     <TableCell className="font-medium">{cedula.folio}</TableCell>
                     <TableCell>{cedula.client}</TableCell>
