@@ -76,6 +76,7 @@ export default function NewSystemPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
+                  style={{ color: color, fontWeight: 'bold' }}
                 />
               </div>
               <div className="grid gap-3">

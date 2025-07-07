@@ -143,7 +143,7 @@ export default function SystemsPage() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
                         <span className="h-3 w-3 rounded-full border" style={{ backgroundColor: system.color }} />
-                        {system.name}
+                        <span style={{ color: system.color }}>{system.name}</span>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{system.description}</TableCell>

@@ -145,7 +145,7 @@ export default function EditSystemPage() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="nombre">Nombre del Sistema</Label>
-                <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required style={{ color: color, fontWeight: 'bold' }} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
