@@ -4,24 +4,28 @@ export const mockUsers = [
     name: 'Admin User',
     email: 'admin@guardianshield.com',
     role: 'Administrador',
+    password: 'admin',
   },
   {
     id: '2',
     name: 'Technician Uno',
     email: 'tech1@guardianshield.com',
     role: 'Técnico',
+    password: 'tech1',
   },
   {
     id: '3',
     name: 'Technician Dos',
     email: 'tech2@guardianshield.com',
     role: 'Técnico',
+    password: 'tech2',
   },
     {
     id: '4',
     name: 'Supervisor General',
     email: 'supervisor@guardianshield.com',
     role: 'Supervisor',
+    password: 'super',
   },
 ];
 

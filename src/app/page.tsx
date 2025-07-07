@@ -1,6 +1,8 @@
-import { ShieldCheck } from 'lucide-react';
-import Link from 'next/link';
+"use client";
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,8 +14,42 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { mockUsers } from '@/lib/mock-data';
+
+const USERS_STORAGE_KEY = 'guardian_shield_users';
+type User = typeof mockUsers[0];
+
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Ensure mock users are in localStorage on first load
+    if (!localStorage.getItem(USERS_STORAGE_KEY)) {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(mockUsers));
+    }
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    const users: User[] = storedUsers ? JSON.parse(storedUsers) : mockUsers;
+
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (user && user.password === password) {
+      router.push('/dashboard');
+    } else {
+      setError('Email o contraseña incorrectos.');
+    }
+  };
+
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
@@ -27,25 +63,26 @@ export default function LoginPage() {
           <p className="text-muted-foreground">Control de Mantenimiento de Seguridad</p>
         </div>
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Iniciar Sesión</CardTitle>
-            <CardDescription>Ingrese sus credenciales para acceder al sistema.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="usuario@ejemplo.com" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" required />
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Link href="/dashboard" className="w-full">
-              <Button className="w-full">Acceder</Button>
-            </Link>
-          </CardFooter>
+          <form onSubmit={handleLogin}>
+            <CardHeader>
+              <CardTitle>Iniciar Sesión</CardTitle>
+              <CardDescription>Ingrese sus credenciales para acceder al sistema.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+              </div>
+              {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full">Acceder</Button>
+            </CardFooter>
+          </form>
         </Card>
       </div>
     </main>

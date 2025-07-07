@@ -22,6 +22,7 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockUsers } from '@/lib/mock-data';
+import { Separator } from '@/components/ui/separator';
 
 const USERS_STORAGE_KEY = 'guardian_shield_users';
 type User = typeof mockUsers[0];
@@ -46,6 +47,8 @@ export default function EditUserPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -68,17 +71,26 @@ export default function EditUserPage() {
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (password && password !== confirmPassword) {
+        alert('Las nuevas contraseñas no coinciden.');
+        return;
+    }
+    
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
 
     const updatedUsers = users.map(u => {
       if (u.id === userId) {
-        return {
+        const updatedUser: User = {
           ...u,
           name,
           email,
           role: valueToRoleMap[role] || u.role,
         };
+        if (password) {
+            updatedUser.password = password;
+        }
+        return updatedUser;
       }
       return u;
     });
@@ -181,6 +193,15 @@ export default function EditUserPage() {
                     <SelectItem value="supervisor">Supervisor</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <Separator />
+               <div className="grid gap-3">
+                <Label htmlFor="password">Nueva Contraseña (opcional)</Label>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Dejar en blanco para no cambiar" />
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
               </div>
             </div>
           </CardContent>

@@ -36,12 +36,19 @@ export default function NewUserPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !role) {
+    if (!name || !email || !role || !password) {
       alert('Por favor, complete todos los campos.');
       return;
+    }
+
+    if (password !== confirmPassword) {
+        alert('Las contraseñas no coinciden.');
+        return;
     }
 
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
@@ -52,6 +59,7 @@ export default function NewUserPage() {
       name,
       email,
       role: valueToRoleMap[role],
+      password,
     };
 
     users.push(newUser);
@@ -101,6 +109,14 @@ export default function NewUserPage() {
                     <SelectItem value="supervisor">Supervisor</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+              </div>
+               <div className="grid gap-3">
+                <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
               </div>
             </div>
           </CardContent>
