@@ -266,12 +266,12 @@ export default function ProtocolsPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
                  <div className="grid gap-2">
                    <Label htmlFor="client">Filtrar por Cliente</Label>
-                   <Select onValueChange={(value) => setSelectedClientId(value === 'all-clients' ? '' : value)} value={selectedClientId}>
+                   <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? '' : value)} value={selectedClientId || 'all'}>
                      <SelectTrigger id="client">
                        <SelectValue placeholder="Todos los clientes" />
                      </SelectTrigger>
                      <SelectContent>
-                       <SelectItem value="all-clients">Todos los clientes</SelectItem>
+                       <SelectItem value="all">Todos los clientes</SelectItem>
                        {clients.map(client => (
                          <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                        ))}
@@ -280,12 +280,12 @@ export default function ProtocolsPage() {
                  </div>
                  <div className="grid gap-2">
                    <Label htmlFor="system">Filtrar por Sistema</Label>
-                   <Select onValueChange={(value) => setSelectedSystemId(value === 'all-systems' ? '' : value)} value={selectedSystemId}>
+                   <Select onValueChange={(value) => setSelectedSystemId(value === 'all' ? '' : value)} value={selectedSystemId || 'all'}>
                      <SelectTrigger id="system">
                        <SelectValue placeholder="Todos los sistemas" />
                      </SelectTrigger>
                      <SelectContent>
-                       <SelectItem value="all-systems">Todos los sistemas</SelectItem>
+                       <SelectItem value="all">Todos los sistemas</SelectItem>
                        {systems.map(system => (
                          <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
                        ))}
@@ -317,14 +317,14 @@ export default function ProtocolsPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem asChild>
-                                        <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
-                                            <Wand2 className="mr-2 h-4 w-4" />
-                                            <span>{equipmentProtocols.length > 0 ? 'Modificar con IA' : 'Ir a Generador IA'}</span>
-                                        </Link>
-                                    </DropdownMenuItem>
-                                    {equipmentProtocols.length > 0 && (
+                                    {equipmentProtocols.length > 0 ? (
                                         <>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                                    <Wand2 className="mr-2 h-4 w-4" />
+                                                    <span>Modificar con IA</span>
+                                                </Link>
+                                            </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
                                                 className="text-destructive focus:text-destructive"
@@ -334,6 +334,18 @@ export default function ProtocolsPage() {
                                                 <span>Eliminar protocolo</span>
                                             </DropdownMenuItem>
                                         </>
+                                    ) : (
+                                        <DropdownMenuItem 
+                                            onSelect={() => handleGenerateProtocol(equipment)} 
+                                            disabled={!!isGenerating}
+                                        >
+                                            {isGenerating === equipment.id ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Wand2 className="mr-2 h-4 w-4" />
+                                            )}
+                                            <span>{isGenerating === equipment.id ? 'Generando...' : 'Generar con IA'}</span>
+                                        </DropdownMenuItem>
                                     )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -384,20 +396,9 @@ export default function ProtocolsPage() {
                             </TableBody>
                           </Table>
                         ) : (
-                          <div className="text-muted-foreground px-4 py-2 flex flex-col items-center justify-center text-center gap-2">
+                          <div className="text-muted-foreground px-4 py-8 flex flex-col items-center justify-center text-center gap-2">
                             <p>No hay un protocolo de mantenimiento definido para este equipo.</p>
-                            <Button
-                                variant="outline"
-                                onClick={() => handleGenerateProtocol(equipment)}
-                                disabled={!!isGenerating}
-                            >
-                                {isGenerating === equipment.id ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                <Wand2 className="mr-2 h-4 w-4" />
-                                )}
-                                {isGenerating === equipment.id ? 'Generando...' : 'Generar con IA'}
-                            </Button>
+                            <p className="text-sm">Usa el menú de acciones para generar uno con IA.</p>
                           </div>
                         )}
                       </AccordionContent>

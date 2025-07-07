@@ -116,6 +116,7 @@ export default function NewProtocolPage() {
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentDescription, setEquipmentDescription] = useState('');
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
+  const [isModificationMode, setIsModificationMode] = useState(false);
   
   // Load initial data from localStorage
   useEffect(() => {
@@ -130,6 +131,7 @@ export default function NewProtocolPage() {
     if (equipmentIdParam && allEquipments.length && clients.length && systems.length) {
         const equipment = allEquipments.find(e => e.id === equipmentIdParam);
         if (equipment) {
+            setIsModificationMode(true);
             const client = clients.find(c => c.name === equipment.client);
             const system = systems.find(s => s.name === equipment.system);
 
@@ -144,7 +146,7 @@ export default function NewProtocolPage() {
             setEquipmentDescription(equipment.description);
         }
     }
-}, [searchParams, allEquipments, clients, systems]);
+  }, [searchParams, allEquipments, clients, systems]);
 
 
   // Filter equipments when client or system changes
@@ -236,9 +238,7 @@ export default function NewProtocolPage() {
     
     const existingProtocolIndex = protocols.findIndex(p => p.equipmentId === selectedEquipmentId);
     if (existingProtocolIndex > -1) {
-      // Here we could decide to append or replace. Replacing seems more intuitive for a "save" action.
       protocols[existingProtocolIndex].steps.push(...selectedSteps);
-      // Remove duplicates
       const uniqueSteps = Array.from(new Map(protocols[existingProtocolIndex].steps.map(item => [item.step, item])).values());
       protocols[existingProtocolIndex].steps = uniqueSteps;
 
@@ -272,9 +272,12 @@ export default function NewProtocolPage() {
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
       {/* Page Header */}
       <div className="grid gap-2">
-        <h1 className="font-headline text-3xl font-bold">Generador de Protocolos (IA)</h1>
+        <h1 className="font-headline text-3xl font-bold">{isModificationMode ? 'Modificar Protocolo (IA)' : 'Generador de Protocolos (IA)'}</h1>
         <p className="text-muted-foreground">
-          Filtre por equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.
+          {isModificationMode 
+            ? 'La IA sugerirá pasos adicionales para el equipo seleccionado. Puede agregarlos al protocolo existente.' 
+            : 'Filtre por equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.'
+          }
         </p>
       </div>
 
@@ -283,14 +286,14 @@ export default function NewProtocolPage() {
         <form action={formAction}>
           <CardHeader>
             <CardTitle>Detalles del Equipo</CardTitle>
-            <CardDescription>Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.</CardDescription>
+            <CardDescription>{isModificationMode ? 'Los detalles del equipo no se pueden cambiar en modo de modificación.' : 'Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.'}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
             {/* Filters */}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                <div className="grid gap-3">
                  <Label htmlFor="client">Cliente</Label>
-                 <Select onValueChange={handleClientChange} value={clientId}>
+                 <Select onValueChange={handleClientChange} value={clientId} disabled={isModificationMode}>
                    <SelectTrigger>
                      <SelectValue placeholder="Seleccione un cliente" />
                    </SelectTrigger>
@@ -303,7 +306,7 @@ export default function NewProtocolPage() {
                </div>
                <div className="grid gap-3">
                  <Label htmlFor="system">Sistema</Label>
-                 <Select onValueChange={handleSystemChange} value={systemId} disabled={!clientId}>
+                 <Select onValueChange={handleSystemChange} value={systemId} disabled={!clientId || isModificationMode}>
                    <SelectTrigger>
                      <SelectValue placeholder="Seleccione un sistema" />
                    </SelectTrigger>
@@ -316,7 +319,7 @@ export default function NewProtocolPage() {
                </div>
                <div className="grid gap-3">
                  <Label htmlFor="equipment">Seleccionar Equipo (Opcional)</Label>
-                 <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId}>
+                 <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId || isModificationMode}>
                    <SelectTrigger>
                      <SelectValue placeholder="Seleccione un equipo..." />
                    </SelectTrigger>
@@ -338,6 +341,7 @@ export default function NewProtocolPage() {
                 onChange={e => setEquipmentName(e.target.value)}
                 placeholder="Ej. Cámara IP Domo PTZ"
                 required
+                readOnly={isModificationMode}
               />
             </div>
             <div className="grid gap-3">
@@ -350,6 +354,7 @@ export default function NewProtocolPage() {
                 placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
                 required
                 className="min-h-32"
+                readOnly={isModificationMode}
               />
             </div>
           </CardContent>
