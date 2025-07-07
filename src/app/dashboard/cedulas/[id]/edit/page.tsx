@@ -539,7 +539,7 @@ export default function EditCedulaPage() {
                                         value={completionPercentages[step.step] || '0'}
                                         onValueChange={(value) => handlePercentageChange(step.step, value)}
                                     >
-                                        <SelectTrigger id={`step-percentage-${index}`}>
+                                        <SelectTrigger id={`step-percentage-${index}`} className="w-auto">
                                             <SelectValue placeholder="% Ejecutado" />
                                         </SelectTrigger>
                                         <SelectContent>
