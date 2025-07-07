@@ -407,15 +407,22 @@ export default function NewCedulaPage() {
                                 </div>
                                 <div className="grid gap-3">
                                     <Label htmlFor={`step-percentage-${index}`}>% Ejecutado</Label>
-                                    <Input
-                                        id={`step-percentage-${index}`}
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        placeholder="% Ejecutado"
-                                        value={completionPercentages[step.step] || ''}
-                                        onChange={(e) => handlePercentageChange(step.step, e.target.value)}
-                                    />
+                                    <Select
+                                        value={completionPercentages[step.step] || '0'}
+                                        onValueChange={(value) => handlePercentageChange(step.step, value)}
+                                    >
+                                        <SelectTrigger id={`step-percentage-${index}`}>
+                                            <SelectValue placeholder="% Ejecutado" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">0%</SelectItem>
+                                            <SelectItem value="20">20%</SelectItem>
+                                            <SelectItem value="40">40%</SelectItem>
+                                            <SelectItem value="60">60%</SelectItem>
+                                            <SelectItem value="80">80%</SelectItem>
+                                            <SelectItem value="100">100%</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                              <div className="grid gap-3 mt-4">
