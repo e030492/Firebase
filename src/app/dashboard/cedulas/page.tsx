@@ -185,7 +185,7 @@ export default function CedulasPage() {
   };
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => prevId === cedulaId ? null : prevId);
+    setExpandedCedulaId(prevId => prevId === cedulaId ? null : cedulaId);
   };
 
 
@@ -313,7 +313,7 @@ export default function CedulasPage() {
               <TableBody>
                 {filteredAndSortedCedulas.map((cedula) => (
                   <Fragment key={cedula.id}>
-                    <TableRow className="cursor-pointer" onClick={() => handleToggleDetails(cedula.id)}>
+                    <TableRow>
                       <TableCell className="font-medium">{cedula.folio}</TableCell>
                       <TableCell>{cedula.client}</TableCell>
                       <TableCell className="hidden md:table-cell">{cedula.equipment}</TableCell>
@@ -325,7 +325,7 @@ export default function CedulasPage() {
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                      <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -348,8 +348,10 @@ export default function CedulasPage() {
                         </DropdownMenu>
                       </TableCell>
                       <TableCell>
-                          <ChevronDown className={cn("h-4 w-4 transition-transform mx-auto", expandedCedulaId === cedula.id && "rotate-180")} />
-                          <span className="sr-only">Ver detalles</span>
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(cedula.id)}>
+                            <ChevronDown className={cn("h-4 w-4 transition-transform", expandedCedulaId === cedula.id && "rotate-180")} />
+                            <span className="sr-only">Ver detalles</span>
+                          </Button>
                       </TableCell>
                     </TableRow>
                     {expandedCedulaId === cedula.id && (
