@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -23,8 +24,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Edit, Trash2, MoreVertical, Wand2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2 } from 'lucide-react';
 import { mockEquipments, mockProtocols, mockClients, mockSystems } from '@/lib/mock-data';
+import { suggestMaintenanceProtocol } from '@/ai/flows/suggest-maintenance-protocol';
 import {
   Dialog,
   DialogContent,
@@ -88,6 +90,9 @@ export default function ProtocolsPage() {
   const [systems, setSystems] = useState<System[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
+  
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load Equipments
@@ -203,6 +208,41 @@ export default function ProtocolsPage() {
     setEquipmentToDelete(null);
   };
 
+  const handleGenerateProtocol = async (equipment: Equipment) => {
+    setIsGenerating(equipment.id);
+    setGenerationError(null);
+
+    try {
+      const result = await suggestMaintenanceProtocol({
+        equipmentName: equipment.name,
+        equipmentDescription: equipment.description,
+      });
+
+      if (result && result.length > 0) {
+        const newProtocol: Protocol = {
+          equipmentId: equipment.id,
+          steps: result,
+        };
+        
+        setProtocols(prevProtocols => {
+            const updatedProtocols = [...prevProtocols, newProtocol];
+            localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(updatedProtocols));
+            return updatedProtocols;
+        });
+
+      } else {
+        alert("La IA no pudo generar un protocolo para este equipo.");
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      setGenerationError(`Error al generar el protocolo: ${errorMessage}`);
+      alert(`Error al generar el protocolo. Por favor, inténtelo de nuevo.`);
+      console.error("Error generating protocol:", error);
+    } finally {
+      setIsGenerating(null);
+    }
+  };
+
 
   return (
     <>
@@ -217,7 +257,7 @@ export default function ProtocolsPage() {
           <Link href="/dashboard/protocols/new">
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Generar Protocolo con IA
+              Crear/Modificar Protocolo
             </Button>
           </Link>
         </div>
@@ -254,7 +294,7 @@ export default function ProtocolsPage() {
                  </div>
             </div>
             <Separator className="mb-6"/>
-
+            {generationError && <p className="text-destructive text-sm text-center mb-4">{generationError}</p>}
             <Accordion type="single" collapsible className="w-full">
               {filteredEquipments.length > 0 ? (
                 filteredEquipments.map(equipment => {
@@ -280,7 +320,7 @@ export default function ProtocolsPage() {
                                     <DropdownMenuItem asChild>
                                         <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
                                             <Wand2 className="mr-2 h-4 w-4" />
-                                            <span>{equipmentProtocols.length > 0 ? 'Modificar con IA' : 'Generar con IA'}</span>
+                                            <span>{equipmentProtocols.length > 0 ? 'Modificar con IA' : 'Ir a Generador IA'}</span>
                                         </Link>
                                     </DropdownMenuItem>
                                     {equipmentProtocols.length > 0 && (
@@ -346,12 +386,18 @@ export default function ProtocolsPage() {
                         ) : (
                           <div className="text-muted-foreground px-4 py-2 flex flex-col items-center justify-center text-center gap-2">
                             <p>No hay un protocolo de mantenimiento definido para este equipo.</p>
-                             <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
-                                <Button variant="outline">
-                                    <Wand2 className="mr-2 h-4 w-4" />
-                                    Generar con IA
-                                </Button>
-                             </Link>
+                            <Button
+                                variant="outline"
+                                onClick={() => handleGenerateProtocol(equipment)}
+                                disabled={!!isGenerating}
+                            >
+                                {isGenerating === equipment.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                <Wand2 className="mr-2 h-4 w-4" />
+                                )}
+                                {isGenerating === equipment.id ? 'Generando...' : 'Generar con IA'}
+                            </Button>
                           </div>
                         )}
                       </AccordionContent>
