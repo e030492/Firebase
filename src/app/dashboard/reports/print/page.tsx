@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ShieldCheck, Printer, X, Camera } from 'lucide-react';
 import { mockCedulas, mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
@@ -23,11 +23,13 @@ type EnrichedCedula = Cedula & { equipmentDetails?: Equipment; clientDetails?: C
 
 function ReportContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [reportCedulas, setReportCedulas] = useState<EnrichedCedula[]>([]);
   const [loading, setLoading] = useState(true);
   const [reportDate, setReportDate] = useState('');
 
   useEffect(() => {
+    // This effect runs only on the client
     setReportDate(new Date().toLocaleDateString('es-ES'));
 
     const idsParam = searchParams.get('ids');
@@ -89,7 +91,7 @@ function ReportContent() {
                     <Printer className="mr-2 h-4 w-4"/>
                     Imprimir / Guardar PDF
                 </Button>
-                <Button variant="outline" onClick={() => window.close()}>
+                <Button variant="outline" onClick={() => router.back()}>
                     <X className="mr-2 h-4 w-4"/>
                     Cerrar
                 </Button>
