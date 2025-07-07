@@ -161,7 +161,7 @@ export const mockCedulas = [
     equipment: 'Cámara Domo PTZ',
     technician: 'Technician Uno',
     supervisor: 'Supervisor General',
-    creationDate: '2024-07-20',
+    creationDate: '2024-07-20 10:30',
     status: 'Pendiente' as const,
     description: 'Revisión trimestral de la cámara de la entrada principal.'
   },
@@ -172,7 +172,7 @@ export const mockCedulas = [
     equipment: 'Lector de Tarjetas RFID',
     technician: 'Technician Dos',
     supervisor: 'Supervisor General',
-    creationDate: '2024-07-18',
+    creationDate: '2024-07-18 14:00',
     status: 'Completada' as const,
     description: 'Cambio de batería y limpieza de lector.'
   },
@@ -183,7 +183,7 @@ export const mockCedulas = [
     equipment: 'Detector de Humo Fotoeléctrico',
     technician: 'Technician Uno',
     supervisor: 'Supervisor General',
-    creationDate: '2024-07-15',
+    creationDate: '2024-07-15 09:00',
     status: 'En Progreso' as const,
     description: 'Pruebas de funcionamiento y limpieza de sensores.'
   },
@@ -194,7 +194,7 @@ export const mockCedulas = [
     equipment: 'Barrera Infrarroja Perimetral',
     technician: 'Technician Dos',
     supervisor: 'Supervisor General',
-    creationDate: '2024-07-21',
+    creationDate: '2024-07-21 16:45',
     status: 'Pendiente' as const,
     description: 'Alineación de haces infrarrojos y prueba de alcance.'
   },

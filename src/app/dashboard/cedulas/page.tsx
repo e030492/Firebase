@@ -291,7 +291,7 @@ export default function CedulasPage() {
                     <TableCell className="hidden lg:table-cell">{cedula.technician}</TableCell>
                     <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
                      <TableCell className="hidden md:table-cell">
-                      {new Date(cedula.creationDate + 'T00:00:00').toLocaleDateString('es-ES')}
+                      {new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>

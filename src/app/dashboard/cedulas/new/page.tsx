@@ -52,7 +52,8 @@ export default function NewCedulaPage() {
   const [equipmentId, setEquipmentId] = useState('');
   const [technicianId, setTechnicianId] = useState('');
   const [supervisorId, setSupervisorId] = useState('');
-  const [creationDate, setCreationDate] = useState<Date>(new Date());
+  const [creationDate, setCreationDate] = useState<Date | undefined>(new Date());
+  const [creationTime, setCreationTime] = useState<string>(format(new Date(), 'HH:mm'));
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Pendiente');
 
@@ -122,6 +123,11 @@ export default function NewCedulaPage() {
     const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
     const supervisorName = supervisors.find(s => s.id === supervisorId)?.name || '';
 
+    const finalDate = new Date(creationDate);
+    const [hours, minutes] = creationTime.split(':');
+    finalDate.setHours(parseInt(hours, 10));
+    finalDate.setMinutes(parseInt(minutes, 10));
+
     const newCedula: Cedula = {
       id: new Date().getTime().toString(),
       folio,
@@ -129,7 +135,7 @@ export default function NewCedulaPage() {
       equipment: equipmentName,
       technician: technicianName,
       supervisor: supervisorName,
-      creationDate: format(creationDate, 'yyyy-MM-dd'),
+      creationDate: format(finalDate, 'yyyy-MM-dd HH:mm'),
       status: status as Cedula['status'],
       description,
     };
@@ -168,31 +174,39 @@ export default function NewCedulaPage() {
                    <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required />
                  </div>
                  <div className="grid gap-3">
-                    <Label htmlFor="creationDate">Fecha de Creación</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !creationDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={creationDate}
-                                onSelect={setCreationDate}
-                                initialFocus
-                                locale={es}
-                            />
-                        </PopoverContent>
-                    </Popover>
-                </div>
+                    <Label htmlFor="creationDate">Fecha y Hora de Creación</Label>
+                    <div className="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !creationDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={creationDate}
+                                    onSelect={setCreationDate}
+                                    initialFocus
+                                    locale={es}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        <Input
+                            type="time"
+                            className="w-auto"
+                            value={creationTime}
+                            onChange={e => setCreationTime(e.target.value)}
+                        />
+                    </div>
+                  </div>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">

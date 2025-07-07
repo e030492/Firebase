@@ -59,6 +59,7 @@ export default function EditCedulaPage() {
   const [technicianId, setTechnicianId] = useState('');
   const [supervisorId, setSupervisorId] = useState('');
   const [creationDate, setCreationDate] = useState<Date>();
+  const [creationTime, setCreationTime] = useState<string>('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('');
 
@@ -100,7 +101,11 @@ export default function EditCedulaPage() {
         setFolio(foundCedula.folio);
         setDescription(foundCedula.description);
         setStatus(foundCedula.status);
-        if(foundCedula.creationDate) setCreationDate(new Date(foundCedula.creationDate + 'T00:00:00'));
+        if (foundCedula.creationDate) {
+          const dateObj = new Date(foundCedula.creationDate);
+          setCreationDate(dateObj);
+          setCreationTime(format(dateObj, 'HH:mm'));
+        }
 
         const foundClient = allClientsData.find(c => c.name === foundCedula.client);
         if (foundClient) setClientId(foundClient.id);
@@ -162,6 +167,13 @@ export default function EditCedulaPage() {
 
     const updatedCedulas = cedulas.map(c => {
       if (c.id === cedulaId) {
+        const finalDateTime = creationDate ? new Date(creationDate) : new Date();
+        if (creationTime) {
+            const [hours, minutes] = creationTime.split(':');
+            finalDateTime.setHours(parseInt(hours, 10));
+            finalDateTime.setMinutes(parseInt(minutes, 10));
+        }
+
         return {
           ...c,
           folio,
@@ -169,7 +181,7 @@ export default function EditCedulaPage() {
           equipment: equipmentName,
           technician: technicianName,
           supervisor: supervisorName,
-          creationDate: creationDate ? format(creationDate, 'yyyy-MM-dd') : '',
+          creationDate: creationDate ? format(finalDateTime, 'yyyy-MM-dd HH:mm') : '',
           status: status as Cedula['status'],
           description,
         };
@@ -201,9 +213,53 @@ export default function EditCedulaPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-32 w-full" />
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label>Folio</Label>
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="grid gap-3">
+                  <Label>Fecha y Hora de Creación</Label>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-24" />
+                  </div>
+                </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                   <Label>Cliente</Label>
+                   <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="grid gap-3">
+                   <Label>Técnico Asignado</Label>
+                   <Skeleton className="h-10 w-full" />
+                </div>
+               </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                   <Label>Sistema</Label>
+                   <Skeleton className="h-10 w-full" />
+                 </div>
+                 <div className="grid gap-3">
+                   <Label>Equipo</Label>
+                   <Skeleton className="h-10 w-full" />
+                 </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                   <Label>Estado</Label>
+                   <Skeleton className="h-10 w-full" />
+                 </div>
+                 <div className="grid gap-3">
+                   <Label>Supervisor</Label>
+                   <Skeleton className="h-10 w-full" />
+                 </div>
+              </div>
+              <div className="grid gap-3">
+                <Label>Descripción del Trabajo</Label>
+                <Skeleton className="h-32 w-full" />
+              </div>
             </div>
           </CardContent>
            <CardFooter className="border-t px-6 py-4">
@@ -252,30 +308,38 @@ export default function EditCedulaPage() {
                    <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required />
                  </div>
                  <div className="grid gap-3">
-                    <Label htmlFor="creationDate">Fecha de Creación</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !creationDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={creationDate}
-                                onSelect={setCreationDate}
-                                initialFocus
-                                locale={es}
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    <Label htmlFor="creationDate">Fecha y Hora de Creación</Label>
+                    <div className="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !creationDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={creationDate}
+                                    onSelect={setCreationDate}
+                                    initialFocus
+                                    locale={es}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        <Input
+                            type="time"
+                            className="w-auto"
+                            value={creationTime}
+                            onChange={e => setCreationTime(e.target.value)}
+                        />
+                    </div>
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
