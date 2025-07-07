@@ -54,6 +54,33 @@ const initialPermissions: Permissions = {
   cedulas: { create: false, update: false, delete: false },
 };
 
+const defaultPermissionsByRole: { [key: string]: Permissions } = {
+  admin: {
+    users: { create: true, update: true, delete: true },
+    clients: { create: true, update: true, delete: true },
+    systems: { create: true, update: true, delete: true },
+    equipments: { create: true, update: true, delete: true },
+    protocols: { create: true, update: true, delete: true },
+    cedulas: { create: true, update: true, delete: true },
+  },
+  supervisor: {
+    users: { create: false, update: false, delete: false },
+    clients: { create: true, update: true, delete: false },
+    systems: { create: true, update: true, delete: false },
+    equipments: { create: true, update: true, delete: false },
+    protocols: { create: true, update: true, delete: true },
+    cedulas: { create: true, update: true, delete: true },
+  },
+  tecnico: {
+    users: { create: false, update: false, delete: false },
+    clients: { create: false, update: false, delete: false },
+    systems: { create: false, update: false, delete: false },
+    equipments: { create: false, update: true, delete: false },
+    protocols: { create: true, update: true, delete: false },
+    cedulas: { create: true, update: true, delete: false },
+  },
+};
+
 const modules: { key: ModuleKey; label: string }[] = [
   { key: 'users', label: 'Usuarios' },
   { key: 'clients', label: 'Clientes' },
@@ -80,6 +107,12 @@ export default function NewUserPage() {
         [action]: value,
       },
     }));
+  };
+
+  const handleRoleChange = (newRoleValue: string) => {
+    setRole(newRoleValue);
+    const newPermissions = defaultPermissionsByRole[newRoleValue] || initialPermissions;
+    setPermissions(newPermissions);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -143,7 +176,7 @@ export default function NewUserPage() {
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="rol">Rol</Label>
-                 <Select onValueChange={setRole} value={role} required>
+                 <Select onValueChange={handleRoleChange} value={role} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione un rol" />
                   </SelectTrigger>
