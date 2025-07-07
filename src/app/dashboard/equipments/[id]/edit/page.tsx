@@ -56,7 +56,7 @@ export default function EditEquipmentPage() {
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
   const [maintenanceStartDate, setMaintenanceStartDate] = useState<Date>();
-  const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date>();
+  const [maintenancePeriodicity, setMaintenancePeriodicity] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const [brand, setBrand] = useState('');
@@ -98,9 +98,7 @@ export default function EditEquipmentPage() {
         if (foundEquipment.maintenanceStartDate) {
           setMaintenanceStartDate(new Date(foundEquipment.maintenanceStartDate + 'T00:00:00'));
         }
-        if (foundEquipment.nextMaintenanceDate) {
-          setNextMaintenanceDate(new Date(foundEquipment.nextMaintenanceDate + 'T00:00:00'));
-        }
+        setMaintenancePeriodicity(foundEquipment.maintenancePeriodicity || '');
         
         const foundClient = allClients.find(c => c.name === foundEquipment.client);
         if (foundClient) {
@@ -161,7 +159,7 @@ export default function EditEquipmentPage() {
           location,
           status: status as Equipment['status'],
           maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
-          nextMaintenanceDate: nextMaintenanceDate ? format(nextMaintenanceDate, 'yyyy-MM-dd') : '',
+          maintenancePeriodicity: maintenancePeriodicity,
           imageUrl: imageUrl || '',
         };
       }
@@ -246,7 +244,7 @@ export default function EditEquipmentPage() {
                     <Skeleton className="h-10 w-full" />
                   </div>
                   <div className="grid gap-3">
-                    <Label>Siguiente Mantenimiento</Label>
+                    <Label>Mantenimiento Recomendado</Label>
                     <Skeleton className="h-10 w-full" />
                   </div>
                 </div>
@@ -431,30 +429,18 @@ export default function EditEquipmentPage() {
                     </Popover>
                 </div>
                 <div className="grid gap-3">
-                    <Label htmlFor="nextMaintenanceDate">Siguiente Mantenimiento</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !nextMaintenanceDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {nextMaintenanceDate ? format(nextMaintenanceDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={nextMaintenanceDate}
-                                onSelect={setNextMaintenanceDate}
-                                initialFocus
-                                locale={es}
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    <Label htmlFor="maintenancePeriodicity">Mantenimiento Recomendado</Label>
+                    <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required>
+                        <SelectTrigger id="maintenancePeriodicity">
+                            <SelectValue placeholder="Seleccione una periodicidad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Mensual">Mensual</SelectItem>
+                            <SelectItem value="Trimestral">Trimestral</SelectItem>
+                            <SelectItem value="Semestral">Semestral</SelectItem>
+                            <SelectItem value="Anual">Anual</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
               </div>
             </div>

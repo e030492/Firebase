@@ -137,7 +137,7 @@ export const mockEquipments = [
     location: 'Almacén Central',
     status: 'Activo' as const,
     maintenanceStartDate: '2024-01-15',
-    nextMaintenanceDate: '2025-01-15',
+    maintenancePeriodicity: 'Anual',
     imageUrl: 'https://placehold.co/400x300.png',
   },
   {
@@ -153,7 +153,7 @@ export const mockEquipments = [
     location: 'Bodega Principal',
     status: 'Activo' as const,
     maintenanceStartDate: '2023-11-20',
-    nextMaintenanceDate: '2024-11-20',
+    maintenancePeriodicity: 'Anual',
     imageUrl: 'https://placehold.co/400x300.png',
   },
   {
@@ -169,7 +169,7 @@ export const mockEquipments = [
     location: 'Oficina Principal',
     status: 'En Mantenimiento' as const,
     maintenanceStartDate: '2024-07-01',
-    nextMaintenanceDate: '2025-01-01',
+    maintenancePeriodicity: 'Semestral',
     imageUrl: '',
   },
     {
@@ -185,7 +185,7 @@ export const mockEquipments = [
     location: 'Almacén Norte',
     status: 'Inactivo' as const,
     maintenanceStartDate: '2022-05-10',
-    nextMaintenanceDate: '2024-05-10',
+    maintenancePeriodicity: 'Anual',
     imageUrl: 'https://placehold.co/400x300.png',
   },
 ];

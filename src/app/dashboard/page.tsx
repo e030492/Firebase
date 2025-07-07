@@ -35,7 +35,32 @@ export default function DashboardPage() {
     setEquipmentCount(equipments.length);
 
     const nextDates = equipments
-      .map((e: any) => e.nextMaintenanceDate ? new Date(e.nextMaintenanceDate) : null)
+      .map((e: any) => {
+        if (!e.maintenanceStartDate || !e.maintenancePeriodicity) {
+            return null;
+        }
+
+        const start = new Date(e.maintenanceStartDate + 'T00:00:00');
+        if (isNaN(start.getTime())) return null;
+
+        const periods = {
+            'Mensual': 1,
+            'Trimestral': 3,
+            'Semestral': 6,
+            'Anual': 12
+        };
+
+        const monthsToAdd = periods[e.maintenancePeriodicity as keyof typeof periods];
+        if (!monthsToAdd) return null;
+
+        let nextDate = new Date(start);
+        const now = new Date();
+        
+        while (nextDate <= now) {
+            nextDate.setMonth(nextDate.getMonth() + monthsToAdd);
+        }
+        return nextDate;
+      })
       .filter((d: any): d is Date => d !== null && !isNaN(d.getTime()))
       .sort((a: Date, b: Date) => a.getTime() - b.getTime());
 

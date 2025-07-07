@@ -53,7 +53,7 @@ export default function NewEquipmentPage() {
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState('Activo');
   const [maintenanceStartDate, setMaintenanceStartDate] = useState<Date>();
-  const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date>();
+  const [maintenancePeriodicity, setMaintenancePeriodicity] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const [brand, setBrand] = useState('');
@@ -100,7 +100,7 @@ export default function NewEquipmentPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !description || !clientId || !systemId || !location || !status || !brand || !model || !type || !serial) {
+    if (!name || !description || !clientId || !systemId || !location || !status || !brand || !model || !type || !serial || !maintenancePeriodicity) {
         alert('Por favor, complete todos los campos.');
         return;
     }
@@ -124,7 +124,7 @@ export default function NewEquipmentPage() {
       location,
       status: status as Equipment['status'],
       maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
-      nextMaintenanceDate: nextMaintenanceDate ? format(nextMaintenanceDate, 'yyyy-MM-dd') : '',
+      maintenancePeriodicity: maintenancePeriodicity,
       imageUrl: imageUrl || '',
     };
 
@@ -289,30 +289,18 @@ export default function NewEquipmentPage() {
                     </Popover>
                 </div>
                 <div className="grid gap-3">
-                    <Label htmlFor="nextMaintenanceDate">Siguiente Mantenimiento</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !nextMaintenanceDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {nextMaintenanceDate ? format(nextMaintenanceDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={nextMaintenanceDate}
-                                onSelect={setNextMaintenanceDate}
-                                initialFocus
-                                locale={es}
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    <Label htmlFor="maintenancePeriodicity">Mantenimiento Recomendado</Label>
+                    <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required>
+                        <SelectTrigger id="maintenancePeriodicity">
+                            <SelectValue placeholder="Seleccione una periodicidad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Mensual">Mensual</SelectItem>
+                            <SelectItem value="Trimestral">Trimestral</SelectItem>
+                            <SelectItem value="Semestral">Semestral</SelectItem>
+                            <SelectItem value="Anual">Anual</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
               </div>
             </div>
