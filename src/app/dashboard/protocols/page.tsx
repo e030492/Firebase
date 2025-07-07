@@ -213,12 +213,12 @@ export default function ProtocolsPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
                  <div className="grid gap-2">
                    <Label htmlFor="client">Filtrar por Cliente</Label>
-                   <Select onValueChange={(value) => setSelectedClientId(value)} value={selectedClientId}>
+                   <Select onValueChange={(value) => setSelectedClientId(value === 'all-clients' ? '' : value)} value={selectedClientId}>
                      <SelectTrigger id="client">
                        <SelectValue placeholder="Todos los clientes" />
                      </SelectTrigger>
                      <SelectContent>
-                       <SelectItem value="">Todos los clientes</SelectItem>
+                       <SelectItem value="all-clients">Todos los clientes</SelectItem>
                        {clients.map(client => (
                          <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                        ))}
@@ -227,12 +227,12 @@ export default function ProtocolsPage() {
                  </div>
                  <div className="grid gap-2">
                    <Label htmlFor="system">Filtrar por Sistema</Label>
-                   <Select onValueChange={(value) => setSelectedSystemId(value)} value={selectedSystemId}>
+                   <Select onValueChange={(value) => setSelectedSystemId(value === 'all-systems' ? '' : value)} value={selectedSystemId}>
                      <SelectTrigger id="system">
                        <SelectValue placeholder="Todos los sistemas" />
                      </SelectTrigger>
                      <SelectContent>
-                       <SelectItem value="">Todos los sistemas</SelectItem>
+                       <SelectItem value="all-systems">Todos los sistemas</SelectItem>
                        {systems.map(system => (
                          <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
                        ))}
