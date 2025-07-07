@@ -85,3 +85,42 @@ export const mockSystems = [
     description: 'Sensores de movimiento y barreras infrarrojas para proteger el perímetro.',
   },
 ];
+
+export const mockEquipments = [
+  {
+    id: '1',
+    name: 'Cámara Domo PTZ',
+    description: 'Cámara de vigilancia exterior con zoom óptico 20x.',
+    client: 'Acme Corp',
+    system: 'Circuito Cerrado de Televisión (CCTV)',
+    location: 'Almacén Central - Puerta Principal',
+    status: 'Activo',
+  },
+  {
+    id: '2',
+    name: 'Lector de Tarjetas RFID',
+    description: 'Lector de proximidad para puerta de oficina.',
+    client: 'Soluciones Tech',
+    system: 'Sistema de Control de Acceso',
+    location: 'Oficina Principal - Entrada',
+    status: 'Activo',
+  },
+  {
+    id: '3',
+    name: 'Detector de Humo Fotoeléctrico',
+    description: 'Detector de humo para área de servidores.',
+    client: 'Innovate Co.',
+    system: 'Sistema de Detección de Incendios',
+    location: 'Sala de Servidores',
+    status: 'En Mantenimiento',
+  },
+    {
+    id: '4',
+    name: 'Barrera Infrarroja Perimetral',
+    description: 'Barrera de 4 haces para protección de barda perimetral.',
+    client: 'Guardianes Nocturnos Ltda.',
+    system: 'Alarma de Intrusión Perimetral',
+    location: 'Barda Norte',
+    status: 'Inactivo',
+  },
+];

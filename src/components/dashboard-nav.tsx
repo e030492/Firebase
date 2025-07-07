@@ -21,7 +21,7 @@ const allNavItems = [
   { href: '/dashboard/users', label: 'Usuarios', icon: Users },
   { href: '/dashboard/clients', label: 'Clientes', icon: Building },
   { href: '/dashboard/systems', label: 'Sistemas', icon: Shield },
-  { href: '/dashboard/equipments', label: 'Equipos', icon: HardHat, disabled: true },
+  { href: '/dashboard/equipments', label: 'Equipos', icon: HardHat },
   { href: '/dashboard/protocols/new', label: 'Protocolos', icon: ClipboardList, ai: true },
   { href: '/dashboard/cedulas', label: 'Cédulas', icon: FileText, disabled: true },
   { href: '/dashboard/reports', label: 'Reportes', icon: LineChart, disabled: true },

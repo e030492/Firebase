@@ -1,0 +1,163 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
+
+const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
+const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
+const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
+
+type Equipment = typeof mockEquipments[0];
+type Client = typeof mockClients[0];
+type System = typeof mockSystems[0];
+
+
+export default function NewEquipmentPage() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [systemId, setSystemId] = useState('');
+  const [location, setLocation] = useState('');
+  const [status, setStatus] = useState('Activo');
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+
+  useEffect(() => {
+    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
+    setClients(storedClients ? JSON.parse(storedClients) : []);
+    
+    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
+    setSystems(storedSystems ? JSON.parse(storedSystems) : []);
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !description || !clientId || !systemId || !location || !status) {
+        alert('Por favor, complete todos los campos.');
+        return;
+    }
+
+    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
+    let equipments: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : [];
+    
+    const clientName = clients.find(c => c.id === clientId)?.name || '';
+    const systemName = systems.find(s => s.id === systemId)?.name || '';
+
+    const newEquipment: Equipment = {
+      id: new Date().getTime().toString(),
+      name,
+      description,
+      client: clientName,
+      system: systemName,
+      location,
+      status: status as Equipment['status'],
+    };
+
+    equipments.push(newEquipment);
+    localStorage.setItem(EQUIPMENTS_STORAGE_KEY, JSON.stringify(equipments));
+
+    alert('Equipo creado con éxito.');
+    router.push('/dashboard/equipments');
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
+        <div className="grid gap-2">
+          <h1 className="font-headline text-3xl font-bold">Registrar Nuevo Equipo</h1>
+          <p className="text-muted-foreground">
+            Complete los datos para agregar un nuevo equipo al sistema.
+          </p>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Información del Equipo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6">
+              <div className="grid gap-3">
+                <Label htmlFor="name">Nombre del Equipo</Label>
+                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Cámara IP" required />
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el equipo" required className="min-h-32" />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="client">Cliente</Label>
+                  <Select onValueChange={setClientId} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map(client => (
+                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <div className="grid gap-3">
+                  <Label htmlFor="system">Sistema Asociado</Label>
+                  <Select onValueChange={setSystemId} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un sistema" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {systems.map(system => (
+                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                   <Label htmlFor="location">Ubicación</Label>
+                   <Input id="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ej. Puerta Principal" required />
+                 </div>
+                 <div className="grid gap-3">
+                   <Label htmlFor="status">Estado</Label>
+                   <Select value={status} onValueChange={setStatus} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Activo">Activo</SelectItem>
+                      <SelectItem value="Inactivo">Inactivo</SelectItem>
+                      <SelectItem value="En Mantenimiento">En Mantenimiento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                 </div>
+               </div>
+            </div>
+          </CardContent>
+          <CardFooter className="border-t px-6 py-4">
+            <Button type="submit">Guardar Equipo</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    </form>
+  );
+}
