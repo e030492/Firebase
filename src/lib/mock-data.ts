@@ -202,8 +202,8 @@ export const mockCedulas = [
     status: 'Pendiente' as const,
     description: 'Revisión trimestral de la cámara de la entrada principal.',
     protocolSteps: [
-      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, completion: 50, imageUrl: 'https://placehold.co/400x300.png' },
-      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, completion: 25, imageUrl: '' },
+      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, completion: 50, imageUrl: 'https://placehold.co/400x300.png', notes: 'Carcasa con algo de polvo, se limpió.' },
+      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, completion: 25, imageUrl: '', notes: '' },
     ]
   },
   {

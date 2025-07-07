@@ -48,7 +48,7 @@ type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type User = typeof mockUsers[0];
 type System = typeof mockSystems[0];
-type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string };
+type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string; notes?: string };
 type Protocol = { equipmentId: string; steps: ProtocolStep[] };
 
 export default function EditCedulaPage() {
@@ -77,6 +77,7 @@ export default function EditCedulaPage() {
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
   const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
   const [imageUrls, setImageUrls] = useState<{ [step: string]: string }>({});
+  const [notes, setNotes] = useState<{ [step: string]: string }>({});
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -131,25 +132,27 @@ export default function EditCedulaPage() {
             const baseProtocolSteps = equipmentProtocol?.steps || [];
             
             setProtocolSteps(baseProtocolSteps);
-
-            const savedCompletionMap = new Map<string, number>();
-            const savedImageUrls: { [step: string]: string } = {};
-
-            if (foundCedula.protocolSteps) {
-                foundCedula.protocolSteps.forEach(step => {
-                    savedCompletionMap.set(step.step, step.completion);
-                    if (step.imageUrl) {
-                        savedImageUrls[step.step] = step.imageUrl;
-                    }
-                });
-            }
             
+            const savedStepsMap = new Map(foundCedula.protocolSteps?.map(s => [s.step, s]));
+
             const initialPercentages = baseProtocolSteps.reduce((acc, step) => {
-                acc[step.step] = String(savedCompletionMap.get(step.step) || 0);
+                acc[step.step] = String(savedStepsMap.get(step.step)?.completion || 0);
                 return acc;
             }, {} as { [step: string]: string });
+
+            const initialImageUrls = baseProtocolSteps.reduce((acc, step) => {
+                acc[step.step] = savedStepsMap.get(step.step)?.imageUrl || '';
+                return acc;
+            }, {} as { [step: string]: string });
+
+            const initialNotes = baseProtocolSteps.reduce((acc, step) => {
+                acc[step.step] = savedStepsMap.get(step.step)?.notes || '';
+                return acc;
+            }, {} as { [step: string]: string });
+
             setCompletionPercentages(initialPercentages);
-            setImageUrls(savedImageUrls);
+            setImageUrls(initialImageUrls);
+            setNotes(initialNotes);
         }
 
         const foundTechnician = allUsersData.find(u => u.name === foundCedula.technician);
@@ -205,6 +208,10 @@ export default function EditCedulaPage() {
     }
   };
 
+  const handleNotesChange = (step: string, value: string) => {
+    setNotes(prev => ({ ...prev, [step]: value }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
@@ -239,6 +246,7 @@ export default function EditCedulaPage() {
             priority: step.priority,
             completion: Number(completionPercentages[step.step]) || 0,
             imageUrl: imageUrls[step.step] || '',
+            notes: notes[step.step] || '',
           })),
         };
       }
@@ -537,6 +545,16 @@ export default function EditCedulaPage() {
                                         onChange={(e) => handlePercentageChange(step.step, e.target.value)}
                                     />
                                 </div>
+                            </div>
+                            <div className="grid gap-3 mt-4">
+                                <Label htmlFor={`step-notes-${index}`}>Notas</Label>
+                                <Textarea
+                                    id={`step-notes-${index}`}
+                                    placeholder="Añadir notas sobre el procedimiento..."
+                                    value={notes[step.step] || ''}
+                                    onChange={(e) => handleNotesChange(step.step, e.target.value)}
+                                    className="min-h-24"
+                                />
                             </div>
                         </div>
                          {index < protocolSteps.length - 1 && <Separator className="mt-6" />}

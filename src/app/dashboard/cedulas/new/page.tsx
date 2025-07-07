@@ -47,7 +47,7 @@ type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type User = typeof mockUsers[0];
 type System = typeof mockSystems[0];
-type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string };
+type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string; notes?: string };
 type Protocol = { equipmentId: string; steps: ProtocolStep[] };
 
 export default function NewCedulaPage() {
@@ -73,6 +73,7 @@ export default function NewCedulaPage() {
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
   const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
   const [imageUrls, setImageUrls] = useState<{ [step: string]: string }>({});
+  const [notes, setNotes] = useState<{ [step: string]: string }>({});
 
   useEffect(() => {
     const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
@@ -117,17 +118,24 @@ export default function NewCedulaPage() {
                 acc[step.step] = '0';
                 return acc;
             }, {} as { [step: string]: string });
+            const initialNotes = equipmentProtocol.steps.reduce((acc, step) => {
+                acc[step.step] = '';
+                return acc;
+            }, {} as { [step: string]: string });
             setCompletionPercentages(initialPercentages);
             setImageUrls({});
+            setNotes(initialNotes);
         } else {
             setProtocolSteps([]);
             setCompletionPercentages({});
             setImageUrls({});
+            setNotes({});
         }
     } else {
         setProtocolSteps([]);
         setCompletionPercentages({});
         setImageUrls({});
+        setNotes({});
     }
   }, [equipmentId]);
 
@@ -157,6 +165,10 @@ export default function NewCedulaPage() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleNotesChange = (step: string, value: string) => {
+    setNotes(prev => ({ ...prev, [step]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -194,6 +206,7 @@ export default function NewCedulaPage() {
         priority: step.priority,
         completion: Number(completionPercentages[step.step]) || 0,
         imageUrl: imageUrls[step.step] || '',
+        notes: notes[step.step] || '',
       })),
     };
 
@@ -404,6 +417,16 @@ export default function NewCedulaPage() {
                                         onChange={(e) => handlePercentageChange(step.step, e.target.value)}
                                     />
                                 </div>
+                            </div>
+                             <div className="grid gap-3 mt-4">
+                                <Label htmlFor={`step-notes-${index}`}>Notas</Label>
+                                <Textarea
+                                    id={`step-notes-${index}`}
+                                    placeholder="Añadir notas sobre el procedimiento..."
+                                    value={notes[step.step] || ''}
+                                    onChange={(e) => handleNotesChange(step.step, e.target.value)}
+                                    className="min-h-24"
+                                />
                             </div>
                         </div>
                         {index < protocolSteps.length - 1 && <Separator className="mt-6" />}
