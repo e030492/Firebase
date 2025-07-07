@@ -1,10 +1,11 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +34,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems, mockProtocols } from '@/lib/mock-data';
+import { Separator } from '@/components/ui/separator';
 
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
@@ -74,6 +76,7 @@ export default function EditCedulaPage() {
 
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
   const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
+  const [imageUrls, setImageUrls] = useState<{ [step: string]: string }>({});
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -130,9 +133,14 @@ export default function EditCedulaPage() {
             setProtocolSteps(baseProtocolSteps);
 
             const savedCompletionMap = new Map<string, number>();
+            const savedImageUrls: { [step: string]: string } = {};
+
             if (foundCedula.protocolSteps) {
                 foundCedula.protocolSteps.forEach(step => {
                     savedCompletionMap.set(step.step, step.completion);
+                    if (step.imageUrl) {
+                        savedImageUrls[step.step] = step.imageUrl;
+                    }
                 });
             }
             
@@ -141,6 +149,7 @@ export default function EditCedulaPage() {
                 return acc;
             }, {} as { [step: string]: string });
             setCompletionPercentages(initialPercentages);
+            setImageUrls(savedImageUrls);
         }
 
         const foundTechnician = allUsersData.find(u => u.name === foundCedula.technician);
@@ -185,6 +194,17 @@ export default function EditCedulaPage() {
     setCompletionPercentages(prev => ({ ...prev, [step]: value }));
   };
 
+  const handleImageChange = (step: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrls(prev => ({ ...prev, [step]: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
@@ -215,8 +235,10 @@ export default function EditCedulaPage() {
           status: status as Cedula['status'],
           description,
           protocolSteps: protocolSteps.map(step => ({
-            ...step,
+            step: step.step,
+            priority: step.priority,
             completion: Number(completionPercentages[step.step]) || 0,
+            imageUrl: imageUrls[step.step] || '',
           })),
         };
       }
@@ -473,26 +495,53 @@ export default function EditCedulaPage() {
           <Card>
             <CardHeader>
               <CardTitle>Protocolo de Mantenimiento</CardTitle>
-              <CardDescription>Registre el porcentaje de ejecución para cada paso del protocolo.</CardDescription>
+              <CardDescription>Registre el porcentaje de ejecución y suba evidencia fotográfica para cada paso.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
+            <CardContent className="grid gap-6">
                 {protocolSteps.map((step, index) => (
-                  <div key={index} className="grid grid-cols-[1fr_120px] items-center gap-4">
-                    <Label htmlFor={`step-${index}`}>{step.step}</Label>
-                    <Input
-                      id={`step-${index}`}
-                      type="number"
-                      min="0"
-                      max="100"
-                      placeholder="% Ejecutado"
-                      value={completionPercentages[step.step] || ''}
-                      onChange={(e) => handlePercentageChange(step.step, e.target.value)}
-                      className="text-right"
-                    />
-                  </div>
+                    <div key={index}>
+                        <div className="grid gap-4 p-4 border rounded-lg">
+                            <p className="font-medium">{step.step}</p>
+                            <div className="grid md:grid-cols-2 gap-6 items-end">
+                                <div className="grid gap-3">
+                                    <Label>Evidencia Fotográfica</Label>
+                                    {imageUrls[step.step] ? (
+                                        <Image src={imageUrls[step.step]} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                    ) : (
+                                        <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
+                                            <Camera className="h-10 w-10 text-muted-foreground" />
+                                        </div>
+                                    )}
+                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()}>
+                                        <Camera className="mr-2 h-4 w-4" />
+                                        {imageUrls[step.step] ? 'Cambiar Foto' : 'Subir Foto'}
+                                    </Button>
+                                    <Input
+                                        id={`image-upload-${index}`}
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={(e) => handleImageChange(step.step, e)}
+                                        className="hidden"
+                                    />
+                                </div>
+                                <div className="grid gap-3">
+                                    <Label htmlFor={`step-percentage-${index}`}>% Ejecutado</Label>
+                                    <Input
+                                        id={`step-percentage-${index}`}
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        placeholder="% Ejecutado"
+                                        value={completionPercentages[step.step] || ''}
+                                        onChange={(e) => handlePercentageChange(step.step, e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                         {index < protocolSteps.length - 1 && <Separator className="mt-6" />}
+                    </div>
                 ))}
-              </div>
             </CardContent>
           </Card>
         )}
