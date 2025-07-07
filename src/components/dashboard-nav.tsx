@@ -25,7 +25,7 @@ const allNavItems = [
   { href: '/dashboard/equipments', label: 'Equipos', icon: HardHat },
   { href: '/dashboard/protocols', label: 'Protocolos', icon: ClipboardList, ai: true },
   { href: '/dashboard/cedulas', label: 'Cédulas', icon: FileText },
-  { href: '/dashboard/reports', label: 'Reportes', icon: LineChart, disabled: true },
+  { href: '/dashboard/reports', label: 'Reportes', icon: LineChart },
 ];
 
 export function DashboardNav() {
@@ -43,12 +43,12 @@ export function DashboardNav() {
     <>
       {allNavItems.map((item) => (
         <SidebarMenuItem key={item.label}>
-          {item.disabled ? (
+          {(item as any).disabled ? (
             <SidebarMenuButton
               isActive={isActive(item.href)}
-              disabled={item.disabled}
+              disabled={(item as any).disabled}
               tooltip={item.label}
-              className={cn(item.disabled && 'cursor-not-allowed opacity-50')}
+              className={cn((item as any).disabled && 'cursor-not-allowed opacity-50')}
             >
               <item.icon />
               <span>{item.label}</span>
@@ -65,9 +65,9 @@ export function DashboardNav() {
             <SidebarMenuButton
               asChild
               isActive={isActive(item.href)}
-              disabled={item.disabled}
+              disabled={(item as any).disabled}
               tooltip={item.label}
-              className={cn(item.disabled && 'cursor-not-allowed opacity-50')}
+              className={cn((item as any).disabled && 'cursor-not-allowed opacity-50')}
             >
               <Link href={item.href}>
                 <item.icon />
