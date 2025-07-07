@@ -140,7 +140,12 @@ export default function SystemsPage() {
               <TableBody>
                 {sortedSystems.map((system) => (
                   <TableRow key={system.id}>
-                    <TableCell className="font-medium">{system.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-3">
+                        <span className="h-3 w-3 rounded-full border" style={{ backgroundColor: system.color }} />
+                        {system.name}
+                      </div>
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">{system.description}</TableCell>
                     <TableCell>
                       <DropdownMenu>

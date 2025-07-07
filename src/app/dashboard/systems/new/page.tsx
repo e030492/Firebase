@@ -23,6 +23,7 @@ export default function NewSystemPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [color, setColor] = useState('#3b82f6');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +39,7 @@ export default function NewSystemPage() {
       id: new Date().getTime().toString(), // Simple unique ID
       name,
       description,
+      color,
     };
 
     systems.push(newSystem);
@@ -86,6 +88,25 @@ export default function NewSystemPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   required
                 />
+              </div>
+               <div className="grid gap-3">
+                <Label htmlFor="color">Color del Sistema</Label>
+                <div className="flex items-center gap-2">
+                    <Input
+                        id="color"
+                        type="color"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        className="h-10 w-14 cursor-pointer p-1"
+                    />
+                    <Input
+                        type="text"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        className="w-28"
+                        placeholder="#3b82f6"
+                    />
+                </div>
               </div>
             </div>
           </CardContent>

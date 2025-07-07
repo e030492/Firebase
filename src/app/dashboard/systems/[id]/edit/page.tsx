@@ -27,6 +27,7 @@ export default function EditSystemPage() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [color, setColor] = useState('#3b82f6');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -39,6 +40,7 @@ export default function EditSystemPage() {
       if (foundSystem) {
         setName(foundSystem.name);
         setDescription(foundSystem.description);
+        setColor(foundSystem.color || '#3b82f6');
       } else {
         setNotFound(true);
       }
@@ -57,6 +59,7 @@ export default function EditSystemPage() {
           ...s,
           name,
           description,
+          color,
         };
       }
       return s;
@@ -93,6 +96,10 @@ export default function EditSystemPage() {
               <div className="grid gap-3">
                 <Label>Descripción</Label>
                 <Skeleton className="h-32 w-full" />
+              </div>
+              <div className="grid gap-3">
+                <Label>Color del Sistema</Label>
+                <Skeleton className="h-10 w-32" />
               </div>
             </div>
           </CardContent>
@@ -143,6 +150,25 @@ export default function EditSystemPage() {
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} required className="min-h-32" />
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="color">Color del Sistema</Label>
+                <div className="flex items-center gap-2">
+                    <Input
+                        id="color"
+                        type="color"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        className="h-10 w-14 cursor-pointer p-1"
+                    />
+                    <Input
+                        type="text"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        className="w-28"
+                        placeholder="#3b82f6"
+                    />
+                </div>
               </div>
             </div>
           </CardContent>
