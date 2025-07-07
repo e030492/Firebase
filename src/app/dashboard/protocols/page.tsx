@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Edit, Trash2, MoreVertical } from 'lucide-react';
-import { mockEquipments, mockProtocols } from '@/lib/mock-data';
+import { mockEquipments, mockProtocols, mockClients, mockSystems } from '@/lib/mock-data';
 import {
   Dialog,
   DialogContent,
@@ -52,13 +52,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
+const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
+const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 
 type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number };
 type Protocol = { equipmentId: string; steps: ProtocolStep[] };
 type Equipment = typeof mockEquipments[0];
+type Client = typeof mockClients[0];
+type System = typeof mockSystems[0];
 type EditingStepInfo = {
   equipmentId: string;
   originalStepText: string;
@@ -70,24 +75,55 @@ type DeletingStepInfo = {
 };
 
 export default function ProtocolsPage() {
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [editingStep, setEditingStep] = useState<EditingStepInfo | null>(null);
   const [deletingStep, setDeletingStep] = useState<DeletingStepInfo | null>(null);
 
+  const [clients, setClients] = useState<Client[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedSystemId, setSelectedSystemId] = useState<string>('');
+
   useEffect(() => {
+    // Load Equipments
     const storedEquipmentsData = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
     const equipmentsData: Equipment[] = storedEquipmentsData ? JSON.parse(storedEquipmentsData) : mockEquipments;
-    setEquipments(equipmentsData);
+    setAllEquipments(equipmentsData);
     
+    // Load Protocols
     const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
-    if (storedProtocols) {
-      setProtocols(JSON.parse(storedProtocols));
-    } else {
-      localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(mockProtocols));
-      setProtocols(mockProtocols);
-    }
+    setProtocols(storedProtocols ? JSON.parse(storedProtocols) : mockProtocols);
+
+    // Load Clients
+    const storedClientsData = localStorage.getItem(CLIENTS_STORAGE_KEY);
+    setClients(storedClientsData ? JSON.parse(storedClientsData) : mockClients);
+
+    // Load Systems
+    const storedSystemsData = localStorage.getItem(SYSTEMS_STORAGE_KEY);
+    setSystems(storedSystemsData ? JSON.parse(storedSystemsData) : mockSystems);
   }, []);
+  
+  const filteredEquipments = useMemo(() => {
+    let equipments = [...allEquipments];
+    
+    if (selectedClientId) {
+      const clientName = clients.find(c => c.id === selectedClientId)?.name;
+      if (clientName) {
+        equipments = equipments.filter(eq => eq.client === clientName);
+      }
+    }
+    
+    if (selectedSystemId) {
+      const systemName = systems.find(s => s.id === selectedSystemId)?.name;
+      if (systemName) {
+        equipments = equipments.filter(eq => eq.system === systemName);
+      }
+    }
+    
+    return equipments;
+  }, [selectedClientId, selectedSystemId, allEquipments, clients, systems]);
+
 
   const getProtocolsForEquipment = (equipmentId: string) => {
     return protocols.find(p => p.equipmentId === equipmentId)?.steps || [];
@@ -162,7 +198,7 @@ export default function ProtocolsPage() {
           <div className="grid gap-2">
             <h1 className="font-headline text-3xl font-bold">Protocolos de Mantenimiento</h1>
             <p className="text-muted-foreground">
-              Listado de protocolos de mantenimiento por equipo.
+              Filtre y visualice los protocolos de mantenimiento por equipo.
             </p>
           </div>
           <Link href="/dashboard/protocols/new">
@@ -174,68 +210,104 @@ export default function ProtocolsPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+                 <div className="grid gap-2">
+                   <Label htmlFor="client">Filtrar por Cliente</Label>
+                   <Select onValueChange={(value) => setSelectedClientId(value)} value={selectedClientId}>
+                     <SelectTrigger id="client">
+                       <SelectValue placeholder="Todos los clientes" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="">Todos los clientes</SelectItem>
+                       {clients.map(client => (
+                         <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </div>
+                 <div className="grid gap-2">
+                   <Label htmlFor="system">Filtrar por Sistema</Label>
+                   <Select onValueChange={(value) => setSelectedSystemId(value)} value={selectedSystemId}>
+                     <SelectTrigger id="system">
+                       <SelectValue placeholder="Todos los sistemas" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="">Todos los sistemas</SelectItem>
+                       {systems.map(system => (
+                         <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </div>
+            </div>
+            <Separator className="mb-6"/>
+
             <Accordion type="single" collapsible className="w-full">
-              {equipments.map(equipment => {
-                const equipmentProtocols = getProtocolsForEquipment(equipment.id);
-                return (
-                  <AccordionItem value={equipment.id} key={equipment.id}>
-                    <AccordionTrigger className="text-lg font-medium hover:no-underline">
-                        <div className="flex items-center gap-4">
-                            <span>{equipment.name}</span>
-                            <Badge variant="outline">{equipmentProtocols.length} pasos</Badge>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      {equipmentProtocols.length > 0 ? (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[50%]">Paso del Protocolo</TableHead>
-                              <TableHead>Prioridad</TableHead>
-                              <TableHead>% Estimado</TableHead>
-                              <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {equipmentProtocols.map((protocolStep, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{protocolStep.step}</TableCell>
-                                <TableCell>
-                                  <Badge variant={getPriorityBadgeVariant(protocolStep.priority)} className="capitalize">
-                                    {protocolStep.priority}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{protocolStep.percentage}%</TableCell>
-                                <TableCell className="text-right">
-                                  <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                          <Button size="icon" variant="ghost">
-                                              <MoreVertical className="h-4 w-4" />
-                                          </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onSelect={() => setEditingStep({ equipmentId: equipment.id, originalStepText: protocolStep.step, currentData: { ...protocolStep }})}>
-                                              <Edit className="mr-2 h-4 w-4" />
-                                              <span>Editar</span>
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeletingStep({ equipmentId: equipment.id, stepToDelete: protocolStep })}>
-                                              <Trash2 className="mr-2 h-4 w-4" />
-                                              <span>Eliminar</span>
-                                          </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
+              {filteredEquipments.length > 0 ? (
+                filteredEquipments.map(equipment => {
+                  const equipmentProtocols = getProtocolsForEquipment(equipment.id);
+                  return (
+                    <AccordionItem value={equipment.id} key={equipment.id}>
+                      <AccordionTrigger className="text-lg font-medium hover:no-underline">
+                          <div className="flex items-center gap-4 text-left">
+                              <span>{equipment.name} <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span></span>
+                              <Badge variant="outline">{equipmentProtocols.length} pasos</Badge>
+                          </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        {equipmentProtocols.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[50%]">Paso del Protocolo</TableHead>
+                                <TableHead>Prioridad</TableHead>
+                                <TableHead>% Estimado</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      ) : (
-                        <p className="text-muted-foreground px-4 py-2">No hay un protocolo de mantenimiento definido para este equipo.</p>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                )
-              })}
+                            </TableHeader>
+                            <TableBody>
+                              {equipmentProtocols.map((protocolStep, index) => (
+                                <TableRow key={index}>
+                                  <TableCell>{protocolStep.step}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={getPriorityBadgeVariant(protocolStep.priority)} className="capitalize">
+                                      {protocolStep.priority}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{protocolStep.percentage}%</TableCell>
+                                  <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button size="icon" variant="ghost">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onSelect={() => setEditingStep({ equipmentId: equipment.id, originalStepText: protocolStep.step, currentData: { ...protocolStep }})}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                <span>Editar</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeletingStep({ equipmentId: equipment.id, stepToDelete: protocolStep })}>
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Eliminar</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <p className="text-muted-foreground px-4 py-2">No hay un protocolo de mantenimiento definido para este equipo.</p>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })
+              ) : (
+                 <p className="text-center text-muted-foreground py-4">No se encontraron equipos que coincidan con los filtros seleccionados.</p>
+              )}
             </Accordion>
           </CardContent>
         </Card>
