@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,15 +32,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { mockSystems } from '@/lib/mock-data';
 
 const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 type System = typeof mockSystems[0];
+type SortableKey = 'name' | 'description';
+
 
 export default function SystemsPage() {
   const [systems, setSystems] = useState<System[]>([]);
   const [systemToDelete, setSystemToDelete] = useState<System | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
 
   useEffect(() => {
     const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
@@ -51,6 +54,40 @@ export default function SystemsPage() {
       setSystems(mockSystems);
     }
   }, []);
+
+  const sortedSystems = useMemo(() => {
+    let sortableItems = [...systems];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [systems, sortConfig]);
+
+  const requestSort = (key: SortableKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortableKey) => {
+    if (sortConfig?.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+        return <ArrowUp className="ml-2 h-4 w-4 text-foreground" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
+  };
 
   const handleDeleteSystem = () => {
     if (systemToDelete) {
@@ -83,15 +120,25 @@ export default function SystemsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="hidden md:table-cell">Descripción</TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('name')}>
+                        Nombre
+                        {getSortIcon('name')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('description')}>
+                        Descripción
+                        {getSortIcon('description')}
+                    </Button>
+                  </TableHead>
                   <TableHead>
                     <span className="sr-only">Acciones</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {systems.map((system) => (
+                {sortedSystems.map((system) => (
                   <TableRow key={system.id}>
                     <TableCell className="font-medium">{system.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{system.description}</TableCell>

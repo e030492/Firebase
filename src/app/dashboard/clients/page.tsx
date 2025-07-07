@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,16 +32,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { mockClients } from '@/lib/mock-data';
 
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 type Client = typeof mockClients[0];
-
+type SortableKey = 'name' | 'responsable' | 'direccion';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
+
 
   useEffect(() => {
     const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
@@ -53,6 +55,40 @@ export default function ClientsPage() {
       setClients(mockClients);
     }
   }, []);
+
+  const sortedClients = useMemo(() => {
+    let sortableItems = [...clients];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [clients, sortConfig]);
+
+  const requestSort = (key: SortableKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortableKey) => {
+    if (sortConfig?.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+        return <ArrowUp className="ml-2 h-4 w-4 text-foreground" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
+  };
 
   const handleDeleteClient = () => {
     if (clientToDelete) {
@@ -85,16 +121,31 @@ export default function ClientsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="hidden md:table-cell">Contacto Responsable</TableHead>
-                  <TableHead className="hidden lg:table-cell">Dirección</TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('name')}>
+                        Nombre
+                        {getSortIcon('name')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('responsable')}>
+                        Contacto Responsable
+                        {getSortIcon('responsable')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('direccion')}>
+                        Dirección
+                        {getSortIcon('direccion')}
+                    </Button>
+                  </TableHead>
                   <TableHead>
                     <span className="sr-only">Acciones</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client) => (
+                {sortedClients.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{client.responsable}</TableCell>

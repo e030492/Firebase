@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -31,17 +31,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { mockUsers } from '@/lib/mock-data';
 
 const USERS_STORAGE_KEY = 'guardian_shield_users';
 type User = typeof mockUsers[0];
-
+type SortableKey = 'name' | 'email' | 'role';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
 
   useEffect(() => {
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
@@ -53,6 +54,40 @@ export default function UsersPage() {
       setUsers(mockUsers);
     }
   }, []);
+
+  const sortedUsers = useMemo(() => {
+    let sortableItems = [...users];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [users, sortConfig]);
+
+  const requestSort = (key: SortableKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortableKey) => {
+    if (sortConfig?.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+        return <ArrowUp className="ml-2 h-4 w-4 text-foreground" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
+  };
 
   const handleDeleteUser = () => {
     if (userToDelete) {
@@ -85,16 +120,31 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden lg:table-cell">Rol</TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('name')}>
+                        Nombre
+                        {getSortIcon('name')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('email')}>
+                        Email
+                        {getSortIcon('email')}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('role')}>
+                        Rol
+                        {getSortIcon('role')}
+                    </Button>
+                  </TableHead>
                   <TableHead>
                     <span className="sr-only">Acciones</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {sortedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{user.email}</TableCell>
@@ -137,7 +187,7 @@ export default function UsersPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
               Sí, eliminar
             </AlertDialogAction>
