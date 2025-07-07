@@ -32,17 +32,19 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockCedulas, mockClients, mockEquipments, mockUsers } from '@/lib/mock-data';
+import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems } from '@/lib/mock-data';
 
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 const USERS_STORAGE_KEY = 'guardian_shield_users';
+const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type User = typeof mockUsers[0];
+type System = typeof mockSystems[0];
 
 
 export default function EditCedulaPage() {
@@ -52,6 +54,7 @@ export default function EditCedulaPage() {
 
   const [folio, setFolio] = useState('');
   const [clientId, setClientId] = useState('');
+  const [systemId, setSystemId] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
   const [technicianId, setTechnicianId] = useState('');
   const [creationDate, setCreationDate] = useState<Date>();
@@ -59,20 +62,24 @@ export default function EditCedulaPage() {
   const [status, setStatus] = useState('');
 
   const [clients, setClients] = useState<Client[]>([]);
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    // Load related data
-    const allClients: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]');
-    setClients(allClients);
-    const allEquipments: Equipment[] = JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || '[]');
-    setEquipments(allEquipments);
-    const allUsers: User[] = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) || '[]');
-    setTechnicians(allUsers.filter(u => u.role === 'Técnico'));
+    // Load all data from localStorage
+    const allClientsData: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]');
+    setClients(allClientsData);
+    const allEquipmentsData: Equipment[] = JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || '[]');
+    setAllEquipments(allEquipmentsData);
+    const allSystemsData: System[] = JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]');
+    setSystems(allSystemsData);
+    const allUsersData: User[] = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) || '[]');
+    setTechnicians(allUsersData.filter(u => u.role === 'Técnico'));
 
     if (cedulaId) {
       const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
@@ -85,13 +92,17 @@ export default function EditCedulaPage() {
         setStatus(foundCedula.status);
         if(foundCedula.creationDate) setCreationDate(new Date(foundCedula.creationDate + 'T00:00:00'));
 
-        const foundClient = allClients.find(c => c.name === foundCedula.client);
+        const foundClient = allClientsData.find(c => c.name === foundCedula.client);
         if (foundClient) setClientId(foundClient.id);
         
-        const foundEquipment = allEquipments.find(e => e.name === foundCedula.equipment);
-        if (foundEquipment) setEquipmentId(foundEquipment.id);
+        const foundEquipment = allEquipmentsData.find(e => e.name === foundCedula.equipment);
+        if (foundEquipment) {
+            setEquipmentId(foundEquipment.id);
+            const foundSystem = allSystemsData.find(s => s.name === foundEquipment.system);
+            if (foundSystem) setSystemId(foundSystem.id);
+        }
 
-        const foundTechnician = allUsers.find(u => u.name === foundCedula.technician);
+        const foundTechnician = allUsersData.find(u => u.name === foundCedula.technician);
         if (foundTechnician) setTechnicianId(foundTechnician.id);
         
         setLoading(false);
@@ -101,14 +112,38 @@ export default function EditCedulaPage() {
       }
     }
   }, [cedulaId]);
+
+  useEffect(() => {
+    if (clientId && systemId) {
+      const clientName = clients.find(c => c.id === clientId)?.name;
+      const systemName = systems.find(s => s.id === systemId)?.name;
+      if (clientName && systemName) {
+        setFilteredEquipments(allEquipments.filter(eq => eq.client === clientName && eq.system === systemName));
+      }
+    } else {
+        setFilteredEquipments([]);
+    }
+  }, [clientId, systemId, allEquipments, clients, systems]);
   
+  const handleClientChange = (newClientId: string) => {
+    setClientId(newClientId);
+    setSystemId('');
+    setEquipmentId('');
+    setFilteredEquipments([]);
+  };
+
+  const handleSystemChange = (newSystemId: string) => {
+    setSystemId(newSystemId);
+    setEquipmentId('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
     let cedulas: Cedula[] = storedCedulas ? JSON.parse(storedCedulas) : [];
 
     const clientName = clients.find(c => c.id === clientId)?.name || '';
-    const equipmentName = equipments.find(e => e.id === equipmentId)?.name || '';
+    const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
     const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
 
     const updatedCedulas = cedulas.map(c => {
@@ -237,7 +272,7 @@ export default function EditCedulaPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select value={clientId} onValueChange={setClientId} required>
+                  <Select value={clientId} onValueChange={handleClientChange} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -248,21 +283,6 @@ export default function EditCedulaPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                 <div className="grid gap-3">
-                  <Label htmlFor="equipment">Equipo</Label>
-                  <Select value={equipmentId} onValueChange={setEquipmentId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un equipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {equipments.map(eq => (
-                        <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.client})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="technician">Técnico Asignado</Label>
                    <Select value={technicianId} onValueChange={setTechnicianId} required>
@@ -276,6 +296,36 @@ export default function EditCedulaPage() {
                     </SelectContent>
                   </Select>
                  </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                   <Label htmlFor="system">Sistema</Label>
+                   <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un sistema" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {systems.map(system => (
+                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                 </div>
+                 <div className="grid gap-3">
+                  <Label htmlFor="equipment">Equipo</Label>
+                  <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredEquipments.map(eq => (
+                        <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+               </div>
+               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>
                    <Select value={status} onValueChange={setStatus} required>
@@ -304,3 +354,5 @@ export default function EditCedulaPage() {
     </form>
   );
 }
+
+    

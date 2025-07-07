@@ -30,22 +30,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { mockCedulas, mockClients, mockEquipments, mockUsers } from '@/lib/mock-data';
+import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems } from '@/lib/mock-data';
 
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 const USERS_STORAGE_KEY = 'guardian_shield_users';
+const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type User = typeof mockUsers[0];
+type System = typeof mockSystems[0];
 
 export default function NewCedulaPage() {
   const router = useRouter();
   const [folio, setFolio] = useState(`C-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`);
   const [clientId, setClientId] = useState('');
+  const [systemId, setSystemId] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
   const [technicianId, setTechnicianId] = useState('');
   const [creationDate, setCreationDate] = useState<Date>(new Date());
@@ -53,12 +56,17 @@ export default function NewCedulaPage() {
   const [status, setStatus] = useState('Pendiente');
 
   const [clients, setClients] = useState<Client[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
 
   useEffect(() => {
     const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
     setClients(storedClients ? JSON.parse(storedClients) : []);
+
+    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
+    setSystems(storedSystems ? JSON.parse(storedSystems) : []);
     
     const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
     setEquipments(storedEquipments ? JSON.parse(storedEquipments) : []);
@@ -67,6 +75,34 @@ export default function NewCedulaPage() {
     const allUsers: User[] = storedUsers ? JSON.parse(storedUsers) : [];
     setTechnicians(allUsers.filter(user => user.role === 'Técnico'));
   }, []);
+
+  useEffect(() => {
+    if (clientId && systemId) {
+      const clientName = clients.find(c => c.id === clientId)?.name;
+      const systemName = systems.find(s => s.id === systemId)?.name;
+      if (clientName && systemName) {
+        const filtered = equipments.filter(eq => eq.client === clientName && eq.system === systemName);
+        setFilteredEquipments(filtered);
+      } else {
+        setFilteredEquipments([]);
+      }
+    } else {
+      setFilteredEquipments([]);
+    }
+    // No reseteamos equipmentId aquí para no perder la seleccion si cambia otra cosa
+  }, [clientId, systemId, clients, systems, equipments]);
+
+  const handleClientChange = (newClientId: string) => {
+    setClientId(newClientId);
+    setSystemId('');
+    setEquipmentId('');
+    setFilteredEquipments([]);
+  };
+
+  const handleSystemChange = (newSystemId: string) => {
+    setSystemId(newSystemId);
+    setEquipmentId('');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,7 +186,7 @@ export default function NewCedulaPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select onValueChange={setClientId} required>
+                  <Select onValueChange={handleClientChange} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -161,21 +197,6 @@ export default function NewCedulaPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                 <div className="grid gap-3">
-                  <Label htmlFor="equipment">Equipo</Label>
-                  <Select onValueChange={setEquipmentId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un equipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {equipments.map(eq => (
-                        <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.client})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="technician">Técnico Asignado</Label>
                    <Select onValueChange={setTechnicianId} required>
@@ -189,6 +210,36 @@ export default function NewCedulaPage() {
                     </SelectContent>
                   </Select>
                  </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                  <Label htmlFor="system">Sistema</Label>
+                  <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un sistema" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {systems.map(system => (
+                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <div className="grid gap-3">
+                  <Label htmlFor="equipment">Equipo</Label>
+                  <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredEquipments.map(eq => (
+                        <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>
                    <Select value={status} onValueChange={setStatus} required>
@@ -217,3 +268,5 @@ export default function NewCedulaPage() {
     </form>
   );
 }
+
+    
