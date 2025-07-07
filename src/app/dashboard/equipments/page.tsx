@@ -134,38 +134,50 @@ export default function EquipmentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="hidden sm:table-cell">Imagen</TableHead>
+                  <TableHead>Imagen</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
                       Nombre
                       {getSortIcon('name')}
                     </Button>
                   </TableHead>
-                   <TableHead className="hidden md:table-cell">
+                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('brand')}>
                       Marca
                       {getSortIcon('brand')}
                     </Button>
                   </TableHead>
-                   <TableHead className="hidden lg:table-cell">
+                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('model')}>
                       Modelo
                       {getSortIcon('model')}
                     </Button>
                   </TableHead>
-                  <TableHead className="hidden md:table-cell">
+                   <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('type')}>
+                      Tipo
+                      {getSortIcon('type')}
+                    </Button>
+                  </TableHead>
+                   <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('serial')}>
+                      Serie
+                      {getSortIcon('serial')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
                      <Button variant="ghost" onClick={() => requestSort('client')}>
                         Cliente
                         {getSortIcon('client')}
                      </Button>
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell">
+                  <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('system')}>
                       Sistema
                       {getSortIcon('system')}
                     </Button>
                   </TableHead>
-                  <TableHead className="hidden md:table-cell">
+                  <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('status')}>
                       Estado
                       {getSortIcon('status')}
@@ -179,7 +191,7 @@ export default function EquipmentsPage() {
               <TableBody>
                 {sortedEquipments.map((equipment) => (
                   <TableRow key={equipment.id}>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell>
                         {equipment.imageUrl ? (
                             <Image src={equipment.imageUrl} alt={equipment.name} width={64} height={64} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-square" />
                         ) : (
@@ -189,11 +201,13 @@ export default function EquipmentsPage() {
                         )}
                     </TableCell>
                     <TableCell className="font-medium">{equipment.name}</TableCell>
-                    <TableCell className="hidden md:table-cell">{equipment.brand}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{equipment.model}</TableCell>
-                    <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{equipment.system}</TableCell>
-                    <TableCell className="hidden md:table-cell">
+                    <TableCell>{equipment.brand}</TableCell>
+                    <TableCell>{equipment.model}</TableCell>
+                    <TableCell>{equipment.type}</TableCell>
+                    <TableCell>{equipment.serial}</TableCell>
+                    <TableCell>{equipment.client}</TableCell>
+                    <TableCell>{equipment.system}</TableCell>
+                    <TableCell>
                       <Badge variant={getStatusBadgeVariant(equipment.status)}>{equipment.status}</Badge>
                     </TableCell>
                     <TableCell>
