@@ -56,6 +56,11 @@ export default function NewEquipmentPage() {
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date>();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
+  const [brand, setBrand] = useState('');
+  const [model, setModel] = useState('');
+  const [type, setType] = useState('');
+  const [serial, setSerial] = useState('');
+
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
@@ -95,7 +100,7 @@ export default function NewEquipmentPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !description || !clientId || !systemId || !location || !status) {
+    if (!name || !description || !clientId || !systemId || !location || !status || !brand || !model || !type || !serial) {
         alert('Por favor, complete todos los campos.');
         return;
     }
@@ -110,6 +115,10 @@ export default function NewEquipmentPage() {
       id: new Date().getTime().toString(),
       name,
       description,
+      brand,
+      model,
+      type,
+      serial,
       client: clientName,
       system: systemName,
       location,
@@ -154,6 +163,26 @@ export default function NewEquipmentPage() {
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el equipo" required className="min-h-32" />
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="brand">Marca</Label>
+                  <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ej. Hikvision" required />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="model">Modelo</Label>
+                  <Input id="model" value={model} onChange={e => setModel(e.target.value)} placeholder="Ej. DS-2DE4225IW-DE" required />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="type">Tipo</Label>
+                  <Input id="type" value={type} onChange={e => setType(e.target.value)} placeholder="Ej. Domo PTZ" required />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="serial">Número de Serie</Label>
+                  <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" required />
+                </div>
               </div>
               <div className="grid gap-3">
                 <Label>Imagen del Equipo</Label>

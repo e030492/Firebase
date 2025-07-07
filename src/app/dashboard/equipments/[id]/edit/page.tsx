@@ -59,6 +59,11 @@ export default function EditEquipmentPage() {
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date>();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
+  const [brand, setBrand] = useState('');
+  const [model, setModel] = useState('');
+  const [type, setType] = useState('');
+  const [serial, setSerial] = useState('');
+
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
@@ -82,6 +87,10 @@ export default function EditEquipmentPage() {
       if (foundEquipment) {
         setName(foundEquipment.name);
         setDescription(foundEquipment.description);
+        setBrand(foundEquipment.brand || '');
+        setModel(foundEquipment.model || '');
+        setType(foundEquipment.type || '');
+        setSerial(foundEquipment.serial || '');
         setLocation(foundEquipment.location);
         setStatus(foundEquipment.status);
         setImageUrl(foundEquipment.imageUrl || null);
@@ -143,6 +152,10 @@ export default function EditEquipmentPage() {
           ...eq,
           name,
           description,
+          brand,
+          model,
+          type,
+          serial,
           client: clientName,
           system: systemName,
           location,
@@ -186,6 +199,26 @@ export default function EditEquipmentPage() {
               <div className="grid gap-3">
                 <Label>Descripción</Label>
                 <Skeleton className="h-32 w-full" />
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label>Marca</Label>
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="grid gap-3">
+                  <Label>Modelo</Label>
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label>Tipo</Label>
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="grid gap-3">
+                  <Label>Número de Serie</Label>
+                  <Skeleton className="h-10 w-full" />
+                </div>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
@@ -266,6 +299,26 @@ export default function EditEquipmentPage() {
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required className="min-h-32" />
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="brand">Marca</Label>
+                  <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ej. Hikvision" required />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="model">Modelo</Label>
+                  <Input id="model" value={model} onChange={e => setModel(e.target.value)} placeholder="Ej. DS-2DE4225IW-DE" required />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="type">Tipo</Label>
+                  <Input id="type" value={type} onChange={e => setType(e.target.value)} placeholder="Ej. Domo PTZ" required />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="serial">Número de Serie</Label>
+                  <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" required />
+                </div>
               </div>
               <div className="grid gap-3">
                 <Label>Imagen del Equipo</Label>

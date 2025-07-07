@@ -141,6 +141,18 @@ export default function EquipmentsPage() {
                       {getSortIcon('name')}
                     </Button>
                   </TableHead>
+                   <TableHead className="hidden md:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('brand')}>
+                      Marca
+                      {getSortIcon('brand')}
+                    </Button>
+                  </TableHead>
+                   <TableHead className="hidden lg:table-cell">
+                    <Button variant="ghost" onClick={() => requestSort('model')}>
+                      Modelo
+                      {getSortIcon('model')}
+                    </Button>
+                  </TableHead>
                   <TableHead className="hidden md:table-cell">
                      <Button variant="ghost" onClick={() => requestSort('client')}>
                         Cliente
@@ -157,18 +169,6 @@ export default function EquipmentsPage() {
                     <Button variant="ghost" onClick={() => requestSort('status')}>
                       Estado
                       {getSortIcon('status')}
-                    </Button>
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    <Button variant="ghost" onClick={() => requestSort('maintenanceStartDate')}>
-                      Inicio Mant.
-                      {getSortIcon('maintenanceStartDate')}
-                    </Button>
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    <Button variant="ghost" onClick={() => requestSort('nextMaintenanceDate')}>
-                      Próximo Mant.
-                      {getSortIcon('nextMaintenanceDate')}
                     </Button>
                   </TableHead>
                   <TableHead>
@@ -189,16 +189,12 @@ export default function EquipmentsPage() {
                         )}
                     </TableCell>
                     <TableCell className="font-medium">{equipment.name}</TableCell>
+                    <TableCell className="hidden md:table-cell">{equipment.brand}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{equipment.model}</TableCell>
                     <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
                     <TableCell className="hidden lg:table-cell">{equipment.system}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <Badge variant={getStatusBadgeVariant(equipment.status)}>{equipment.status}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {equipment.maintenanceStartDate ? new Date(equipment.maintenanceStartDate + 'T00:00:00').toLocaleDateString('es-ES') : 'N/A'}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {equipment.nextMaintenanceDate ? new Date(equipment.nextMaintenanceDate + 'T00:00:00').toLocaleDateString('es-ES') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
