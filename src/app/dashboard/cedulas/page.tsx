@@ -185,7 +185,7 @@ export default function CedulasPage() {
   };
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => prevId === cedulaId ? null : cedulaId);
+    setExpandedCedulaId(prevId => prevId === cedulaId ? null : prevId);
   };
 
 
@@ -385,11 +385,11 @@ export default function CedulasPage() {
                                                                 <div className="flex items-center gap-4">
                                                                     <div>
                                                                         <Label className="font-semibold">Progreso</Label>
-                                                                        <p><Badge variant="secondary">{step.completion}%</Badge></p>
+                                                                        <div><Badge variant="secondary">{step.completion}%</Badge></div>
                                                                     </div>
                                                                     <div>
                                                                         <Label className="font-semibold">Prioridad</Label>
-                                                                        <p><Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge></p>
+                                                                        <div><Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge></div>
                                                                     </div>
                                                                 </div>
                                                             </div>
