@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
   suggestMaintenanceProtocol,
   type SuggestMaintenanceProtocolOutput,
@@ -70,7 +71,7 @@ function SubmitButton() {
 }
 
 export default function NewProtocolPage() {
-  const [state, formAction] = useFormState(generateProtocolAction, { result: null, error: null });
+  const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
