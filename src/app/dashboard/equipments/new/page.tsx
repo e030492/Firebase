@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,6 +44,8 @@ type System = typeof mockSystems[0];
 
 export default function NewEquipmentPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
@@ -51,6 +54,7 @@ export default function NewEquipmentPage() {
   const [status, setStatus] = useState('Activo');
   const [maintenanceStartDate, setMaintenanceStartDate] = useState<Date>();
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date>();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -62,6 +66,17 @@ export default function NewEquipmentPage() {
     const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
     setSystems(storedSystems ? JSON.parse(storedSystems) : []);
   }, []);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +101,7 @@ export default function NewEquipmentPage() {
       status: status as Equipment['status'],
       maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
       nextMaintenanceDate: nextMaintenanceDate ? format(nextMaintenanceDate, 'yyyy-MM-dd') : '',
+      imageUrl: imageUrl || '',
     };
 
     equipments.push(newEquipment);
@@ -117,6 +133,23 @@ export default function NewEquipmentPage() {
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el equipo" required className="min-h-32" />
+              </div>
+              <div className="grid gap-3">
+                <Label>Imagen del Equipo</Label>
+                {imageUrl && <Image src={imageUrl} alt="Vista previa del equipo" width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video" />}
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
+                </Button>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">

@@ -97,6 +97,7 @@ export const mockEquipments = [
     status: 'Activo' as const,
     maintenanceStartDate: '2024-01-15',
     nextMaintenanceDate: '2025-01-15',
+    imageUrl: 'https://placehold.co/400x300.png',
   },
   {
     id: '2',
@@ -108,6 +109,7 @@ export const mockEquipments = [
     status: 'Activo' as const,
     maintenanceStartDate: '2023-11-20',
     nextMaintenanceDate: '2024-11-20',
+    imageUrl: 'https://placehold.co/400x300.png',
   },
   {
     id: '3',
@@ -119,6 +121,7 @@ export const mockEquipments = [
     status: 'En Mantenimiento' as const,
     maintenanceStartDate: '2024-07-01',
     nextMaintenanceDate: '2025-01-01',
+    imageUrl: '',
   },
     {
     id: '4',
@@ -130,6 +133,7 @@ export const mockEquipments = [
     status: 'Inactivo' as const,
     maintenanceStartDate: '2022-05-10',
     nextMaintenanceDate: '2024-05-10',
+    imageUrl: 'https://placehold.co/400x300.png',
   },
 ];
 

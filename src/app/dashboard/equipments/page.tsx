@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -33,7 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, HardHat } from 'lucide-react';
 import { mockEquipments } from '@/lib/mock-data';
 
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
@@ -133,6 +134,7 @@ export default function EquipmentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="hidden sm:table-cell">Imagen</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
                       Nombre
@@ -177,6 +179,15 @@ export default function EquipmentsPage() {
               <TableBody>
                 {sortedEquipments.map((equipment) => (
                   <TableRow key={equipment.id}>
+                    <TableCell className="hidden sm:table-cell">
+                        {equipment.imageUrl ? (
+                            <Image src={equipment.imageUrl} alt={equipment.name} width={64} height={64} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-square" />
+                        ) : (
+                            <div className="h-16 w-16 bg-muted rounded-md flex items-center justify-center">
+                                <HardHat className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                        )}
+                    </TableCell>
                     <TableCell className="font-medium">{equipment.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
                     <TableCell className="hidden lg:table-cell">{equipment.system}</TableCell>

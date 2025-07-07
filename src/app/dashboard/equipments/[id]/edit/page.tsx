@@ -1,11 +1,12 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,6 +48,7 @@ export default function EditEquipmentPage() {
   const params = useParams();
   const router = useRouter();
   const equipmentId = params.id as string;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -56,6 +58,7 @@ export default function EditEquipmentPage() {
   const [status, setStatus] = useState('');
   const [maintenanceStartDate, setMaintenanceStartDate] = useState<Date>();
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date>();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -82,6 +85,7 @@ export default function EditEquipmentPage() {
         setDescription(foundEquipment.description);
         setLocation(foundEquipment.location);
         setStatus(foundEquipment.status);
+        setImageUrl(foundEquipment.imageUrl || null);
         
         if (foundEquipment.maintenanceStartDate) {
           setMaintenanceStartDate(new Date(foundEquipment.maintenanceStartDate + 'T00:00:00'));
@@ -105,6 +109,17 @@ export default function EditEquipmentPage() {
     }
 
   }, [equipmentId, clients.length, systems.length]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +141,7 @@ export default function EditEquipmentPage() {
           status: status as Equipment['status'],
           maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
           nextMaintenanceDate: nextMaintenanceDate ? format(nextMaintenanceDate, 'yyyy-MM-dd') : '',
+          imageUrl: imageUrl || '',
         };
       }
       return eq;
@@ -248,6 +264,29 @@ export default function EditEquipmentPage() {
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required className="min-h-32" />
+              </div>
+              <div className="grid gap-3">
+                <Label>Imagen del Equipo</Label>
+                {imageUrl ? (
+                    <Image src={imageUrl} alt="Vista previa del equipo" width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video" />
+                ) : (
+                    <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
+                        <Camera className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                )}
+                <Input
+                    id="image-upload"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    className="hidden"
+                />
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
+                </Button>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
