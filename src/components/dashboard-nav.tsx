@@ -43,7 +43,7 @@ export function DashboardNav() {
     <>
       {allNavItems.map((item) => (
         <SidebarMenuItem key={item.label}>
-          <Link href={item.disabled ? '#' : item.href} passHref legacyBehavior>
+          {item.disabled ? (
             <SidebarMenuButton
               isActive={isActive(item.href)}
               disabled={item.disabled}
@@ -61,7 +61,28 @@ export function DashboardNav() {
                 </Badge>
               )}
             </SidebarMenuButton>
-          </Link>
+          ) : (
+            <SidebarMenuButton
+              asChild
+              isActive={isActive(item.href)}
+              disabled={item.disabled}
+              tooltip={item.label}
+              className={cn(item.disabled && 'cursor-not-allowed opacity-50')}
+            >
+              <Link href={item.href}>
+                <item.icon />
+                <span>{item.label}</span>
+                {item.ai && (
+                  <Badge
+                    variant="outline"
+                    className="ml-auto bg-accent/20 text-accent-foreground border-accent"
+                  >
+                    AI
+                  </Badge>
+                )}
+              </Link>
+            </SidebarMenuButton>
+          )}
         </SidebarMenuItem>
       ))}
     </>
