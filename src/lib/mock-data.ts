@@ -62,3 +62,26 @@ export const mockClients = [
     ]
   },
 ];
+
+export const mockSystems = [
+  {
+    id: '1',
+    name: 'Sistema de Control de Acceso',
+    description: 'Gestiona entradas y salidas mediante tarjetas RFID y biométricos.',
+  },
+  {
+    id: '2',
+    name: 'Circuito Cerrado de Televisión (CCTV)',
+    description: 'Sistema de videovigilancia con cámaras IP de alta definición.',
+  },
+  {
+    id: '3',
+    name: 'Sistema de Detección de Incendios',
+    description: 'Detectores de humo y calor conectados a una central de alarmas.',
+  },
+  {
+    id: '4',
+    name: 'Alarma de Intrusión Perimetral',
+    description: 'Sensores de movimiento y barreras infrarrojas para proteger el perímetro.',
+  },
+];
