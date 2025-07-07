@@ -411,7 +411,7 @@ export default function EditCedulaPage() {
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
+                 <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
                   <Select value={clientId} onValueChange={handleClientChange} required>
                     <SelectTrigger>
@@ -424,22 +424,7 @@ export default function EditCedulaPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                 <div className="grid gap-3">
-                   <Label htmlFor="technician">Técnico Asignado</Label>
-                   <Select value={technicianId} onValueChange={setTechnicianId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un técnico" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {technicians.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                 </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
+                <div className="grid gap-3">
                    <Label htmlFor="system">Sistema</Label>
                    <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId}>
                     <SelectTrigger>
@@ -452,6 +437,8 @@ export default function EditCedulaPage() {
                     </SelectContent>
                   </Select>
                  </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                   <Label htmlFor="equipment">Equipo</Label>
                   <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId}>
@@ -465,7 +452,20 @@ export default function EditCedulaPage() {
                     </SelectContent>
                   </Select>
                 </div>
-               </div>
+                <div className="grid gap-3">
+                   <Label htmlFor="technician">Técnico Asignado</Label>
+                   <Select value={technicianId} onValueChange={setTechnicianId} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un técnico" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {technicians.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                 </div>
+              </div>
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>

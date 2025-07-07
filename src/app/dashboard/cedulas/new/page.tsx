@@ -296,21 +296,6 @@ export default function NewCedulaPage() {
                     </Select>
                     </div>
                     <div className="grid gap-3">
-                    <Label htmlFor="technician">Técnico Asignado</Label>
-                    <Select onValueChange={setTechnicianId} required>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un técnico" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {technicians.map(t => (
-                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    </div>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div className="grid gap-3">
                     <Label htmlFor="system">Sistema</Label>
                     <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId}>
                         <SelectTrigger>
@@ -323,6 +308,8 @@ export default function NewCedulaPage() {
                         </SelectContent>
                     </Select>
                     </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
                     <Label htmlFor="equipment">Equipo</Label>
                     <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId}>
@@ -332,6 +319,19 @@ export default function NewCedulaPage() {
                         <SelectContent>
                         {filteredEquipments.map(eq => (
                             <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="technician">Técnico Asignado</Label>
+                    <Select onValueChange={setTechnicianId} required>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un técnico" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {technicians.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
