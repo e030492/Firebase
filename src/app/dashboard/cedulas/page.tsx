@@ -1,11 +1,16 @@
+
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -33,7 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, Camera } from 'lucide-react';
 import { mockCedulas, mockClients, mockEquipments } from '@/lib/mock-data';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -60,6 +65,8 @@ export default function CedulasPage() {
 
   const [cedulaToDelete, setCedulaToDelete] = useState<Cedula | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'folio', direction: 'ascending' });
+
+  const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
 
   useEffect(() => {
     const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
@@ -163,6 +170,24 @@ export default function CedulasPage() {
         return 'secondary';
     }
   };
+  
+  const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
+    switch (priority?.toLowerCase()) {
+      case 'alta':
+        return 'destructive';
+      case 'media':
+        return 'default';
+      case 'baja':
+        return 'secondary';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const handleToggleDetails = (cedulaId: string) => {
+    setExpandedCedulaId(prevId => prevId === cedulaId ? null : cedulaId);
+  };
+
 
   return (
     <>
@@ -280,45 +305,119 @@ export default function CedulasPage() {
                   <TableHead>
                     <span className="sr-only">Acciones</span>
                   </TableHead>
+                  <TableHead>
+                    <span className="sr-only">Detalles</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAndSortedCedulas.map((cedula) => (
-                  <TableRow key={cedula.id}>
-                    <TableCell className="font-medium">{cedula.folio}</TableCell>
-                    <TableCell>{cedula.client}</TableCell>
-                    <TableCell className="hidden md:table-cell">{cedula.equipment}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{cedula.technician}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
-                     <TableCell className="hidden md:table-cell">
-                      {new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
+                  <Fragment key={cedula.id}>
+                    <TableRow>
+                      <TableCell className="font-medium">{cedula.folio}</TableCell>
+                      <TableCell>{cedula.client}</TableCell>
+                      <TableCell className="hidden md:table-cell">{cedula.equipment}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{cedula.technician}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
+                       <TableCell className="hidden md:table-cell">
+                        {new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Toggle menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                               <Link href={`/dashboard/cedulas/${cedula.id}/edit`}>Editar</Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => setCedulaToDelete(cedula)}
+                            >
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                      <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(cedula.id)}>
+                            <ChevronDown className={cn("h-4 w-4 transition-transform", expandedCedulaId === cedula.id && "rotate-180")} />
+                            <span className="sr-only">Ver detalles</span>
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                             <Link href={`/dashboard/cedulas/${cedula.id}/edit`}>Editar</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onSelect={() => setCedulaToDelete(cedula)}
-                          >
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                    </TableRow>
+                    {expandedCedulaId === cedula.id && (
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell colSpan={9} className="p-0">
+                                <div className="p-4">
+                                <Card className="shadow-inner">
+                                    <CardHeader>
+                                        <CardTitle>Detalles de la Cédula: {cedula.folio}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        <div>
+                                            <Label className="text-base">Descripción del Trabajo</Label>
+                                            <p className="text-sm text-muted-foreground mt-1">{cedula.description || 'Sin descripción.'}</p>
+                                        </div>
+                                        {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
+                                            <div>
+                                                <Label className="text-base">Protocolo de Mantenimiento Ejecutado</Label>
+                                                <div className="border rounded-md mt-2 divide-y">
+                                                    {cedula.protocolSteps.map((step, index) => (
+                                                        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4">
+                                                            <div className="md:col-span-2 space-y-3">
+                                                                <div>
+                                                                    <Label className="font-semibold">Paso del Protocolo</Label>
+                                                                    <p className="text-sm text-muted-foreground">{step.step}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <Label className="font-semibold">Notas del Técnico</Label>
+                                                                    <p className="text-sm text-muted-foreground">{step.notes || 'Sin notas.'}</p>
+                                                                </div>
+                                                                <div className="flex items-center gap-4">
+                                                                    <div>
+                                                                        <Label className="font-semibold">Progreso</Label>
+                                                                        <p><Badge variant="secondary">{step.completion}%</Badge></p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <Label className="font-semibold">Prioridad</Label>
+                                                                        <p><Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge></p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label className="font-semibold">Evidencia Fotográfica</Label>
+                                                                {step.imageUrl ? (
+                                                                    <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video border" />
+                                                                ) : (
+                                                                    <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                                                        <div className="text-center text-muted-foreground">
+                                                                            <Camera className="h-10 w-10 mx-auto" />
+                                                                            <p className="text-sm mt-2">Sin evidencia</p>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
@@ -344,3 +443,5 @@ export default function CedulasPage() {
     </>
   );
 }
+
+    
