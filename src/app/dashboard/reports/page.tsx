@@ -114,7 +114,7 @@ export default function ReportsPage() {
   const selectionState = isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false);
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : cedulaId));
+    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : prevId));
   };
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
@@ -340,7 +340,7 @@ export default function ReportsPage() {
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
           <Button asChild disabled={selectedCedulas.length === 0}>
-             <Link href={`/dashboard/reports/print?ids=${selectedCedulas.join(',')}`} target="_blank">
+             <Link href={`/dashboard/reports/print?ids=${selectedCedulas.join(',')}`}>
                 <Printer className="mr-2 h-4 w-4" />
                 Generar Reporte ({selectedCedulas.length})
             </Link>

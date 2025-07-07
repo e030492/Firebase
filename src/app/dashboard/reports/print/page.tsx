@@ -21,14 +21,13 @@ type Client = typeof mockClients[0];
 type System = typeof mockSystems[0];
 type EnrichedCedula = Cedula & { equipmentDetails?: Equipment; clientDetails?: Client; systemDetails?: System };
 
-function ReportGenerator() {
+function ReportContent() {
   const searchParams = useSearchParams();
   const [reportCedulas, setReportCedulas] = useState<EnrichedCedula[]>([]);
   const [loading, setLoading] = useState(true);
   const [reportDate, setReportDate] = useState('');
 
   useEffect(() => {
-    // Set the date on the client side to avoid hydration mismatch
     setReportDate(new Date().toLocaleDateString('es-ES'));
 
     const idsParam = searchParams.get('ids');
@@ -214,9 +213,15 @@ function ReportGenerator() {
 }
 
 export default function PrintReportPage() {
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+    
     return (
         <Suspense fallback={<div className="p-8 text-center">Cargando reporte...</div>}>
-            <ReportGenerator />
+            {isClient ? <ReportContent /> : <div className="p-8 text-center">Preparando reporte...</div>}
         </Suspense>
     )
 }
