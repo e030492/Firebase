@@ -61,20 +61,20 @@ export default function EditEquipmentPage() {
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
+  const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    const allClients: Client[] = storedClients ? JSON.parse(storedClients) : [];
+    // Load static data first
+    const allClients: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]');
     setClients(allClients);
-    
-    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    const allSystems: System[] = storedSystems ? JSON.parse(storedSystems) : [];
+    const allSystems: System[] = JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]');
     setSystems(allSystems);
 
-    if (equipmentId && allClients.length > 0 && allSystems.length > 0) {
+    // Then load and process equipment data
+    if (equipmentId && allClients.length > 0) {
       const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
       const equipments: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : [];
       const foundEquipment = equipments.find(e => e.id === equipmentId);
@@ -94,20 +94,29 @@ export default function EditEquipmentPage() {
         }
         
         const foundClient = allClients.find(c => c.name === foundEquipment.client);
-        if (foundClient) setClientId(foundClient.id);
+        if (foundClient) {
+          setClientId(foundClient.id);
+          setClientWarehouses(foundClient.almacenes || []);
+        }
 
         const foundSystem = allSystems.find(s => s.name === foundEquipment.system);
-        if (foundSystem) setSystemId(foundSystem.id);
+        if (foundSystem) {
+          setSystemId(foundSystem.id);
+        }
 
       } else {
         setNotFound(true);
       }
       setLoading(false);
-    } else if (equipmentId) {
-        setLoading(true);
     }
-
-  }, [equipmentId, clients.length, systems.length]);
+  }, [equipmentId]);
+  
+  const handleClientChange = (newClientId: string) => {
+    setClientId(newClientId);
+    const selectedClient = clients.find(c => c.id === newClientId);
+    setClientWarehouses(selectedClient?.almacenes || []);
+    setLocation(''); // Reset location when client changes
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -184,14 +193,14 @@ export default function EditEquipmentPage() {
                   <Skeleton className="h-10 w-full" />
                 </div>
                  <div className="grid gap-3">
-                  <Label>Sistema Asociado</Label>
+                  <Label>Almacén / Ubicación</Label>
                   <Skeleton className="h-10 w-full" />
                 </div>
               </div>
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
-                   <Label>Ubicación</Label>
-                   <Skeleton className="h-10 w-full" />
+                    <Label>Sistema Asociado</Label>
+                    <Skeleton className="h-10 w-full" />
                  </div>
                  <div className="grid gap-3">
                    <Label>Estado</Label>
@@ -284,7 +293,7 @@ export default function EditEquipmentPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select value={clientId} onValueChange={setClientId} required>
+                  <Select value={clientId} onValueChange={handleClientChange} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -296,8 +305,27 @@ export default function EditEquipmentPage() {
                   </Select>
                 </div>
                  <div className="grid gap-3">
-                  <Label htmlFor="system">Sistema Asociado</Label>
-                  <Select value={systemId} onValueChange={setSystemId} required>
+                  <Label htmlFor="location">Almacén / Ubicación</Label>
+                  <Select value={location} onValueChange={setLocation} required disabled={!clientId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un almacén" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clientWarehouses.length > 0 ? (
+                        clientWarehouses.map(almacen => (
+                          <SelectItem key={almacen.nombre} value={almacen.nombre}>{almacen.nombre}</SelectItem>
+                        ))
+                      ) : (
+                         <SelectItem value="no-warehouses" disabled>No hay almacenes para este cliente</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                   <Label htmlFor="system">Sistema Asociado</Label>
+                   <Select value={systemId} onValueChange={setSystemId} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un sistema" />
                     </SelectTrigger>
@@ -307,12 +335,6 @@ export default function EditEquipmentPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                   <Label htmlFor="location">Ubicación</Label>
-                   <Input id="location" value={location} onChange={e => setLocation(e.target.value)} required />
                  </div>
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>

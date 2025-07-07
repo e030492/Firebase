@@ -58,6 +58,7 @@ export default function NewEquipmentPage() {
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
+  const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
 
   useEffect(() => {
     const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
@@ -66,6 +67,20 @@ export default function NewEquipmentPage() {
     const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
     setSystems(storedSystems ? JSON.parse(storedSystems) : []);
   }, []);
+
+  useEffect(() => {
+    if (clientId) {
+      const selectedClient = clients.find(c => c.id === clientId);
+      setClientWarehouses(selectedClient?.almacenes || []);
+    } else {
+      setClientWarehouses([]);
+    }
+  }, [clientId, clients]);
+  
+  const handleClientChange = (newClientId: string) => {
+    setClientId(newClientId);
+    setLocation('');
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -160,7 +175,7 @@ export default function NewEquipmentPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select onValueChange={setClientId} required>
+                  <Select onValueChange={handleClientChange} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -171,6 +186,25 @@ export default function NewEquipmentPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                 <div className="grid gap-3">
+                  <Label htmlFor="location">Almacén / Ubicación</Label>
+                  <Select value={location} onValueChange={setLocation} required disabled={!clientId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un almacén" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clientWarehouses.length > 0 ? (
+                        clientWarehouses.map(almacen => (
+                          <SelectItem key={almacen.nombre} value={almacen.nombre}>{almacen.nombre}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-warehouses" disabled>No hay almacenes para este cliente</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                   <Label htmlFor="system">Sistema Asociado</Label>
                   <Select onValueChange={setSystemId} required>
@@ -183,12 +217,6 @@ export default function NewEquipmentPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                   <Label htmlFor="location">Ubicación</Label>
-                   <Input id="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ej. Puerta Principal" required />
                  </div>
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>
