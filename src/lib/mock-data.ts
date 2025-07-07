@@ -200,7 +200,11 @@ export const mockCedulas = [
     supervisor: 'Supervisor General',
     creationDate: '2024-07-20 10:30',
     status: 'Pendiente' as const,
-    description: 'Revisión trimestral de la cámara de la entrada principal.'
+    description: 'Revisión trimestral de la cámara de la entrada principal.',
+    protocolSteps: [
+      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, percentage: 10, completion: 50 },
+      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, percentage: 25, completion: 25 },
+    ]
   },
   {
     id: '2',
@@ -211,7 +215,8 @@ export const mockCedulas = [
     supervisor: 'Supervisor General',
     creationDate: '2024-07-18 14:00',
     status: 'Completada' as const,
-    description: 'Cambio de batería y limpieza de lector.'
+    description: 'Cambio de batería y limpieza de lector.',
+    protocolSteps: []
   },
   {
     id: '3',
@@ -222,7 +227,8 @@ export const mockCedulas = [
     supervisor: 'Supervisor General',
     creationDate: '2024-07-15 09:00',
     status: 'En Progreso' as const,
-    description: 'Pruebas de funcionamiento y limpieza de sensores.'
+    description: 'Pruebas de funcionamiento y limpieza de sensores.',
+    protocolSteps: []
   },
   {
     id: '4',
@@ -233,7 +239,8 @@ export const mockCedulas = [
     supervisor: 'Supervisor General',
     creationDate: '2024-07-21 16:45',
     status: 'Pendiente' as const,
-    description: 'Alineación de haces infrarrojos y prueba de alcance.'
+    description: 'Alineación de haces infrarrojos y prueba de alcance.',
+    protocolSteps: []
   },
 ];
 

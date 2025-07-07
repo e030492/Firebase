@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -31,21 +32,22 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems } from '@/lib/mock-data';
-import Link from 'next/link';
+import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems, mockProtocols } from '@/lib/mock-data';
 
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 const USERS_STORAGE_KEY = 'guardian_shield_users';
 const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
+const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type User = typeof mockUsers[0];
 type System = typeof mockSystems[0];
-
+type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string };
+type Protocol = { equipmentId: string; steps: ProtocolStep[] };
 
 export default function EditCedulaPage() {
   const params = useParams();
@@ -69,6 +71,9 @@ export default function EditCedulaPage() {
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
+
+  const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
+  const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -115,6 +120,27 @@ export default function EditCedulaPage() {
             setEquipmentId(foundEquipment.id);
             const foundSystem = allSystemsData.find(s => s.name === foundEquipment.system);
             if (foundSystem) setSystemId(foundSystem.id);
+
+            // Load protocol for the equipment
+            const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
+            const protocols: Protocol[] = storedProtocols ? JSON.parse(storedProtocols) : mockProtocols;
+            const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
+            const baseProtocolSteps = equipmentProtocol?.steps || [];
+            
+            setProtocolSteps(baseProtocolSteps);
+
+            const savedCompletionMap = new Map<string, number>();
+            if (foundCedula.protocolSteps) {
+                foundCedula.protocolSteps.forEach(step => {
+                    savedCompletionMap.set(step.step, step.completion);
+                });
+            }
+            
+            const initialPercentages = baseProtocolSteps.reduce((acc, step) => {
+                acc[step.step] = String(savedCompletionMap.get(step.step) || 0);
+                return acc;
+            }, {} as { [step: string]: string });
+            setCompletionPercentages(initialPercentages);
         }
 
         const foundTechnician = allUsersData.find(u => u.name === foundCedula.technician);
@@ -155,6 +181,10 @@ export default function EditCedulaPage() {
     setEquipmentId('');
   };
 
+  const handlePercentageChange = (step: string, value: string) => {
+    setCompletionPercentages(prev => ({ ...prev, [step]: value }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
@@ -184,6 +214,10 @@ export default function EditCedulaPage() {
           creationDate: creationDate ? format(finalDateTime, 'yyyy-MM-dd HH:mm') : '',
           status: status as Cedula['status'],
           description,
+          protocolSteps: protocolSteps.map(step => ({
+            ...step,
+            completion: Number(completionPercentages[step.step]) || 0,
+          })),
         };
       }
       return c;
@@ -296,6 +330,7 @@ export default function EditCedulaPage() {
              <p className="text-muted-foreground">Modifique los datos de la cédula de mantenimiento.</p>
            </div>
         </div>
+        <div className='grid gap-4'>
         <Card>
           <CardHeader>
             <CardTitle>Información de la Cédula</CardTitle>
@@ -427,15 +462,45 @@ export default function EditCedulaPage() {
                  </div>
                </div>
                 <div className="grid gap-3">
-                <Label htmlFor="description">Descripción del Trabajo</Label>
-                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" />
-              </div>
+                  <Label htmlFor="description">Descripción del Trabajo</Label>
+                  <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" />
+                </div>
             </div>
           </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-            <Button type="submit">Guardar Cambios</Button>
-          </CardFooter>
         </Card>
+
+        {protocolSteps.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Protocolo de Mantenimiento</CardTitle>
+              <CardDescription>Registre el porcentaje de ejecución para cada paso del protocolo.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {protocolSteps.map((step, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_120px] items-center gap-4">
+                    <Label htmlFor={`step-${index}`}>{step.step}</Label>
+                    <Input
+                      id={`step-${index}`}
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="% Ejecutado"
+                      value={completionPercentages[step.step] || ''}
+                      onChange={(e) => handlePercentageChange(step.step, e.target.value)}
+                      className="text-right"
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="flex justify-start">
+            <Button type="submit">Guardar Cambios</Button>
+        </div>
+        </div>
       </div>
     </form>
   );

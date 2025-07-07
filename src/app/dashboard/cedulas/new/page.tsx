@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -30,19 +31,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems } from '@/lib/mock-data';
+import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems, mockProtocols } from '@/lib/mock-data';
 
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 const USERS_STORAGE_KEY = 'guardian_shield_users';
 const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
+const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type User = typeof mockUsers[0];
 type System = typeof mockSystems[0];
+type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string };
+type Protocol = { equipmentId: string; steps: ProtocolStep[] };
 
 export default function NewCedulaPage() {
   const router = useRouter();
@@ -63,6 +67,9 @@ export default function NewCedulaPage() {
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
+
+  const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
+  const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
 
   useEffect(() => {
     const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
@@ -95,6 +102,30 @@ export default function NewCedulaPage() {
     }
     // No reseteamos equipmentId aquí para no perder la seleccion si cambia otra cosa
   }, [clientId, systemId, clients, systems, equipments]);
+  
+  useEffect(() => {
+    if (equipmentId) {
+        const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
+        const protocols: Protocol[] = storedProtocols ? JSON.parse(storedProtocols) : mockProtocols;
+        const equipmentProtocol = protocols.find(p => p.equipmentId === equipmentId);
+        
+        if (equipmentProtocol) {
+            setProtocolSteps(equipmentProtocol.steps);
+            const initialPercentages = equipmentProtocol.steps.reduce((acc, step) => {
+                acc[step.step] = '0';
+                return acc;
+            }, {} as { [step: string]: string });
+            setCompletionPercentages(initialPercentages);
+        } else {
+            setProtocolSteps([]);
+            setCompletionPercentages({});
+        }
+    } else {
+        setProtocolSteps([]);
+        setCompletionPercentages({});
+    }
+  }, [equipmentId]);
+
 
   const handleClientChange = (newClientId: string) => {
     setClientId(newClientId);
@@ -106,6 +137,10 @@ export default function NewCedulaPage() {
   const handleSystemChange = (newSystemId: string) => {
     setSystemId(newSystemId);
     setEquipmentId('');
+  };
+
+  const handlePercentageChange = (step: string, value: string) => {
+    setCompletionPercentages(prev => ({ ...prev, [step]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -138,6 +173,10 @@ export default function NewCedulaPage() {
       creationDate: format(finalDate, 'yyyy-MM-dd HH:mm'),
       status: status as Cedula['status'],
       description,
+      protocolSteps: protocolSteps.map(step => ({
+        ...step,
+        completion: Number(completionPercentages[step.step]) || 0,
+      })),
     };
 
     cedulas.push(newCedula);
@@ -162,146 +201,177 @@ export default function NewCedulaPage() {
             </p>
            </div>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Información de la Cédula</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-6">
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                   <Label htmlFor="folio">Folio</Label>
-                   <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required />
-                 </div>
-                 <div className="grid gap-3">
-                    <Label htmlFor="creationDate">Fecha y Hora de Creación</Label>
-                    <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !creationDate && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={creationDate}
-                                    onSelect={setCreationDate}
-                                    initialFocus
-                                    locale={es}
-                                />
-                            </PopoverContent>
-                        </Popover>
+        <div className='grid gap-4'>
+            <Card>
+            <CardHeader>
+                <CardTitle>Información de la Cédula</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid gap-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-3">
+                    <Label htmlFor="folio">Folio</Label>
+                    <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required />
+                    </div>
+                    <div className="grid gap-3">
+                        <Label htmlFor="creationDate">Fecha y Hora de Creación</Label>
+                        <div className="flex items-center gap-2">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !creationDate && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                        mode="single"
+                                        selected={creationDate}
+                                        onSelect={setCreationDate}
+                                        initialFocus
+                                        locale={es}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            <Input
+                                type="time"
+                                className="w-auto"
+                                value={creationTime}
+                                onChange={e => setCreationTime(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-3">
+                    <Label htmlFor="client">Cliente</Label>
+                    <Select onValueChange={handleClientChange} required>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {clients.map(client => (
+                            <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="technician">Técnico Asignado</Label>
+                    <Select onValueChange={setTechnicianId} required>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un técnico" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {technicians.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-3">
+                    <Label htmlFor="system">Sistema</Label>
+                    <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId}>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un sistema" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {systems.map(system => (
+                            <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="equipment">Equipo</Label>
+                    <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId}>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un equipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {filteredEquipments.map(eq => (
+                            <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-3">
+                    <Label htmlFor="status">Estado</Label>
+                    <Select value={status} onValueChange={setStatus} required>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="Pendiente">Pendiente</SelectItem>
+                        <SelectItem value="En Progreso">En Progreso</SelectItem>
+                        <SelectItem value="Completada">Completada</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="supervisor">Supervisor</Label>
+                    <Select onValueChange={setSupervisorId} required>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un supervisor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {supervisors.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="description">Descripción del Trabajo</Label>
+                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" />
+                </div>
+                </div>
+            </CardContent>
+            </Card>
+
+            {protocolSteps.length > 0 && (
+            <Card>
+                <CardHeader>
+                <CardTitle>Protocolo de Mantenimiento</CardTitle>
+                <CardDescription>Registre el porcentaje de ejecución para cada paso del protocolo.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <div className="grid gap-4">
+                    {protocolSteps.map((step, index) => (
+                    <div key={index} className="grid grid-cols-[1fr_120px] items-center gap-4">
+                        <Label htmlFor={`step-${index}`}>{step.step}</Label>
                         <Input
-                            type="time"
-                            className="w-auto"
-                            value={creationTime}
-                            onChange={e => setCreationTime(e.target.value)}
+                        id={`step-${index}`}
+                        type="number"
+                        min="0"
+                        max="100"
+                        placeholder="% Ejecutado"
+                        value={completionPercentages[step.step] || ''}
+                        onChange={(e) => handlePercentageChange(step.step, e.target.value)}
+                        className="text-right"
                         />
                     </div>
-                  </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="client">Cliente</Label>
-                  <Select onValueChange={handleClientChange} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    ))}
                 </div>
-                 <div className="grid gap-3">
-                   <Label htmlFor="technician">Técnico Asignado</Label>
-                   <Select onValueChange={setTechnicianId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un técnico" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {technicians.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                 </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                  <Label htmlFor="system">Sistema</Label>
-                  <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un sistema" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {systems.map(system => (
-                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div className="grid gap-3">
-                  <Label htmlFor="equipment">Equipo</Label>
-                  <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un equipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredEquipments.map(eq => (
-                        <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                   <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pendiente">Pendiente</SelectItem>
-                      <SelectItem value="En Progreso">En Progreso</SelectItem>
-                      <SelectItem value="Completada">Completada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                 </div>
-                 <div className="grid gap-3">
-                   <Label htmlFor="supervisor">Supervisor</Label>
-                   <Select onValueChange={setSupervisorId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un supervisor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {supervisors.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                 </div>
-               </div>
-                <div className="grid gap-3">
-                <Label htmlFor="description">Descripción del Trabajo</Label>
-                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" />
-              </div>
+                </CardContent>
+            </Card>
+            )}
+
+            <div className="flex justify-start">
+                <Button type="submit">Guardar Cédula</Button>
             </div>
-          </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-            <Button type="submit">Guardar Cédula</Button>
-          </CardFooter>
-        </Card>
+        </div>
       </div>
     </form>
   );
