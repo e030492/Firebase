@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -22,7 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreVertical, Wand2 } from 'lucide-react';
 import { mockEquipments, mockProtocols, mockClients, mockSystems } from '@/lib/mock-data';
 import {
   Dialog,
@@ -46,6 +47,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -75,10 +77,12 @@ type DeletingStepInfo = {
 };
 
 export default function ProtocolsPage() {
+  const router = useRouter();
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [editingStep, setEditingStep] = useState<EditingStepInfo | null>(null);
   const [deletingStep, setDeletingStep] = useState<DeletingStepInfo | null>(null);
+  const [equipmentToDelete, setEquipmentToDelete] = useState<string | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -191,6 +195,15 @@ export default function ProtocolsPage() {
       setDeletingStep(null);
   };
 
+  const handleDeleteProtocol = () => {
+    if (!equipmentToDelete) return;
+    const updatedProtocols = protocols.filter(p => p.equipmentId !== equipmentToDelete);
+    setProtocols(updatedProtocols);
+    localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(updatedProtocols));
+    setEquipmentToDelete(null);
+  };
+
+
   return (
     <>
       <div className="grid auto-rows-max items-start gap-4 md:gap-8">
@@ -248,12 +261,44 @@ export default function ProtocolsPage() {
                   const equipmentProtocols = getProtocolsForEquipment(equipment.id);
                   return (
                     <AccordionItem value={equipment.id} key={equipment.id}>
-                      <AccordionTrigger className="text-lg font-medium hover:no-underline">
-                          <div className="flex items-center gap-4 text-left">
-                              <span>{equipment.name} <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span></span>
-                              <Badge variant="outline">{equipmentProtocols.length} pasos</Badge>
-                          </div>
-                      </AccordionTrigger>
+                        <div className="flex items-center w-full">
+                           <AccordionTrigger className="flex-1 text-lg font-medium hover:no-underline py-4">
+                              <div className="flex items-center gap-4 text-left">
+                                  <span>{equipment.name} <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span></span>
+                                  <Badge variant="outline">{equipmentProtocols.length} {equipmentProtocols.length === 1 ? 'paso' : 'pasos'}</Badge>
+                              </div>
+                           </AccordionTrigger>
+                           <div className="px-4">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                        <MoreVertical className="h-4 w-4" />
+                                        <span className="sr-only">Más acciones</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                        <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                            <Wand2 className="mr-2 h-4 w-4" />
+                                            <span>{equipmentProtocols.length > 0 ? 'Modificar con IA' : 'Generar con IA'}</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    {equipmentProtocols.length > 0 && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                className="text-destructive focus:text-destructive"
+                                                onSelect={() => setEquipmentToDelete(equipment.id)}
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Eliminar protocolo</span>
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                           </div>
+                        </div>
                       <AccordionContent>
                         {equipmentProtocols.length > 0 ? (
                           <Table>
@@ -299,7 +344,15 @@ export default function ProtocolsPage() {
                             </TableBody>
                           </Table>
                         ) : (
-                          <p className="text-muted-foreground px-4 py-2">No hay un protocolo de mantenimiento definido para este equipo.</p>
+                          <div className="text-muted-foreground px-4 py-2 flex flex-col items-center justify-center text-center gap-2">
+                            <p>No hay un protocolo de mantenimiento definido para este equipo.</p>
+                             <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                <Button variant="outline">
+                                    <Wand2 className="mr-2 h-4 w-4" />
+                                    Generar con IA
+                                </Button>
+                             </Link>
+                          </div>
                         )}
                       </AccordionContent>
                     </AccordionItem>
@@ -352,7 +405,7 @@ export default function ProtocolsPage() {
         </DialogContent>
     </Dialog>
     
-    {/* Delete Confirmation Dialog */}
+    {/* Delete Step Confirmation Dialog */}
     <AlertDialog open={!!deletingStep} onOpenChange={(open) => !open && setDeletingStep(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -364,6 +417,24 @@ export default function ProtocolsPage() {
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+     {/* Delete Protocol Confirmation Dialog */}
+    <AlertDialog open={!!equipmentToDelete} onOpenChange={(open) => !open && setEquipmentToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Está seguro de eliminar todo el protocolo?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Se eliminarán todos los pasos de mantenimiento para este equipo.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setEquipmentToDelete(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteProtocol} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                    Sí, eliminar todo
+                </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>

@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   suggestMaintenanceProtocol,
@@ -100,6 +100,7 @@ function SubmitButton() {
 // Main Page Component
 export default function NewProtocolPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
 
   // Data states
@@ -122,6 +123,29 @@ export default function NewProtocolPage() {
     setSystems(JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]'));
     setAllEquipments(JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || '[]'));
   }, []);
+
+  // Pre-fill form if equipmentId is in query params
+  useEffect(() => {
+    const equipmentIdParam = searchParams.get('equipmentId');
+    if (equipmentIdParam && allEquipments.length && clients.length && systems.length) {
+        const equipment = allEquipments.find(e => e.id === equipmentIdParam);
+        if (equipment) {
+            const client = clients.find(c => c.name === equipment.client);
+            const system = systems.find(s => s.name === equipment.system);
+
+            if (client) {
+                setClientId(client.id);
+            }
+            if (system) {
+                setSystemId(system.id);
+            }
+            setSelectedEquipmentId(equipment.id);
+            setEquipmentName(equipment.name);
+            setEquipmentDescription(equipment.description);
+        }
+    }
+}, [searchParams, allEquipments, clients, systems]);
+
 
   // Filter equipments when client or system changes
   useEffect(() => {
@@ -212,7 +236,12 @@ export default function NewProtocolPage() {
     
     const existingProtocolIndex = protocols.findIndex(p => p.equipmentId === selectedEquipmentId);
     if (existingProtocolIndex > -1) {
-      protocols[existingProtocolIndex] = newProtocol;
+      // Here we could decide to append or replace. Replacing seems more intuitive for a "save" action.
+      protocols[existingProtocolIndex].steps.push(...selectedSteps);
+      // Remove duplicates
+      const uniqueSteps = Array.from(new Map(protocols[existingProtocolIndex].steps.map(item => [item.step, item])).values());
+      protocols[existingProtocolIndex].steps = uniqueSteps;
+
     } else {
       protocols.push(newProtocol);
     }
@@ -261,7 +290,7 @@ export default function NewProtocolPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                <div className="grid gap-3">
                  <Label htmlFor="client">Cliente</Label>
-                 <Select onValueChange={handleClientChange}>
+                 <Select onValueChange={handleClientChange} value={clientId}>
                    <SelectTrigger>
                      <SelectValue placeholder="Seleccione un cliente" />
                    </SelectTrigger>
@@ -395,5 +424,3 @@ export default function NewProtocolPage() {
     </div>
   );
 }
-
-    
