@@ -25,8 +25,12 @@ function ReportGenerator() {
   const searchParams = useSearchParams();
   const [reportCedulas, setReportCedulas] = useState<EnrichedCedula[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reportDate, setReportDate] = useState('');
 
   useEffect(() => {
+    // Set the date on the client side to avoid hydration mismatch
+    setReportDate(new Date().toLocaleDateString('es-ES'));
+
     const idsParam = searchParams.get('ids');
     const ids = idsParam ? idsParam.split(',').filter(id => id) : [];
     
@@ -107,7 +111,7 @@ function ReportGenerator() {
                         </div>
                         <div className="text-left sm:text-right mt-4 sm:mt-0">
                             <p className="font-semibold text-gray-700">Folio: <span className="font-normal">{cedula.folio}</span></p>
-                            <p className="font-semibold text-gray-700">Fecha de Reporte: <span className="font-normal">{new Date().toLocaleDateString('es-ES')}</span></p>
+                            <p className="font-semibold text-gray-700">Fecha de Reporte: <span className="font-normal">{reportDate}</span></p>
                         </div>
                     </div>
                     <Separator className="my-6"/>
