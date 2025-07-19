@@ -15,5 +15,3 @@ export default function PrintLayout({
   // Print-specific styles are handled in globals.css
   return <>{children}</>;
 }
-
-    
