@@ -1,9 +1,16 @@
 
+export const CEDULAS_STORAGE_KEY = 'escuadra_cedulas';
+export const CLIENTS_STORAGE_KEY = 'escuadra_clients';
+export const EQUIPMENTS_STORAGE_KEY = 'escuadra_equipments';
+export const USERS_STORAGE_KEY = 'escuadra_users';
+export const SYSTEMS_STORAGE_KEY = 'escuadra_systems';
+export const PROTOCOLS_STORAGE_KEY = 'escuadra_protocols';
+
 export const mockUsers = [
   {
     id: '1',
     name: 'Admin User',
-    email: 'admin@guardianshield.com',
+    email: 'admin@escuadra.com',
     role: 'Administrador',
     password: 'admin',
     permissions: {
@@ -18,7 +25,7 @@ export const mockUsers = [
   {
     id: '2',
     name: 'Technician Uno',
-    email: 'tech1@guardianshield.com',
+    email: 'tech1@escuadra.com',
     role: 'Técnico',
     password: 'tech1',
     permissions: {
@@ -33,7 +40,7 @@ export const mockUsers = [
   {
     id: '3',
     name: 'Technician Dos',
-    email: 'tech2@guardianshield.com',
+    email: 'tech2@escuadra.com',
     role: 'Técnico',
     password: 'tech2',
     permissions: {
@@ -48,7 +55,7 @@ export const mockUsers = [
     {
     id: '4',
     name: 'Supervisor General',
-    email: 'supervisor@guardianshield.com',
+    email: 'supervisor@escuadra.com',
     role: 'Supervisor',
     password: 'super',
     permissions: {

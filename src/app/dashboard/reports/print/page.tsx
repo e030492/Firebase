@@ -1,19 +1,22 @@
+
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ShieldCheck, Printer, X, Camera } from 'lucide-react';
-import { mockCedulas, mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
+import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
+import type { mockCedulas, mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
+import {
+  CEDULAS_STORAGE_KEY,
+  EQUIPMENTS_STORAGE_KEY,
+  CLIENTS_STORAGE_KEY,
+  SYSTEMS_STORAGE_KEY,
+} from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-
-const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 
 type Cedula = typeof mockCedulas[0];
 type Equipment = typeof mockEquipments[0];
@@ -23,10 +26,14 @@ type EnrichedCedula = Cedula & { equipmentDetails?: Equipment; clientDetails?: C
 
 function ReportContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [reportCedulas, setReportCedulas] = useState<EnrichedCedula[]>([]);
   const [loading, setLoading] = useState(true);
   const [reportDate, setReportDate] = useState('');
+  
+  const allCedulas = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, []);
+  const allEquipments = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, []);
+  const allClients = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, []);
+  const allSystems = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, []);
 
   useEffect(() => {
     // This effect runs only on the client
@@ -35,19 +42,8 @@ function ReportContent() {
     const idsParam = searchParams.get('ids');
     const ids = idsParam ? idsParam.split(',').filter(id => id) : [];
     
-    if (ids.length > 0) {
-      const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
-      const allCedulas: Cedula[] = storedCedulas ? JSON.parse(storedCedulas) : mockCedulas;
-
-      const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-      const allEquipments: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : mockEquipments;
-
-      const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-      const allClients: Client[] = storedClients ? JSON.parse(storedClients) : mockClients;
-
-      const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-      const allSystems: System[] = storedSystems ? JSON.parse(storedSystems) : mockSystems;
-
+    // We wait for all data to be loaded from local storage before processing
+    if (ids.length > 0 && allCedulas.length > 0 && allEquipments.length > 0 && allClients.length > 0 && allSystems.length > 0) {
       const enrichedData = ids.map(id => {
         const cedula = allCedulas.find(c => c.id === id);
         if (!cedula) return null;
@@ -65,9 +61,11 @@ function ReportContent() {
       }).filter((c): c is EnrichedCedula => c !== null);
       
       setReportCedulas(enrichedData);
+      setLoading(false);
+    } else if (ids.length === 0) {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [searchParams]);
+  }, [searchParams, allCedulas, allEquipments, allClients, allSystems]);
   
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
@@ -83,7 +81,7 @@ function ReportContent() {
   }
   
   if (reportCedulas.length === 0) {
-      return <div className="p-8 text-center">No se seleccionaron cédulas para el reporte.</div>;
+      return <div className="p-8 text-center">No se seleccionaron cédulas para el reporte o los datos no pudieron ser cargados.</div>;
   }
 
   return (
@@ -114,7 +112,7 @@ function ReportContent() {
                              <ShieldCheck className="h-12 w-12 text-primary" />
                              <div>
                                 <h2 className="text-2xl font-bold text-gray-800">Reporte de Mantenimiento</h2>
-                                <p className="text-sm text-gray-500">Escuadra Tecnology - Control de Seguridad</p>
+                                <p className="text-sm text-gray-500">Escuadra - Control de Seguridad</p>
                              </div>
                         </div>
                         <div className="text-left sm:text-right mt-4 sm:mt-0">
@@ -234,3 +232,5 @@ export default function PrintReportPage() {
         </Suspense>
     )
 }
+
+    

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Reporte de Mantenimiento - Escuadra Tecnology',
+  title: 'Reporte de Mantenimiento - Escuadra',
   description: 'Documento para impresión de cédulas de mantenimiento.',
 };
 
@@ -15,3 +15,5 @@ export default function PrintLayout({
   // Print-specific styles are handled in globals.css
   return <>{children}</>;
 }
+
+    
