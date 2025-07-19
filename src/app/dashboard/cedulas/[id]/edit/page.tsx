@@ -88,15 +88,12 @@ export default function EditCedulaPage() {
   const [supervisors, setSupervisors] = useState<User[]>([]);
 
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
-  const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
-  const [imageUrls, setImageUrls] = useState<{ [step: string]: string }>({});
-  const [notes, setNotes] = useState<{ [step: string]: string }>({});
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    // Only proceed when all data is loaded from localStorage
+    // This effect populates the form once all data is loaded from localStorage.
     if (cedulaId && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0) {
       const foundCedula = cedulas.find(c => c.id === cedulaId);
 
@@ -120,31 +117,21 @@ export default function EditCedulaPage() {
             const foundSystem = systems.find(s => s.name === foundEquipment.system);
             if (foundSystem) setSystemId(foundSystem.id);
 
-            const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
-            const baseProtocolSteps = equipmentProtocol?.steps || [];
-            
-            setProtocolSteps(baseProtocolSteps);
-            
-            const savedStepsMap = new Map(foundCedula.protocolSteps?.map(s => [s.step, s]));
-
-            const initialPercentages = baseProtocolSteps.reduce((acc, step) => {
-                acc[step.step] = String(savedStepsMap.get(step.step)?.completion || 0);
-                return acc;
-            }, {} as { [step: string]: string });
-
-            const initialImageUrls = baseProtocolSteps.reduce((acc, step) => {
-                acc[step.step] = savedStepsMap.get(step.step)?.imageUrl || '';
-                return acc;
-            }, {} as { [step: string]: string });
-
-            const initialNotes = baseProtocolSteps.reduce((acc, step) => {
-                acc[step.step] = savedStepsMap.get(step.step)?.notes || '';
-                return acc;
-            }, {} as { [step: string]: string });
-
-            setCompletionPercentages(initialPercentages);
-            setImageUrls(initialImageUrls);
-            setNotes(initialNotes);
+            // **CRITICAL FIX**: Prioritize existing protocol steps from the cedula.
+            // Only fall back to the base protocol if the cedula has no steps saved.
+            if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
+                setProtocolSteps(foundCedula.protocolSteps.map(s => ({
+                    step: s.step,
+                    priority: s.priority,
+                    percentage: s.completion,
+                    imageUrl: s.imageUrl,
+                    notes: s.notes,
+                })));
+            } else {
+                const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
+                const baseProtocolSteps = equipmentProtocol?.steps || [];
+                setProtocolSteps(baseProtocolSteps.map(s => ({...s, percentage: 0, imageUrl: '', notes: ''})));
+            }
         }
 
         const currentTechnicians = users.filter(u => u.role === 'Técnico');
@@ -191,25 +178,26 @@ export default function EditCedulaPage() {
     setSystemId(newSystemId);
     setEquipmentId('');
   };
-
-  const handlePercentageChange = (step: string, value: string) => {
-    setCompletionPercentages(prev => ({ ...prev, [step]: value }));
+  
+  const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
+    setProtocolSteps(prev => {
+        const newSteps = [...prev];
+        (newSteps[index] as any)[field] = value;
+        return newSteps;
+    });
   };
 
-  const handleImageChange = (step: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageUrls(prev => ({ ...prev, [step]: reader.result as string }));
+        handleStepChange(index, 'imageUrl', reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleNotesChange = (step: string, value: string) => {
-    setNotes(prev => ({ ...prev, [step]: value }));
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,9 +230,9 @@ export default function EditCedulaPage() {
           protocolSteps: protocolSteps.map(step => ({
             step: step.step,
             priority: step.priority,
-            completion: Number(completionPercentages[step.step]) || 0,
-            imageUrl: imageUrls[step.step] || '',
-            notes: notes[step.step] || '',
+            completion: Number(step.percentage) || 0,
+            imageUrl: step.imageUrl || '',
+            notes: step.notes || '',
           })),
         };
       }
@@ -511,8 +499,8 @@ export default function EditCedulaPage() {
                             <div className="grid md:grid-cols-2 gap-6 items-end">
                                 <div className="grid gap-3">
                                     <Label>Evidencia Fotográfica</Label>
-                                    {imageUrls[step.step] ? (
-                                        <Image src={imageUrls[step.step]} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                    {step.imageUrl ? (
+                                        <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
                                     ) : (
                                         <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
                                             <Camera className="h-10 w-10 text-muted-foreground" />
@@ -520,22 +508,22 @@ export default function EditCedulaPage() {
                                     )}
                                     <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()}>
                                         <Camera className="mr-2 h-4 w-4" />
-                                        {imageUrls[step.step] ? 'Cambiar Foto' : 'Subir Foto'}
+                                        {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
                                     </Button>
                                     <Input
                                         id={`image-upload-${index}`}
                                         type="file"
                                         accept="image/*"
                                         capture="environment"
-                                        onChange={(e) => handleImageChange(step.step, e)}
+                                        onChange={(e) => handleImageChange(index, e)}
                                         className="hidden"
                                     />
                                 </div>
                                 <div className="grid gap-3">
                                     <Label htmlFor={`step-percentage-${index}`}>% Ejecutado</Label>
                                     <Select
-                                        value={completionPercentages[step.step] || '0'}
-                                        onValueChange={(value) => handlePercentageChange(step.step, value)}
+                                        value={String(step.percentage || '0')}
+                                        onValueChange={(value) => handleStepChange(index, 'percentage', value)}
                                     >
                                         <SelectTrigger id={`step-percentage-${index}`} className="w-auto">
                                             <SelectValue placeholder="% Ejecutado" />
@@ -556,8 +544,8 @@ export default function EditCedulaPage() {
                                 <Textarea
                                     id={`step-notes-${index}`}
                                     placeholder="Añadir notas sobre el procedimiento..."
-                                    value={notes[step.step] || ''}
-                                    onChange={(e) => handleNotesChange(step.step, e.target.value)}
+                                    value={step.notes || ''}
+                                    onChange={(e) => handleStepChange(index, 'notes', e.target.value)}
                                     className="min-h-24"
                                 />
                             </div>
@@ -614,4 +602,3 @@ export default function EditCedulaPage() {
     </form>
   );
 }
-
