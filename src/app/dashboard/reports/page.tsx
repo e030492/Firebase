@@ -18,11 +18,11 @@ import { mockCedulas, mockClients, mockEquipments, mockSystems } from '@/lib/moc
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
-const CEDULAS_STORAGE_KEY = 'escuadra_cedulas';
-const CLIENTS_STORAGE_KEY = 'escuadra_clients';
-const EQUIPMENTS_STORAGE_KEY = 'escuadra_equipments';
-const SYSTEMS_STORAGE_KEY = 'escuadra_systems';
-const REPORT_DATA_KEY = 'escuadra_report_data';
+const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
+const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
+const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
+const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
+const REPORT_DATA_KEY = 'guardian_shield_report_data';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
@@ -380,5 +380,7 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
 
     

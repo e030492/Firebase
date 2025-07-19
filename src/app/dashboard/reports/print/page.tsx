@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
-const REPORT_DATA_KEY = 'escuadra_report_data';
+const REPORT_DATA_KEY = 'guardian_shield_report_data';
 
 type Cedula = typeof mockCedulas[0];
 type Equipment = typeof mockEquipments[0];
@@ -218,5 +218,7 @@ export default function PrintReportPage() {
         </Suspense>
     );
 }
+
+    
 
     
