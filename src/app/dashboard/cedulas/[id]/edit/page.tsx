@@ -134,9 +134,9 @@ export default function EditCedulaPage() {
                 setProtocolSteps(foundCedula.protocolSteps.map(s => ({
                     step: s.step,
                     priority: s.priority,
-                    percentage: s.completion,
-                    imageUrl: s.imageUrl,
-                    notes: s.notes,
+                    percentage: Number(s.completion) || 0,
+                    imageUrl: s.imageUrl || '',
+                    notes: s.notes || '',
                 })));
             } else {
                  if (foundEquipment) {
@@ -216,33 +216,39 @@ export default function EditCedulaPage() {
         finalDateTime.setHours(parseInt(hours, 10));
         finalDateTime.setMinutes(parseInt(minutes, 10));
     }
+    
+    // Create a new array from the current state to avoid mutation issues
+    const currentCedulas = [...cedulas];
+    const cedulaIndex = currentCedulas.findIndex(c => c.id === cedulaId);
 
-    const updatedCedulas = cedulas.map(c => {
-      if (c.id === cedulaId) {
-        return {
-          ...c,
-          folio,
-          client: clientName,
-          equipment: equipmentName,
-          technician: technicianName,
-          supervisor: supervisorName,
-          creationDate: creationDate ? finalDateTime.toISOString() : '',
-          status: status as Cedula['status'],
-          description,
-          semaforo: semaforo as Cedula['semaforo'],
-          protocolSteps: protocolSteps.map(step => ({
-            step: step.step,
-            priority: step.priority,
-            completion: Number(step.percentage) || 0,
-            imageUrl: step.imageUrl || '',
-            notes: step.notes || '',
-          })),
-        };
-      }
-      return c;
-    });
+    if (cedulaIndex === -1) {
+        alert('Error: No se pudo encontrar la cédula para actualizar.');
+        return;
+    }
+    
+    const updatedCedula = {
+        ...currentCedulas[cedulaIndex],
+        folio,
+        client: clientName,
+        equipment: equipmentName,
+        technician: technicianName,
+        supervisor: supervisorName,
+        creationDate: creationDate ? finalDateTime.toISOString() : '',
+        status: status as Cedula['status'],
+        description,
+        semaforo: semaforo as Cedula['semaforo'],
+        protocolSteps: protocolSteps.map(step => ({
+        step: step.step,
+        priority: step.priority,
+        completion: Number(step.percentage) || 0,
+        imageUrl: step.imageUrl || '',
+        notes: step.notes || '',
+        })),
+    };
+    
+    currentCedulas[cedulaIndex] = updatedCedula;
 
-    setCedulas(updatedCedulas);
+    setCedulas(currentCedulas);
     alert('Cédula actualizada con éxito.');
     router.push('/dashboard/cedulas');
   }
@@ -605,5 +611,3 @@ export default function EditCedulaPage() {
     </form>
   );
 }
-
-    
