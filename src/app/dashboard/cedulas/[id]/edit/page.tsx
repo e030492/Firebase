@@ -94,7 +94,6 @@ export default function EditCedulaPage() {
   const dataLoadedRef = useRef(false);
 
   useEffect(() => {
-    // This effect runs once all data from localStorage is synced and available.
     if (cedulaId && !dataLoadedRef.current && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0) {
         const foundCedula = cedulas.find(c => c.id === cedulaId);
 
@@ -129,18 +128,18 @@ export default function EditCedulaPage() {
                 setEquipmentId(foundEquipment.id);
                 const foundSystem = systems.find(s => s.name === foundEquipment.system);
                 if (foundSystem) setSystemId(foundSystem.id);
+            }
 
-                // **CRITICAL FIX**: Prioritize existing protocol steps from the cedula.
-                // Only fall back to the base protocol if the cedula has no steps saved.
-                if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
-                    setProtocolSteps(foundCedula.protocolSteps.map(s => ({
-                        step: s.step,
-                        priority: s.priority,
-                        percentage: s.completion,
-                        imageUrl: s.imageUrl,
-                        notes: s.notes,
-                    })));
-                } else {
+            if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
+                setProtocolSteps(foundCedula.protocolSteps.map(s => ({
+                    step: s.step,
+                    priority: s.priority,
+                    percentage: s.completion,
+                    imageUrl: s.imageUrl,
+                    notes: s.notes,
+                })));
+            } else {
+                 if (foundEquipment) {
                     const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
                     const baseProtocolSteps = equipmentProtocol?.steps || [];
                     setProtocolSteps(baseProtocolSteps.map(s => ({...s, percentage: 0, imageUrl: '', notes: ''})));
@@ -606,3 +605,5 @@ export default function EditCedulaPage() {
     </form>
   );
 }
+
+    

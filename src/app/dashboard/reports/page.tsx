@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import Image from 'next/image';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -39,7 +38,7 @@ type EnrichedCedula = Cedula & {
   systemColor?: string;
 };
 
-// Component for the report print view
+
 function ReportPrintView({ reportData, onBack }: { reportData: EnrichedCedula[], onBack: () => void }) {
   const reportDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -74,7 +73,6 @@ function ReportPrintView({ reportData, onBack }: { reportData: EnrichedCedula[],
         <main className="space-y-8 print:space-y-0">
             {reportData.map((cedula) => (
                 <div key={cedula.id} className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none break-after-page page-break">
-                    {/* Report Header */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
                         <div className="flex items-center gap-4">
                              <ShieldCheck className="h-12 w-12 text-primary" />
@@ -90,7 +88,6 @@ function ReportPrintView({ reportData, onBack }: { reportData: EnrichedCedula[],
                     </div>
                     <Separator className="my-6"/>
 
-                    {/* General Info */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm mb-6">
                         <div><p className="font-semibold text-gray-700">Cliente:</p><p>{cedula.client}</p></div>
                         <div><p className="font-semibold text-gray-700">Fecha de Cédula:</p><p>{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p></div>
@@ -109,7 +106,6 @@ function ReportPrintView({ reportData, onBack }: { reportData: EnrichedCedula[],
                         <p className="mt-1 p-3 border rounded-md bg-gray-50">{cedula.description}</p>
                     </div>
                     
-                    {/* Protocol Steps */}
                     {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
                         <div className="mt-8">
                             <h3 className="text-lg font-bold text-gray-800 mb-4">Protocolo de Mantenimiento Ejecutado</h3>
@@ -164,7 +160,6 @@ function ReportPrintView({ reportData, onBack }: { reportData: EnrichedCedula[],
                         </div>
                     )}
                     
-                    {/* Final Evaluation */}
                     <div className="mt-8 pt-6 border-t">
                          <h3 className="text-lg font-bold text-gray-800 mb-4">Evaluación Final del Equipo</h3>
                          {cedula.semaforo ? (
@@ -201,7 +196,8 @@ export default function ReportsPage() {
   const [selectedCedulaIds, setSelectedCedulaIds] = useState<string[]>([]);
   const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
 
-  const [reportData, setReportData] = useState<EnrichedCedula[] | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [reportData, setReportData] = useState<EnrichedCedula[]>([]);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -280,6 +276,7 @@ export default function ReportsPage() {
 
     if (dataForReport.length > 0) {
         setReportData(dataForReport);
+        setIsPreviewing(true);
     } else {
         alert("Por favor, seleccione al menos una cédula para generar el reporte.");
     }
@@ -307,8 +304,8 @@ export default function ReportsPage() {
     }
   };
   
-  if (reportData) {
-    return <ReportPrintView reportData={reportData} onBack={() => setReportData(null)} />;
+  if (isPreviewing) {
+    return <ReportPrintView reportData={reportData} onBack={() => setIsPreviewing(false)} />;
   }
 
   return (
