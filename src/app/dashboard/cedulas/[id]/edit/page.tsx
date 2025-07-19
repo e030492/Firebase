@@ -64,12 +64,12 @@ export default function EditCedulaPage() {
   const router = useRouter();
   const cedulaId = params.id as string;
 
-  const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, []);
-  const [clients, setClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, []);
-  const [allEquipments, setAllEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, []);
-  const [users, setUsers] = useLocalStorageSync<User[]>(USERS_STORAGE_KEY, []);
-  const [systems, setSystems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, []);
-  const [protocols, setProtocols] = useLocalStorageSync<Protocol[]>(PROTOCOLS_STORAGE_KEY, []);
+  const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
+  const [clients, setClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
+  const [allEquipments, setAllEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
+  const [users, setUsers] = useLocalStorageSync<User[]>(USERS_STORAGE_KEY, mockUsers);
+  const [systems, setSystems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
+  const [protocols, setProtocols] = useLocalStorageSync<Protocol[]>(PROTOCOLS_STORAGE_KEY, mockProtocols);
 
   const [folio, setFolio] = useState('');
   const [clientId, setClientId] = useState('');
@@ -91,10 +91,11 @@ export default function EditCedulaPage() {
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const dataLoadedRef = useRef(false);
 
   useEffect(() => {
     // This effect populates the form once all data is loaded from localStorage.
-    if (cedulaId && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0) {
+    if (cedulaId && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0 && !dataLoadedRef.current) {
       const foundCedula = cedulas.find(c => c.id === cedulaId);
 
       if (foundCedula) {
@@ -145,6 +146,7 @@ export default function EditCedulaPage() {
         const foundSupervisor = currentSupervisors.find(u => u.name === foundCedula.supervisor);
         if (foundSupervisor) setSupervisorId(foundSupervisor.id);
         
+        dataLoadedRef.current = true; // Mark as loaded to prevent re-running
         setLoading(false);
       } else {
         setNotFound(true);
