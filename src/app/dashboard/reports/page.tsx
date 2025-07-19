@@ -2,8 +2,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, Fragment } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
@@ -14,7 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Printer, ChevronDown, Camera } from 'lucide-react';
-import { mockCedulas, mockClients, mockEquipments, mockSystems, CEDULAS_STORAGE_KEY, CLIENTS_STORAGE_KEY, EQUIPMENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY } from '@/lib/mock-data';
+import { 
+    mockCedulas, mockClients, mockEquipments, mockSystems, 
+    CEDULAS_STORAGE_KEY, CLIENTS_STORAGE_KEY, EQUIPMENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY 
+} from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
@@ -25,12 +26,19 @@ type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type System = typeof mockSystems[0];
-type EnrichedCedula = Cedula & { equipmentDetails?: Equipment; clientDetails?: Client; systemDetails?: System };
+
+// This type represents the fully enriched data we'll pass to the report page
+type EnrichedCedula = Cedula & { 
+  equipmentDetails?: Equipment; 
+  clientDetails?: Client; 
+  systemDetails?: System;
+  system?: string;
+  warehouse?: string;
+  systemColor?: string;
+};
 
 
 export default function ReportsPage() {
-  const router = useRouter();
-
   const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
   const [clients, setClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
   const [allEquipments, setAllEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
@@ -54,7 +62,7 @@ export default function ReportsPage() {
     }
   }, [selectedClientId, clients]);
 
-  const filteredCedulas = useMemo(() => {
+  const filteredCedulas = useMemo((): EnrichedCedula[] => {
     let filtered = cedulas.map(cedula => {
       const equipment = allEquipments.find(eq => eq.name === cedula.equipment && eq.client === cedula.client);
       const systemName = equipment?.system || '';
@@ -102,6 +110,7 @@ export default function ReportsPage() {
   };
   
   const handleGenerateReport = () => {
+    // 1. Gather the fully enriched data for the selected cédulas.
     const reportData = selectedCedulaIds.map(id => {
       const cedula = cedulas.find(c => c.id === id);
       if (!cedula) return null;
@@ -116,8 +125,9 @@ export default function ReportsPage() {
         clientDetails: client,
         systemDetails: system,
       };
-    }).filter(Boolean);
+    }).filter((item): item is EnrichedCedula => item !== null);
 
+    // 2. Use sessionStorage to pass the data reliably.
     try {
         sessionStorage.setItem(REPORT_DATA_KEY, JSON.stringify(reportData));
         const url = `/dashboard/reports/print`;

@@ -25,7 +25,8 @@ function ReportContent() {
   const [reportDate, setReportDate] = useState('');
   
   useEffect(() => {
-    // This code now runs only on the client, after the component has mounted.
+    // This effect runs only on the client, after the component has mounted.
+    // This ensures `sessionStorage` is available.
     setReportDate(new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }));
     
     try {
@@ -45,7 +46,7 @@ function ReportContent() {
         setError('Los datos del reporte están vacíos o no son válidos.');
       }
       
-      // Clean up sessionStorage after reading the data
+      // Clean up sessionStorage after reading the data to prevent stale data on reloads.
       sessionStorage.removeItem(REPORT_DATA_KEY);
 
     } catch (e) {
@@ -54,7 +55,7 @@ function ReportContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // The empty dependency array ensures this runs only once on mount.
   
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
@@ -97,7 +98,7 @@ function ReportContent() {
         </header>
 
         <main className="space-y-8 print:space-y-0">
-            {reportCedulas.map((cedula, idx) => (
+            {reportCedulas.map((cedula) => (
                 <div key={cedula.id} className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none break-after-page page-break">
                     {/* Report Header */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
