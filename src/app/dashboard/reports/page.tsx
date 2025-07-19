@@ -150,7 +150,7 @@ export default function ReportsPage() {
   const selectionState = isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false);
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : cedulaId));
+    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : prevId));
   };
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
@@ -245,7 +245,6 @@ export default function ReportsPage() {
                                 <Fragment key={cedula.id}>
                                 <TableRow
                                   data-state={selectedCedulaIds.includes(cedula.id) ? "selected" : ""}
-                                  onClick={() => handleToggleDetails(cedula.id)}
                                   className="cursor-pointer"
                                 >
                                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -255,15 +254,15 @@ export default function ReportsPage() {
                                             aria-label={`Seleccionar cédula ${cedula.folio}`}
                                         />
                                     </TableCell>
-                                    <TableCell className="font-medium">{cedula.folio}</TableCell>
-                                    <TableCell>{cedula.client}</TableCell>
-                                    <TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)} className="font-medium">{cedula.folio}</TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.client}</TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>
                                         <span className="font-medium" style={{ color: cedula.systemColor }}>
                                             {cedula.system}
                                         </span>
                                     </TableCell>
-                                    <TableCell>{cedula.equipment}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.equipment}</TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)} className="hidden md:table-cell">{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
                                     <TableCell>
                                         <Button
                                             variant="ghost"

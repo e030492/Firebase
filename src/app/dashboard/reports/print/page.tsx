@@ -25,8 +25,6 @@ function ReportContent() {
   const [reportDate, setReportDate] = useState('');
   
   useEffect(() => {
-    // This effect runs only on the client, after the component has mounted.
-    // This ensures `sessionStorage` is available.
     setReportDate(new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }));
     
     try {
@@ -92,7 +90,24 @@ function ReportContent() {
   }
 
   if (reportCedulas.length === 0) {
-    return <div className="p-8 text-center">No se encontraron datos válidos para generar el reporte.</div>;
+    return (
+        <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
+             <header className="flex items-center justify-between mb-8 print:hidden">
+                <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-6 w-6 text-primary"/>
+                    <h1 className="text-xl font-bold">Error en Reporte</h1>
+                </div>
+                 <Button variant="outline" onClick={() => window.close()}>
+                    <X className="mr-2 h-4 w-4"/>
+                    Cerrar
+                </Button>
+            </header>
+            <div className="p-8 text-center text-muted-foreground bg-muted/30 border rounded-lg">
+                <p className="font-semibold">No hay datos para mostrar.</p>
+                <p className="mt-2 text-sm">No se encontraron datos válidos para generar el reporte. Es posible que no haya seleccionado ninguna cédula.</p>
+            </div>
+        </div>
+    );
   }
 
   return (
