@@ -31,7 +31,11 @@ function ReportContent() {
   const [error, setError] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState('');
   
-  // Directly get data from localStorage on client-side
+  const [allCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, []);
+  const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, []);
+  const [allClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, []);
+  const [allSystems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, []);
+  
   useEffect(() => {
     setReportDate(new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }));
 
@@ -48,19 +52,13 @@ function ReportContent() {
         setLoading(false);
         return;
     }
+    
+    // Wait until all data from local storage is loaded
+    if (allCedulas.length === 0 && allEquipments.length === 0) {
+        return; // Data is still loading from the hook
+    }
 
     try {
-        const allCedulas: Cedula[] = JSON.parse(localStorage.getItem(CEDULAS_STORAGE_KEY) || '[]');
-        const allEquipments: Equipment[] = JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || '[]');
-        const allClients: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]');
-        const allSystems: System[] = JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]');
-        
-        if (allCedulas.length === 0) {
-          setError('No se encontraron datos de cédulas en el almacenamiento.');
-          setLoading(false);
-          return;
-        }
-
         const enrichedData = ids.map(id => {
             const cedula = allCedulas.find(c => c.id === id);
             if (!cedula) return null;
@@ -88,7 +86,7 @@ function ReportContent() {
     } finally {
         setLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, allCedulas, allEquipments, allClients, allSystems]);
   
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
