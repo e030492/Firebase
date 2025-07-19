@@ -25,6 +25,7 @@ function ReportContent() {
   const [reportDate, setReportDate] = useState('');
   
   useEffect(() => {
+    // This code now runs only on the client, after the component has mounted.
     setReportDate(new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }));
     
     try {
@@ -218,7 +219,3 @@ export default function PrintReportPage() {
         </Suspense>
     );
 }
-
-    
-
-    

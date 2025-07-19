@@ -14,14 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Printer, ChevronDown, Camera } from 'lucide-react';
-import { mockCedulas, mockClients, mockEquipments, mockSystems } from '@/lib/mock-data';
+import { mockCedulas, mockClients, mockEquipments, mockSystems, CEDULAS_STORAGE_KEY, CLIENTS_STORAGE_KEY, EQUIPMENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
 
-const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 const REPORT_DATA_KEY = 'guardian_shield_report_data';
 
 type Cedula = typeof mockCedulas[0];
@@ -34,10 +31,10 @@ type EnrichedCedula = Cedula & { equipmentDetails?: Equipment; clientDetails?: C
 export default function ReportsPage() {
   const router = useRouter();
 
-  const [cedulas, setCedulas] = useState<Cedula[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
+  const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
+  const [clients, setClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
+  const [allEquipments, setAllEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
+  const [systems, setSystems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
@@ -45,15 +42,6 @@ export default function ReportsPage() {
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
   const [selectedCedulaIds, setSelectedCedulaIds] = useState<string[]>([]);
   const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Load data from localStorage
-    setCedulas(JSON.parse(localStorage.getItem(CEDULAS_STORAGE_KEY) || JSON.stringify(mockCedulas)));
-    const allClientsData = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || JSON.stringify(mockClients));
-    setClients(allClientsData);
-    setAllEquipments(JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || JSON.stringify(mockEquipments)));
-    setSystems(JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || JSON.stringify(mockSystems)));
-  }, []);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -380,7 +368,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    
-
-    
