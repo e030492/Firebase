@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ShieldCheck, Printer, X, Camera } from 'lucide-react';
 import type { mockCedulas, mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
@@ -11,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
+const REPORT_DATA_KEY = 'escuadra_report_data';
+
 type Cedula = typeof mockCedulas[0];
 type Equipment = typeof mockEquipments[0];
 type Client = typeof mockClients[0];
@@ -18,7 +19,6 @@ type System = typeof mockSystems[0];
 type EnrichedCedula = Cedula & { equipmentDetails?: Equipment; clientDetails?: Client; systemDetails?: System };
 
 function ReportContent() {
-  const searchParams = useSearchParams();
   const [reportCedulas, setReportCedulas] = useState<EnrichedCedula[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,30 +26,34 @@ function ReportContent() {
   
   useEffect(() => {
     setReportDate(new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }));
-    const dataParam = searchParams.get('data');
-
-    if (!dataParam) {
-      setError('No se proporcionaron datos para el reporte.');
-      setLoading(false);
-      return;
-    }
-
+    
     try {
-      const decodedData = atob(dataParam);
-      const parsedData = JSON.parse(decodedData);
+      const dataString = sessionStorage.getItem(REPORT_DATA_KEY);
+      
+      if (!dataString) {
+        setError('No se proporcionaron datos para el reporte. Por favor, vuelva a la página anterior y genere el reporte de nuevo.');
+        setLoading(false);
+        return;
+      }
+      
+      const parsedData = JSON.parse(dataString);
       
       if (Array.isArray(parsedData) && parsedData.length > 0) {
         setReportCedulas(parsedData);
       } else {
         setError('Los datos del reporte están vacíos o no son válidos.');
       }
+      
+      // Clean up sessionStorage after reading the data
+      sessionStorage.removeItem(REPORT_DATA_KEY);
+
     } catch (e) {
-      console.error("Error decoding or parsing report data:", e);
-      setError('Ocurrió un error al procesar los datos del reporte. El enlace puede ser inválido.');
+      console.error("Error processing report data from sessionStorage:", e);
+      setError('Ocurrió un error al procesar los datos del reporte.');
     } finally {
       setLoading(false);
     }
-  }, [searchParams]);
+  }, []);
   
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
@@ -69,7 +73,7 @@ function ReportContent() {
   }
 
   if (reportCedulas.length === 0) {
-    return <div className="p-8 text-center">No se encontraron datos para las cédulas seleccionadas.</div>;
+    return <div className="p-8 text-center">No se encontraron datos válidos para generar el reporte.</div>;
   }
 
   return (

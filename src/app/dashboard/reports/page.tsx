@@ -18,10 +18,11 @@ import { mockCedulas, mockClients, mockEquipments, mockSystems } from '@/lib/moc
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
-const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
+const CEDULAS_STORAGE_KEY = 'escuadra_cedulas';
+const CLIENTS_STORAGE_KEY = 'escuadra_clients';
+const EQUIPMENTS_STORAGE_KEY = 'escuadra_equipments';
+const SYSTEMS_STORAGE_KEY = 'escuadra_systems';
+const REPORT_DATA_KEY = 'escuadra_report_data';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
@@ -129,9 +130,14 @@ export default function ReportsPage() {
       };
     }).filter(Boolean);
 
-    const encodedData = btoa(JSON.stringify(reportData));
-    const url = `/dashboard/reports/print?data=${encodedData}`;
-    window.open(url, '_blank');
+    try {
+        sessionStorage.setItem(REPORT_DATA_KEY, JSON.stringify(reportData));
+        const url = `/dashboard/reports/print`;
+        window.open(url, '_blank');
+    } catch (error) {
+        console.error("Error saving to sessionStorage:", error);
+        alert("No se pudo generar el reporte. El almacenamiento de la sesión podría estar lleno o deshabilitado.");
+    }
   };
 
 
