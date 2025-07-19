@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Printer, ChevronDown, Camera } from 'lucide-react';
+import { Printer, ChevronDown, Camera, ArrowLeft, ShieldCheck, X } from 'lucide-react';
 import { 
     CEDULAS_STORAGE_KEY, 
     CLIENTS_STORAGE_KEY, 
@@ -26,14 +26,10 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
 
-const REPORT_DATA_KEY = 'guardian_shield_report_data';
-
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type System = typeof mockSystems[0];
-
-// This type represents the fully enriched data we'll pass to the report page
 type EnrichedCedula = Cedula & { 
   equipmentDetails?: Equipment; 
   clientDetails?: Client; 
@@ -43,9 +39,157 @@ type EnrichedCedula = Cedula & {
   systemColor?: string;
 };
 
+// Component for the report print view
+function ReportPrintView({ reportData, onBack }: { reportData: EnrichedCedula[], onBack: () => void }) {
+  const reportDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
+    switch (priority?.toLowerCase()) {
+      case 'alta': return 'destructive';
+      case 'media': return 'default';
+      case 'baja': return 'secondary';
+      default: return 'secondary';
+    }
+  };
+
+  return (
+     <div className="report-container">
+       <header className="flex items-center justify-between mb-8 print:hidden">
+            <div className="flex items-center gap-2">
+                <ShieldCheck className="h-6 w-6 text-primary"/>
+                <h1 className="text-xl font-bold">Vista Previa del Reporte</h1>
+            </div>
+            <div className="flex items-center gap-2">
+                <Button onClick={() => window.print()}>
+                    <Printer className="mr-2 h-4 w-4"/>
+                    Imprimir / Guardar PDF
+                </Button>
+                <Button variant="outline" onClick={onBack}>
+                    <ArrowLeft className="mr-2 h-4 w-4"/>
+                    Volver a la selección
+                </Button>
+            </div>
+        </header>
+
+        <main className="space-y-8 print:space-y-0">
+            {reportData.map((cedula) => (
+                <div key={cedula.id} className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none break-after-page page-break">
+                    {/* Report Header */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                        <div className="flex items-center gap-4">
+                             <ShieldCheck className="h-12 w-12 text-primary" />
+                             <div>
+                                <h2 className="text-2xl font-bold text-gray-800">Reporte de Mantenimiento</h2>
+                                <p className="text-sm text-gray-500">Escuadra Tecnology - Control de Seguridad</p>
+                             </div>
+                        </div>
+                        <div className="text-left sm:text-right mt-4 sm:mt-0">
+                            <p className="font-semibold text-gray-700">Folio: <span className="font-normal">{cedula.folio}</span></p>
+                            <p className="font-semibold text-gray-700">Fecha de Reporte: <span className="font-normal">{reportDate}</span></p>
+                        </div>
+                    </div>
+                    <Separator className="my-6"/>
+
+                    {/* General Info */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm mb-6">
+                        <div><p className="font-semibold text-gray-700">Cliente:</p><p>{cedula.client}</p></div>
+                        <div><p className="font-semibold text-gray-700">Fecha de Cédula:</p><p>{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p></div>
+                        <div><p className="font-semibold text-gray-700">Técnico:</p><p>{cedula.technician}</p></div>
+                        <div><p className="font-semibold text-gray-700">Equipo:</p><p>{cedula.equipment}</p></div>
+                        <div><p className="font-semibold text-gray-700">Sistema:</p><p style={{color: cedula.systemDetails?.color}}>{cedula.equipmentDetails?.system || 'N/A'}</p></div>
+                        <div><p className="font-semibold text-gray-700">Supervisor:</p><p>{cedula.supervisor}</p></div>
+                    </div>
+                     <div className="text-sm mb-6">
+                        <p className="font-semibold text-gray-700">Ubicación:</p>
+                        <p>{cedula.equipmentDetails?.location || 'No especificada'}</p>
+                    </div>
+
+                    <div className="text-sm">
+                        <p className="font-semibold text-gray-700">Descripción del Trabajo:</p>
+                        <p className="mt-1 p-3 border rounded-md bg-gray-50">{cedula.description}</p>
+                    </div>
+                    
+                    {/* Protocol Steps */}
+                    {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
+                        <div className="mt-8">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4">Protocolo de Mantenimiento Ejecutado</h3>
+                            <div className="border rounded-lg divide-y divide-gray-200">
+                                {cedula.protocolSteps.map((step, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4 break-inside-avoid">
+                                        <div className="md:col-span-2 space-y-3">
+                                            <div>
+                                                <p className="font-semibold text-gray-600 text-sm">Paso del Protocolo</p>
+                                                <p className="text-gray-800">{step.step}</p>
+                                            </div>
+                                            {step.notes && (
+                                                <div>
+                                                    <p className="font-semibold text-gray-600 text-sm">Notas del Técnico</p>
+                                                    <p className="text-gray-700 italic text-sm">"{step.notes}"</p>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-4 pt-2">
+                                                <div>
+                                                    <p className="font-semibold text-gray-600 text-sm">Progreso</p>
+                                                    <Badge variant="secondary">{step.completion}%</Badge>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-600 text-sm">Prioridad</p>
+                                                    <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="font-semibold text-gray-600 text-sm">Evidencia Fotográfica</p>
+                                            {step.imageUrl ? (
+                                                <Image 
+                                                    src={step.imageUrl} 
+                                                    alt={`Evidencia para ${step.step}`} 
+                                                    width={300} 
+                                                    height={225} 
+                                                    data-ai-hint="protocol evidence" 
+                                                    className="rounded-md object-cover border w-full aspect-[4/3]"
+                                                />
+                                            ) : (
+                                                <div className="w-full aspect-[4/3] bg-gray-100 rounded-md flex items-center justify-center border text-center">
+                                                    <div>
+                                                        <Camera className="h-8 w-8 text-gray-400 mx-auto"/>
+                                                        <p className="text-xs text-gray-400 mt-1">Sin evidencia</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Final Evaluation */}
+                    <div className="mt-8 pt-6 border-t">
+                         <h3 className="text-lg font-bold text-gray-800 mb-4">Evaluación Final del Equipo</h3>
+                         {cedula.semaforo ? (
+                            <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-lg">
+                                 <div className={cn("h-6 w-6 rounded-full", {
+                                    'bg-green-500': cedula.semaforo === 'Verde',
+                                    'bg-orange-500': cedula.semaforo === 'Naranja',
+                                    'bg-red-500': cedula.semaforo === 'Rojo',
+                                })} />
+                                <p className="font-semibold text-base">{cedula.semaforo}</p>
+                            </div>
+                         ) : (
+                            <p className="text-gray-500">Sin evaluación final registrada.</p>
+                         )}
+                    </div>
+                </div>
+            ))}
+        </main>
+     </div>
+  );
+}
+
 
 export default function ReportsPage() {
-  const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
+  const [cedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
   const [clients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
   const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
   const [systems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
@@ -56,6 +200,8 @@ export default function ReportsPage() {
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
   const [selectedCedulaIds, setSelectedCedulaIds] = useState<string[]>([]);
   const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
+
+  const [reportData, setReportData] = useState<EnrichedCedula[] | null>(null);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -116,8 +262,7 @@ export default function ReportsPage() {
   };
   
   const handleGenerateReport = () => {
-    // 1. Gather the fully enriched data for the selected cédulas.
-    const reportData = selectedCedulaIds.map(id => {
+    const dataForReport = selectedCedulaIds.map(id => {
       const cedula = cedulas.find(c => c.id === id);
       if (!cedula) return null;
       
@@ -133,14 +278,10 @@ export default function ReportsPage() {
       };
     }).filter((item): item is EnrichedCedula => item !== null);
 
-    // 2. Use sessionStorage to pass the data reliably.
-    try {
-        sessionStorage.setItem(REPORT_DATA_KEY, JSON.stringify(reportData));
-        const url = `/dashboard/reports/print`;
-        window.open(url, '_blank');
-    } catch (error) {
-        console.error("Error saving to sessionStorage:", error);
-        alert("No se pudo generar el reporte. El almacenamiento de la sesión podría estar lleno o deshabilitado.");
+    if (dataForReport.length > 0) {
+        setReportData(dataForReport);
+    } else {
+        alert("Por favor, seleccione al menos una cédula para generar el reporte.");
     }
   };
 
@@ -150,7 +291,7 @@ export default function ReportsPage() {
   const selectionState = isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false);
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : prevId));
+    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : cedulaId));
   };
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
@@ -165,6 +306,10 @@ export default function ReportsPage() {
         return 'secondary';
     }
   };
+  
+  if (reportData) {
+    return <ReportPrintView reportData={reportData} onBack={() => setReportData(null)} />;
+  }
 
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
@@ -246,6 +391,7 @@ export default function ReportsPage() {
                                 <TableRow
                                   data-state={selectedCedulaIds.includes(cedula.id) ? "selected" : ""}
                                   className="cursor-pointer"
+                                  onClick={() => handleToggleDetails(cedula.id)}
                                 >
                                     <TableCell onClick={(e) => e.stopPropagation()}>
                                         <Checkbox 
@@ -254,15 +400,15 @@ export default function ReportsPage() {
                                             aria-label={`Seleccionar cédula ${cedula.folio}`}
                                         />
                                     </TableCell>
-                                    <TableCell onClick={() => handleToggleDetails(cedula.id)} className="font-medium">{cedula.folio}</TableCell>
-                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.client}</TableCell>
-                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>
+                                    <TableCell className="font-medium">{cedula.folio}</TableCell>
+                                    <TableCell>{cedula.client}</TableCell>
+                                    <TableCell>
                                         <span className="font-medium" style={{ color: cedula.systemColor }}>
                                             {cedula.system}
                                         </span>
                                     </TableCell>
-                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.equipment}</TableCell>
-                                    <TableCell onClick={() => handleToggleDetails(cedula.id)} className="hidden md:table-cell">{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
+                                    <TableCell>{cedula.equipment}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
                                     <TableCell>
                                         <Button
                                             variant="ghost"
@@ -383,3 +529,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
