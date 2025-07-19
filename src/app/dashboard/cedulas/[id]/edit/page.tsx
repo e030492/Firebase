@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
@@ -33,15 +34,22 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems, mockProtocols } from '@/lib/mock-data';
+import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
+import { 
+    mockCedulas, 
+    mockClients, 
+    mockEquipments, 
+    mockUsers, 
+    mockSystems, 
+    mockProtocols,
+    CEDULAS_STORAGE_KEY,
+    CLIENTS_STORAGE_KEY,
+    EQUIPMENTS_STORAGE_KEY,
+    USERS_STORAGE_KEY,
+    SYSTEMS_STORAGE_KEY,
+    PROTOCOLS_STORAGE_KEY
+} from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
-
-const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const USERS_STORAGE_KEY = 'guardian_shield_users';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
@@ -56,6 +64,13 @@ export default function EditCedulaPage() {
   const router = useRouter();
   const cedulaId = params.id as string;
 
+  const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, []);
+  const [clients, setClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, []);
+  const [allEquipments, setAllEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, []);
+  const [users, setUsers] = useLocalStorageSync<User[]>(USERS_STORAGE_KEY, []);
+  const [systems, setSystems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, []);
+  const [protocols, setProtocols] = useLocalStorageSync<Protocol[]>(PROTOCOLS_STORAGE_KEY, []);
+
   const [folio, setFolio] = useState('');
   const [clientId, setClientId] = useState('');
   const [systemId, setSystemId] = useState('');
@@ -68,9 +83,6 @@ export default function EditCedulaPage() {
   const [status, setStatus] = useState('');
   const [semaforo, setSemaforo] = useState('');
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
-  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
@@ -84,27 +96,8 @@ export default function EditCedulaPage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    // Load all data from localStorage or mock data
-    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    const allClientsData: Client[] = storedClients ? JSON.parse(storedClients) : mockClients;
-    setClients(allClientsData);
-    
-    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    const allEquipmentsData: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : mockEquipments;
-    setAllEquipments(allEquipmentsData);
-
-    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    const allSystemsData: System[] = storedSystems ? JSON.parse(storedSystems) : mockSystems;
-    setSystems(allSystemsData);
-
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const allUsersData: User[] = storedUsers ? JSON.parse(storedUsers) : mockUsers;
-    setTechnicians(allUsersData.filter(u => u.role === 'Técnico'));
-    setSupervisors(allUsersData.filter(u => u.role === 'Supervisor'));
-
-    if (cedulaId) {
-      const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
-      const cedulas: Cedula[] = storedCedulas ? JSON.parse(storedCedulas) : [];
+    // Only proceed when all data is loaded from localStorage
+    if (cedulaId && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0) {
       const foundCedula = cedulas.find(c => c.id === cedulaId);
 
       if (foundCedula) {
@@ -118,18 +111,15 @@ export default function EditCedulaPage() {
           setCreationTime(format(dateObj, 'HH:mm'));
         }
 
-        const foundClient = allClientsData.find(c => c.name === foundCedula.client);
+        const foundClient = clients.find(c => c.name === foundCedula.client);
         if (foundClient) setClientId(foundClient.id);
         
-        const foundEquipment = allEquipmentsData.find(e => e.name === foundCedula.equipment);
+        const foundEquipment = allEquipments.find(e => e.name === foundCedula.equipment && e.client === foundCedula.client);
         if (foundEquipment) {
             setEquipmentId(foundEquipment.id);
-            const foundSystem = allSystemsData.find(s => s.name === foundEquipment.system);
+            const foundSystem = systems.find(s => s.name === foundEquipment.system);
             if (foundSystem) setSystemId(foundSystem.id);
 
-            // Load protocol for the equipment
-            const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
-            const protocols: Protocol[] = storedProtocols ? JSON.parse(storedProtocols) : mockProtocols;
             const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
             const baseProtocolSteps = equipmentProtocol?.steps || [];
             
@@ -157,10 +147,15 @@ export default function EditCedulaPage() {
             setNotes(initialNotes);
         }
 
-        const foundTechnician = allUsersData.find(u => u.name === foundCedula.technician);
+        const currentTechnicians = users.filter(u => u.role === 'Técnico');
+        const currentSupervisors = users.filter(u => u.role === 'Supervisor');
+        setTechnicians(currentTechnicians);
+        setSupervisors(currentSupervisors);
+
+        const foundTechnician = currentTechnicians.find(u => u.name === foundCedula.technician);
         if (foundTechnician) setTechnicianId(foundTechnician.id);
 
-        const foundSupervisor = allUsersData.find(u => u.name === foundCedula.supervisor);
+        const foundSupervisor = currentSupervisors.find(u => u.name === foundCedula.supervisor);
         if (foundSupervisor) setSupervisorId(foundSupervisor.id);
         
         setLoading(false);
@@ -169,7 +164,7 @@ export default function EditCedulaPage() {
         setLoading(false);
       }
     }
-  }, [cedulaId]);
+  }, [cedulaId, cedulas, clients, allEquipments, users, systems, protocols]);
 
   useEffect(() => {
     if (clientId && systemId) {
@@ -177,6 +172,8 @@ export default function EditCedulaPage() {
       const systemName = systems.find(s => s.id === systemId)?.name;
       if (clientName && systemName) {
         setFilteredEquipments(allEquipments.filter(eq => eq.client === clientName && eq.system === systemName));
+      } else {
+        setFilteredEquipments([]);
       }
     } else {
         setFilteredEquipments([]);
@@ -216,23 +213,21 @@ export default function EditCedulaPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
-    let cedulas: Cedula[] = storedCedulas ? JSON.parse(storedCedulas) : [];
 
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
     const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
     const supervisorName = supervisors.find(s => s.id === supervisorId)?.name || '';
 
+    const finalDateTime = creationDate ? new Date(creationDate) : new Date();
+    if (creationTime) {
+        const [hours, minutes] = creationTime.split(':');
+        finalDateTime.setHours(parseInt(hours, 10));
+        finalDateTime.setMinutes(parseInt(minutes, 10));
+    }
+
     const updatedCedulas = cedulas.map(c => {
       if (c.id === cedulaId) {
-        const finalDateTime = creationDate ? new Date(creationDate) : new Date();
-        if (creationTime) {
-            const [hours, minutes] = creationTime.split(':');
-            finalDateTime.setHours(parseInt(hours, 10));
-            finalDateTime.setMinutes(parseInt(minutes, 10));
-        }
-
         return {
           ...c,
           folio,
@@ -256,7 +251,7 @@ export default function EditCedulaPage() {
       return c;
     });
 
-    localStorage.setItem(CEDULAS_STORAGE_KEY, JSON.stringify(updatedCedulas));
+    setCedulas(updatedCedulas);
     alert('Cédula actualizada con éxito.');
     router.push('/dashboard/cedulas');
   }
@@ -619,3 +614,4 @@ export default function EditCedulaPage() {
     </form>
   );
 }
+
