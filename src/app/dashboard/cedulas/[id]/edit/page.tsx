@@ -94,7 +94,8 @@ export default function EditCedulaPage() {
   const dataLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (cedulaId && !dataLoadedRef.current && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0) {
+    // This effect runs once all data from localStorage is synced and available.
+    if (cedulaId && !dataLoadedRef.current && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0) {
         const foundCedula = cedulas.find(c => c.id === cedulaId);
 
         if (foundCedula) {
@@ -526,7 +527,7 @@ export default function EditCedulaPage() {
                                     <Label htmlFor={`step-percentage-${index}`}>% Ejecutado</Label>
                                     <Select
                                         value={String(step.percentage || '0')}
-                                        onValueChange={(value) => handleStepChange(index, 'percentage', value)}
+                                        onValueChange={(value) => handleStepChange(index, 'percentage', Number(value))}
                                     >
                                         <SelectTrigger id={`step-percentage-${index}`} className="w-auto">
                                             <SelectValue placeholder="% Ejecutado" />
