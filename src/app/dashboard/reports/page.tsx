@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, Fragment } from 'react';
@@ -26,6 +27,8 @@ type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type System = typeof mockSystems[0];
+type EnrichedCedula = Cedula & { equipmentDetails?: Equipment; clientDetails?: Client; systemDetails?: System };
+
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -39,7 +42,7 @@ export default function ReportsPage() {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
-  const [selectedCedulas, setSelectedCedulas] = useState<string[]>([]);
+  const [selectedCedulaIds, setSelectedCedulaIds] = useState<string[]>([]);
   const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -90,27 +93,50 @@ export default function ReportsPage() {
         filtered = filtered.filter(c => c.system === systemName);
       }
     }
-    return filtered;
+    return filtered.sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
   }, [cedulas, allEquipments, clients, systems, selectedClientId, selectedWarehouse, selectedSystemId]);
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-      setSelectedCedulas(filteredCedulas.map(c => c.id));
+      setSelectedCedulaIds(filteredCedulas.map(c => c.id));
     } else {
-      setSelectedCedulas([]);
+      setSelectedCedulaIds([]);
     }
   };
   
   const handleSelectCedula = (cedulaId: string, checked: boolean) => {
     if (checked) {
-      setSelectedCedulas(prev => [...prev, cedulaId]);
+      setSelectedCedulaIds(prev => [...prev, cedulaId]);
     } else {
-      setSelectedCedulas(prev => prev.filter(id => id !== cedulaId));
+      setSelectedCedulaIds(prev => prev.filter(id => id !== cedulaId));
     }
   };
+  
+  const handleGenerateReport = () => {
+    const reportData = selectedCedulaIds.map(id => {
+      const cedula = cedulas.find(c => c.id === id);
+      if (!cedula) return null;
+      
+      const equipment = allEquipments.find(e => e.name === cedula.equipment && e.client === cedula.client);
+      const client = clients.find(c => c.name === cedula.client);
+      const system = equipment ? systems.find(s => s.name === equipment.system) : undefined;
+      
+      return {
+        ...cedula,
+        equipmentDetails: equipment,
+        clientDetails: client,
+        systemDetails: system,
+      };
+    }).filter(Boolean);
 
-  const isAllSelected = filteredCedulas.length > 0 && selectedCedulas.length === filteredCedulas.length;
-  const isSomeSelected = selectedCedulas.length > 0 && selectedCedulas.length < filteredCedulas.length;
+    const encodedData = btoa(JSON.stringify(reportData));
+    const url = `/dashboard/reports/print?data=${encodedData}`;
+    window.open(url, '_blank');
+  };
+
+
+  const isAllSelected = filteredCedulas.length > 0 && selectedCedulaIds.length === filteredCedulas.length;
+  const isSomeSelected = selectedCedulaIds.length > 0 && selectedCedulaIds.length < filteredCedulas.length;
   const selectionState = isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false);
 
   const handleToggleDetails = (cedulaId: string) => {
@@ -208,14 +234,14 @@ export default function ReportsPage() {
                             filteredCedulas.map(cedula => (
                                 <Fragment key={cedula.id}>
                                 <TableRow
-                                  data-state={selectedCedulas.includes(cedula.id) ? "selected" : ""}
+                                  data-state={selectedCedulaIds.includes(cedula.id) ? "selected" : ""}
                                   onClick={() => handleToggleDetails(cedula.id)}
                                   className="cursor-pointer"
                                 >
                                     <TableCell onClick={(e) => e.stopPropagation()}>
                                         <Checkbox 
                                             onCheckedChange={checked => handleSelectCedula(cedula.id, !!checked)}
-                                            checked={selectedCedulas.includes(cedula.id)}
+                                            checked={selectedCedulaIds.includes(cedula.id)}
                                             aria-label={`Seleccionar cédula ${cedula.folio}`}
                                         />
                                     </TableCell>
@@ -339,14 +365,14 @@ export default function ReportsPage() {
             </div>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button asChild disabled={selectedCedulas.length === 0}>
-             <Link href={`/dashboard/reports/print?ids=${selectedCedulas.join(',')}`} target="_blank" rel="noopener noreferrer">
-                <Printer className="mr-2 h-4 w-4" />
-                Generar Reporte ({selectedCedulas.length})
-            </Link>
+          <Button onClick={handleGenerateReport} disabled={selectedCedulaIds.length === 0}>
+             <Printer className="mr-2 h-4 w-4" />
+             Generar Reporte ({selectedCedulaIds.length})
           </Button>
         </CardFooter>
       </Card>
     </div>
   );
 }
+
+    

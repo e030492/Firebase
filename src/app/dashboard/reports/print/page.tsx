@@ -5,14 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ShieldCheck, Printer, X, Camera } from 'lucide-react';
-import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
 import type { mockCedulas, mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
-import {
-  CEDULAS_STORAGE_KEY,
-  EQUIPMENTS_STORAGE_KEY,
-  CLIENTS_STORAGE_KEY,
-  SYSTEMS_STORAGE_KEY,
-} from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,62 +24,32 @@ function ReportContent() {
   const [error, setError] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState('');
   
-  const [allCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, []);
-  const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, []);
-  const [allClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, []);
-  const [allSystems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, []);
-  
   useEffect(() => {
     setReportDate(new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }));
+    const dataParam = searchParams.get('data');
 
-    const idsParam = searchParams.get('ids');
-    if (!idsParam) {
-      setError('No se seleccionaron cédulas para el reporte.');
+    if (!dataParam) {
+      setError('No se proporcionaron datos para el reporte.');
       setLoading(false);
       return;
     }
 
-    const ids = idsParam ? idsParam.split(',').filter(id => id) : [];
-    if (ids.length === 0) {
-        setError('No se seleccionaron cédulas válidas para el reporte.');
-        setLoading(false);
-        return;
-    }
-    
-    // Wait until all data from local storage is loaded
-    if (allCedulas.length === 0 && allEquipments.length === 0) {
-        return; // Data is still loading from the hook
-    }
-
     try {
-        const enrichedData = ids.map(id => {
-            const cedula = allCedulas.find(c => c.id === id);
-            if (!cedula) return null;
-
-            const equipment = allEquipments.find(e => e.name === cedula.equipment && e.client === cedula.client);
-            const client = allClients.find(c => c.name === cedula.client);
-            const system = equipment ? allSystems.find(s => s.name === equipment.system) : undefined;
-            
-            return {
-                ...cedula,
-                equipmentDetails: equipment,
-                clientDetails: client,
-                systemDetails: system,
-            };
-        }).filter((c): c is EnrichedCedula => c !== null);
+      const decodedData = atob(dataParam);
+      const parsedData = JSON.parse(decodedData);
       
-        if (enrichedData.length === 0) {
-            setError('Las cédulas seleccionadas no pudieron ser encontradas en la base de datos actual.');
-        }
-
-        setReportCedulas(enrichedData);
+      if (Array.isArray(parsedData) && parsedData.length > 0) {
+        setReportCedulas(parsedData);
+      } else {
+        setError('Los datos del reporte están vacíos o no son válidos.');
+      }
     } catch (e) {
-        console.error("Error processing report data:", e);
-        setError('Ocurrió un error al procesar los datos del reporte.');
+      console.error("Error decoding or parsing report data:", e);
+      setError('Ocurrió un error al procesar los datos del reporte. El enlace puede ser inválido.');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-  }, [searchParams, allCedulas, allEquipments, allClients, allSystems]);
+  }, [searchParams]);
   
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
@@ -137,7 +100,7 @@ function ReportContent() {
                              <ShieldCheck className="h-12 w-12 text-primary" />
                              <div>
                                 <h2 className="text-2xl font-bold text-gray-800">Reporte de Mantenimiento</h2>
-                                <p className="text-sm text-gray-500">Escuadra - Control de Seguridad</p>
+                                <p className="text-sm text-gray-500">Escuadra Tecnology - Control de Seguridad</p>
                              </div>
                         </div>
                         <div className="text-left sm:text-right mt-4 sm:mt-0">
@@ -251,3 +214,5 @@ export default function PrintReportPage() {
         </Suspense>
     );
 }
+
+    
