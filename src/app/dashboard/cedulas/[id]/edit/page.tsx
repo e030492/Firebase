@@ -36,18 +36,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
 import { 
+    CEDULAS_STORAGE_KEY,
+    CLIENTS_STORAGE_KEY,
+    EQUIPMENTS_STORAGE_KEY,
+    USERS_STORAGE_KEY,
+    SYSTEMS_STORAGE_KEY,
+    PROTOCOLS_STORAGE_KEY,
     mockCedulas, 
     mockClients, 
     mockEquipments, 
     mockUsers, 
     mockSystems, 
     mockProtocols,
-    CEDULAS_STORAGE_KEY,
-    CLIENTS_STORAGE_KEY,
-    EQUIPMENTS_STORAGE_KEY,
-    USERS_STORAGE_KEY,
-    SYSTEMS_STORAGE_KEY,
-    PROTOCOLS_STORAGE_KEY
 } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 
@@ -65,11 +65,11 @@ export default function EditCedulaPage() {
   const cedulaId = params.id as string;
 
   const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
-  const [clients, setClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
-  const [allEquipments, setAllEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
-  const [users, setUsers] = useLocalStorageSync<User[]>(USERS_STORAGE_KEY, mockUsers);
-  const [systems, setSystems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
-  const [protocols, setProtocols] = useLocalStorageSync<Protocol[]>(PROTOCOLS_STORAGE_KEY, mockProtocols);
+  const [clients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
+  const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
+  const [users] = useLocalStorageSync<User[]>(USERS_STORAGE_KEY, mockUsers);
+  const [systems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
+  const [protocols] = useLocalStorageSync<Protocol[]>(PROTOCOLS_STORAGE_KEY, mockProtocols);
 
   const [folio, setFolio] = useState('');
   const [clientId, setClientId] = useState('');
@@ -94,66 +94,67 @@ export default function EditCedulaPage() {
   const dataLoadedRef = useRef(false);
 
   useEffect(() => {
-    // This effect populates the form once all data is loaded from localStorage.
-    if (cedulaId && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0 && !dataLoadedRef.current) {
-      const foundCedula = cedulas.find(c => c.id === cedulaId);
+    if (cedulaId && !dataLoadedRef.current && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0) {
+        const foundCedula = cedulas.find(c => c.id === cedulaId);
 
-      if (foundCedula) {
-        setFolio(foundCedula.folio);
-        setDescription(foundCedula.description);
-        setStatus(foundCedula.status);
-        setSemaforo(foundCedula.semaforo || '');
-        if (foundCedula.creationDate) {
-          const dateObj = new Date(foundCedula.creationDate);
-          setCreationDate(dateObj);
-          setCreationTime(format(dateObj, 'HH:mm'));
-        }
+        if (foundCedula) {
+            setFolio(foundCedula.folio);
+            setDescription(foundCedula.description);
+            setStatus(foundCedula.status);
+            setSemaforo(foundCedula.semaforo || '');
 
-        const foundClient = clients.find(c => c.name === foundCedula.client);
-        if (foundClient) setClientId(foundClient.id);
-        
-        const foundEquipment = allEquipments.find(e => e.name === foundCedula.equipment && e.client === foundCedula.client);
-        if (foundEquipment) {
-            setEquipmentId(foundEquipment.id);
-            const foundSystem = systems.find(s => s.name === foundEquipment.system);
-            if (foundSystem) setSystemId(foundSystem.id);
-
-            // **CRITICAL FIX**: Prioritize existing protocol steps from the cedula.
-            // Only fall back to the base protocol if the cedula has no steps saved.
-            if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
-                setProtocolSteps(foundCedula.protocolSteps.map(s => ({
-                    step: s.step,
-                    priority: s.priority,
-                    percentage: s.completion,
-                    imageUrl: s.imageUrl,
-                    notes: s.notes,
-                })));
-            } else {
-                const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
-                const baseProtocolSteps = equipmentProtocol?.steps || [];
-                setProtocolSteps(baseProtocolSteps.map(s => ({...s, percentage: 0, imageUrl: '', notes: ''})));
+            if (foundCedula.creationDate) {
+                const dateObj = new Date(foundCedula.creationDate);
+                setCreationDate(dateObj);
+                setCreationTime(format(dateObj, 'HH:mm'));
             }
+
+            const foundClient = clients.find(c => c.name === foundCedula.client);
+            if (foundClient) setClientId(foundClient.id);
+            
+            const currentTechnicians = users.filter(u => u.role === 'Técnico');
+            const currentSupervisors = users.filter(u => u.role === 'Supervisor');
+            setTechnicians(currentTechnicians);
+            setSupervisors(currentSupervisors);
+
+            const foundTechnician = currentTechnicians.find(u => u.name === foundCedula.technician);
+            if (foundTechnician) setTechnicianId(foundTechnician.id);
+
+            const foundSupervisor = currentSupervisors.find(u => u.name === foundCedula.supervisor);
+            if (foundSupervisor) setSupervisorId(foundSupervisor.id);
+
+            const foundEquipment = allEquipments.find(e => e.name === foundCedula.equipment && e.client === foundCedula.client);
+            if (foundEquipment) {
+                setEquipmentId(foundEquipment.id);
+                const foundSystem = systems.find(s => s.name === foundEquipment.system);
+                if (foundSystem) setSystemId(foundSystem.id);
+
+                // **CRITICAL FIX**: Prioritize existing protocol steps from the cedula.
+                // Only fall back to the base protocol if the cedula has no steps saved.
+                if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
+                    setProtocolSteps(foundCedula.protocolSteps.map(s => ({
+                        step: s.step,
+                        priority: s.priority,
+                        percentage: s.completion,
+                        imageUrl: s.imageUrl,
+                        notes: s.notes,
+                    })));
+                } else {
+                    const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
+                    const baseProtocolSteps = equipmentProtocol?.steps || [];
+                    setProtocolSteps(baseProtocolSteps.map(s => ({...s, percentage: 0, imageUrl: '', notes: ''})));
+                }
+            }
+            
+            dataLoadedRef.current = true;
+            setLoading(false);
+        } else {
+            setNotFound(true);
+            setLoading(false);
         }
-
-        const currentTechnicians = users.filter(u => u.role === 'Técnico');
-        const currentSupervisors = users.filter(u => u.role === 'Supervisor');
-        setTechnicians(currentTechnicians);
-        setSupervisors(currentSupervisors);
-
-        const foundTechnician = currentTechnicians.find(u => u.name === foundCedula.technician);
-        if (foundTechnician) setTechnicianId(foundTechnician.id);
-
-        const foundSupervisor = currentSupervisors.find(u => u.name === foundCedula.supervisor);
-        if (foundSupervisor) setSupervisorId(foundSupervisor.id);
-        
-        dataLoadedRef.current = true; // Mark as loaded to prevent re-running
-        setLoading(false);
-      } else {
-        setNotFound(true);
-        setLoading(false);
-      }
     }
   }, [cedulaId, cedulas, clients, allEquipments, users, systems, protocols]);
+
 
   useEffect(() => {
     if (clientId && systemId) {

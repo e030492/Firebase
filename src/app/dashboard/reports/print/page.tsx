@@ -43,7 +43,7 @@ function ReportContent() {
       if (Array.isArray(parsedData) && parsedData.length > 0) {
         setReportCedulas(parsedData);
       } else {
-        setError('Los datos del reporte están vacíos o no son válidos.');
+        setError('Los datos del reporte están vacíos o no son válidos. Por favor, vuelva a seleccionar las cédulas.');
       }
       
       // Clean up sessionStorage after reading the data to prevent stale data on reloads.
@@ -71,7 +71,24 @@ function ReportContent() {
   }
   
   if (error) {
-    return <div className="p-8 text-center text-destructive">{error}</div>;
+    return (
+        <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-background">
+             <header className="flex items-center justify-between mb-8 print:hidden">
+                <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-6 w-6 text-primary"/>
+                    <h1 className="text-xl font-bold">Error en Reporte</h1>
+                </div>
+                 <Button variant="outline" onClick={() => window.close()}>
+                    <X className="mr-2 h-4 w-4"/>
+                    Cerrar
+                </Button>
+            </header>
+            <div className="p-8 text-center text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="font-semibold">No se pudo generar el reporte.</p>
+                <p className="mt-2 text-sm">{error}</p>
+            </div>
+        </div>
+    );
   }
 
   if (reportCedulas.length === 0) {

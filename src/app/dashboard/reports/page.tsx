@@ -13,8 +13,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Printer, ChevronDown, Camera } from 'lucide-react';
 import { 
-    mockCedulas, mockClients, mockEquipments, mockSystems, 
-    CEDULAS_STORAGE_KEY, CLIENTS_STORAGE_KEY, EQUIPMENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY 
+    CEDULAS_STORAGE_KEY, 
+    CLIENTS_STORAGE_KEY, 
+    EQUIPMENTS_STORAGE_KEY, 
+    SYSTEMS_STORAGE_KEY,
+    mockCedulas, 
+    mockClients, 
+    mockEquipments, 
+    mockSystems
 } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -40,9 +46,9 @@ type EnrichedCedula = Cedula & {
 
 export default function ReportsPage() {
   const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
-  const [clients, setClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
-  const [allEquipments, setAllEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
-  const [systems, setSystems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
+  const [clients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
+  const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
+  const [systems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
