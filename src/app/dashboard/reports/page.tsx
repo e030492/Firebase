@@ -36,6 +36,7 @@ type EnrichedCedula = Cedula & {
   system: string;
   warehouse?: string;
   systemColor?: string;
+  serial: string;
 };
 type SortableKey = 'folio' | 'client' | 'system' | 'equipment' | 'creationDate';
 
@@ -96,7 +97,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                             <div><p className="font-semibold text-gray-700">Cliente:</p><p>{cedula.client}</p></div>
                             <div><p className="font-semibold text-gray-700">Fecha de Cédula:</p><p>{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p></div>
                             <div><p className="font-semibold text-gray-700">Técnico:</p><p>{cedula.technician}</p></div>
-                            <div><p className="font-semibold text-gray-700">Equipo:</p><p>{cedula.equipment}</p></div>
+                            <div><p className="font-semibold text-gray-700">Equipo:</p><p>{cedula.equipment} ({cedula.serial})</p></div>
                             <div><p className="font-semibold text-gray-700">Sistema:</p><p style={{color: cedula.systemDetails?.color}}>{cedula.equipmentDetails?.system || 'N/A'}</p></div>
                             <div><p className="font-semibold text-gray-700">Supervisor:</p><p>{cedula.supervisor}</p></div>
                         </div>
@@ -224,6 +225,7 @@ export default function ReportsPage() {
         system: systemName, 
         warehouse: equipment?.location || '',
         systemColor: systemInfo?.color,
+        serial: equipment?.serial || 'N/A',
        };
     });
 
@@ -307,6 +309,7 @@ export default function ReportsPage() {
         equipmentDetails: equipment,
         clientDetails: client,
         systemDetails: system,
+        serial: equipment?.serial || 'N/A',
       } as EnrichedCedula;
     }).filter((item): item is EnrichedCedula => item !== null);
 
@@ -463,7 +466,10 @@ export default function ReportsPage() {
                                             {cedula.system}
                                         </span>
                                     </TableCell>
-                                    <TableCell>{cedula.equipment}</TableCell>
+                                    <TableCell>
+                                        {cedula.equipment}
+                                        <span className="block text-xs text-muted-foreground">(N/S: {cedula.serial})</span>
+                                    </TableCell>
                                     <TableCell className="hidden md:table-cell">{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
                                     <TableCell>
                                         <Button
@@ -585,5 +591,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    
