@@ -31,31 +31,23 @@ const collectionsToSeed = {
 
 export const seedDatabase = async () => {
   console.log("Seeding database...");
+  const batch = writeBatch(db);
   for (const [collectionName, mockData] of Object.entries(collectionsToSeed)) {
-      const batch = writeBatch(db);
+      const collectionRef = collection(db, collectionName);
       mockData.forEach(item => {
-          const { id, ...data } = item; // Exclude mock ID
-          // For protocols, we don't create a random ID, we use the equipmentId based one
-          const docRef = collectionName === 'protocols' ? doc(db, collectionName, data.equipmentId) : doc(collection(db, collectionName));
+          const { id, ...data } = item; // Exclude mock ID from data
+          const docRef = doc(collectionRef); // Let Firestore generate the ID
           batch.set(docRef, data);
       });
-      await batch.commit();
   }
+  await batch.commit();
   console.log("Database seeded successfully.");
 };
 
 
 // Generic function to fetch all documents from a collection
 async function getCollection<T extends {id: string}>(collectionName: string): Promise<T[]> {
-  let querySnapshot = await getDocs(collection(db, collectionName));
-  
-  if (querySnapshot.empty) {
-    console.warn(`Collection '${collectionName}' is empty. Seeding database...`);
-    await seedDatabase();
-    // Re-fetch the collection after seeding
-    querySnapshot = await getDocs(collection(db, collectionName));
-  }
-  
+  const querySnapshot = await getDocs(collection(db, collectionName));
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 }
 

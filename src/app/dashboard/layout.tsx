@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 import type { User } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
-import { PermissionsProvider } from '@/hooks/use-permissions.tsx';
+import { PermissionsProvider } from '@/hooks/use-permissions';
 
 
 export default function DashboardLayout({
@@ -46,9 +46,9 @@ export default function DashboardLayout({
       } catch (error) {
         console.error("Failed to parse active user from localStorage", error);
         setActiveUser(null);
+        router.push('/');
       }
     } else {
-        // If no user is logged in, redirect to login page
         router.push('/');
     }
   }, [router]);
@@ -69,7 +69,7 @@ export default function DashboardLayout({
           <Sidebar>
             <SidebarHeader>
               <Link
-                href="/dashboard"
+                href="/dashboard/dashboard"
                 className="group flex h-9 items-center gap-3 rounded-lg px-2 text-lg font-semibold text-primary"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-all group-hover:bg-primary/20">

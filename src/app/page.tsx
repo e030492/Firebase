@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Server, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,69 +17,92 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
-    ACTIVE_USER_STORAGE_KEY
+    ACTIVE_USER_STORAGE_KEY,
+    mockUsers,
 } from '@/lib/mock-data';
-import { getUsers, User } from '@/lib/services';
+import { getUsers, User, seedDatabase } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+
+type Status = "loading" | "error" | "success";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  // Debug states
+  const [systemStatus, setSystemStatus] = useState<Status>("loading");
+  const [statusMessage, setStatusMessage] = useState('Cargando datos iniciales...');
+  const [userCount, setUserCount] = useState(0);
 
   useEffect(() => {
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-    async function loadUsers() {
-      setError('');
-      setLoading(true);
+    
+    async function loadInitialData() {
       try {
+        setSystemStatus("loading");
+        setStatusMessage("Obteniendo usuarios desde la base de datos...");
         const usersData = await getUsers();
-        setUsers(usersData);
-      } catch (e) {
+        
+        if (usersData.length === 0) {
+            setSystemStatus("error");
+            setStatusMessage("Error: La colección de usuarios está vacía. La base de datos puede no estar inicializada.");
+            setUserCount(0);
+        } else {
+            setUsers(usersData);
+            setUserCount(usersData.length);
+            setSystemStatus("success");
+            setStatusMessage("Datos cargados correctamente.");
+        }
+      } catch (e: any) {
         console.error("Failed to load users", e);
-        setError("No se pudo conectar a la base de datos.");
-      } finally {
-        setLoading(false);
+        setSystemStatus("error");
+        setStatusMessage(`Error de conexión: ${e.message}`);
       }
     }
-    loadUsers();
+    loadInitialData();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoggingIn(true);
+    setLoginError('');
 
-    try {
-        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-        if (user && user.password === password) {
+    if (user) {
+        if (user.password === password) {
             localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-            router.push('/dashboard');
+            router.push('/dashboard/dashboard');
         } else {
-            setError('Email o contraseña incorrectos.');
-            // Reload users in case they were just seeded
-            const usersData = await getUsers();
-            setUsers(usersData);
+            setLoginError('Contraseña incorrecta.');
         }
-    } catch (err) {
-        console.error("Login error:", err);
-        setError("No se pudo verificar el usuario. Verifique su conexión e inténtelo de nuevo.");
-    } finally {
-        setIsLoggingIn(false);
+    } else {
+        setLoginError('Usuario no encontrado.');
     }
   };
 
-  const isLoading = loading || isLoggingIn;
+  const handleSeedDatabase = async () => {
+      try {
+          setStatusMessage("Iniciando sembrado de base de datos...");
+          setSystemStatus("loading");
+          await seedDatabase();
+          setStatusMessage("¡Base de datos sembrada con éxito! Recargando...");
+          window.location.reload();
+      } catch(e: any) {
+          setSystemStatus("error");
+          setStatusMessage(`Error en el sembrado: ${e.message}`);
+      }
+  }
+
+  const isLoading = systemStatus === "loading";
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center text-center">
           <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
             <ShieldCheck className="h-10 w-10" />
@@ -93,12 +116,14 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <CardHeader>
               <CardTitle>Iniciar Sesión</CardTitle>
-               {isLoading && !error && (
-                 <CardDescription>Conectando a la base de datos...</CardDescription>
-               )}
+              <CardDescription>
+                {isLoading 
+                  ? "Verificando estado del sistema..." 
+                  : "Ingrese sus credenciales para acceder."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {loading ? (
+              {isLoading ? (
                   <div className="space-y-4">
                       <div className="space-y-2"><Label>Email</Label><Skeleton className="h-10 w-full"/></div>
                       <div className="space-y-2"><Label>Contraseña</Label><Skeleton className="h-10 w-full"/></div>
@@ -107,19 +132,19 @@ export default function LoginPage() {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
+                    <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Contraseña</Label>
-                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading}/>
+                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
                   </div>
                 </>
               )}
-              {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
+              {loginError && <p className="text-sm font-medium text-destructive pt-2">{loginError}</p>}
             </CardContent>
             <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoggingIn ? 'Verificando...' : (loading ? 'Cargando...' : 'Acceder')}
+                {isLoading ? 'Cargando...' : 'Acceder'}
               </Button>
                <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
                 ¿Olvidó su contraseña?
@@ -127,6 +152,44 @@ export default function LoginPage() {
             </CardFooter>
           </form>
         </Card>
+        
+        {/* Debug Window */}
+        <Card className="shadow-lg bg-muted/30">
+            <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                    <Server className="h-4 w-4" />
+                    <span>Estado del Sistema</span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-3">
+                <div className="flex items-start gap-3">
+                    {systemStatus === 'loading' && <Skeleton className="h-5 w-5 rounded-full mt-0.5" />}
+                    {systemStatus === 'success' && <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />}
+                    {systemStatus === 'error' && <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />}
+                    <div>
+                        <p className="font-semibold">Mensaje:</p>
+                        <p className="text-muted-foreground break-words">{statusMessage}</p>
+                    </div>
+                </div>
+                <Separator />
+                <div className="flex justify-between items-center">
+                    <p className="font-semibold">Usuarios encontrados:</p>
+                    <p className="font-mono text-lg">{userCount}</p>
+                </div>
+                 {userCount === 0 && systemStatus === 'error' && (
+                    <>
+                        <Separator />
+                        <div className="pt-2">
+                            <p className="text-muted-foreground mb-3 text-center">Si esta es la primera vez que ejecuta la aplicación, la base de datos necesita ser inicializada.</p>
+                            <Button onClick={handleSeedDatabase} className="w-full" variant="destructive" disabled={isLoading}>
+                                Inicializar Base de Datos (Sembrar)
+                            </Button>
+                        </div>
+                    </>
+                 )}
+            </CardContent>
+        </Card>
+
       </div>
     </main>
   );
