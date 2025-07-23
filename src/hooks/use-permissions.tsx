@@ -1,7 +1,6 @@
-
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { ACTIVE_USER_STORAGE_KEY, mockUsers } from "@/lib/mock-data";
 
 type User = typeof mockUsers[0];
@@ -16,7 +15,7 @@ type PermissionsContextType = {
 
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
-export function PermissionsProvider({ children }: { children: React.ReactNode }) {
+export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {

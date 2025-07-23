@@ -66,8 +66,9 @@ export default function NewCedulaPage() {
   const [semaforo, setSemaforo] = useState('');
 
   const [clients, setClients] = useState<Client[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [allSystems, setAllSystems] = useState<System[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [filteredSystems, setFilteredSystems] = useState<System[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
@@ -82,10 +83,10 @@ export default function NewCedulaPage() {
     setClients(storedClients ? JSON.parse(storedClients) : mockClients);
 
     const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    setSystems(storedSystems ? JSON.parse(storedSystems) : mockSystems);
+    setAllSystems(storedSystems ? JSON.parse(storedSystems) : mockSystems);
     
     const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    setEquipments(storedEquipments ? JSON.parse(storedEquipments) : mockEquipments);
+    setAllEquipments(storedEquipments ? JSON.parse(storedEquipments) : mockEquipments);
 
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
     const allUsers: User[] = storedUsers ? JSON.parse(storedUsers) : mockUsers;
@@ -94,11 +95,27 @@ export default function NewCedulaPage() {
   }, []);
 
   useEffect(() => {
+    if (clientId) {
+      const clientName = clients.find(c => c.id === clientId)?.name;
+      if (clientName) {
+        const equipmentsForClient = allEquipments.filter(eq => eq.client === clientName);
+        const systemNamesForClient = [...new Set(equipmentsForClient.map(eq => eq.system))];
+        const systemsForClient = allSystems.filter(sys => systemNamesForClient.includes(sys.name));
+        setFilteredSystems(systemsForClient);
+      } else {
+        setFilteredSystems([]);
+      }
+    } else {
+      setFilteredSystems([]);
+    }
+  }, [clientId, clients, allEquipments, allSystems]);
+
+  useEffect(() => {
     if (clientId && systemId) {
       const clientName = clients.find(c => c.id === clientId)?.name;
-      const systemName = systems.find(s => s.id === systemId)?.name;
+      const systemName = allSystems.find(s => s.id === systemId)?.name;
       if (clientName && systemName) {
-        const filtered = equipments.filter(eq => eq.client === clientName && eq.system === systemName);
+        const filtered = allEquipments.filter(eq => eq.client === clientName && eq.system === systemName);
         setFilteredEquipments(filtered);
       } else {
         setFilteredEquipments([]);
@@ -106,7 +123,7 @@ export default function NewCedulaPage() {
     } else {
       setFilteredEquipments([]);
     }
-  }, [clientId, systemId, clients, systems, equipments]);
+  }, [clientId, systemId, clients, allSystems, allEquipments]);
   
   useEffect(() => {
     if (equipmentId) {
@@ -146,6 +163,7 @@ export default function NewCedulaPage() {
     setClientId(newClientId);
     setSystemId('');
     setEquipmentId('');
+    setFilteredSystems([]);
     setFilteredEquipments([]);
   };
 
@@ -184,7 +202,7 @@ export default function NewCedulaPage() {
     let cedulas: Cedula[] = storedCedulas ? JSON.parse(storedCedulas) : [];
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
-    const equipmentName = equipments.find(eq => eq.id === equipmentId)?.name || '';
+    const equipmentName = allEquipments.find(eq => eq.id === equipmentId)?.name || '';
     const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
     const supervisorName = supervisors.find(s => s.id === supervisorId)?.name || '';
 
@@ -303,9 +321,13 @@ export default function NewCedulaPage() {
                         <SelectValue placeholder="Seleccione un sistema" />
                         </SelectTrigger>
                         <SelectContent>
-                        {systems.map(system => (
-                            <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                        ))}
+                          {filteredSystems.length > 0 ? (
+                            filteredSystems.map(system => (
+                                <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-systems" disabled>No hay sistemas con equipos para este cliente</SelectItem>
+                          )}
                         </SelectContent>
                     </Select>
                     </div>

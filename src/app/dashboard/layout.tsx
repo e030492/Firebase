@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 import type { mockUsers } from '@/lib/mock-data';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
-import { PermissionsProvider } from '@/hooks/use-permissions';
+import { PermissionsProvider } from '@/hooks/use-permissions.tsx';
 
 type User = (typeof mockUsers)[0];
 
