@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
@@ -15,10 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockSystems } from '@/lib/mock-data';
-
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-type System = typeof mockSystems[0];
+import { getSystem, updateSystem, System } from '@/lib/services';
 
 export default function EditSystemPage() {
   const params = useParams();
@@ -30,44 +28,50 @@ export default function EditSystemPage() {
   const [color, setColor] = useState('#3b82f6');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (systemId) {
-      const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-      const systems: System[] = storedSystems ? JSON.parse(storedSystems) : [];
-      const foundSystem = systems.find(s => s.id === systemId);
-
-      if (foundSystem) {
-        setName(foundSystem.name);
-        setDescription(foundSystem.description);
-        setColor(foundSystem.color || '#3b82f6');
-      } else {
-        setNotFound(true);
-      }
-      setLoading(false);
+      const fetchSystem = async () => {
+        try {
+          const foundSystem = await getSystem(systemId);
+          if (foundSystem) {
+            setName(foundSystem.name);
+            setDescription(foundSystem.description);
+            setColor(foundSystem.color || '#3b82f6');
+          } else {
+            setNotFound(true);
+          }
+        } catch (error) {
+          console.error("Failed to fetch system:", error);
+          setNotFound(true);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchSystem();
     }
   }, [systemId]);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    let systems: System[] = storedSystems ? JSON.parse(storedSystems) : [];
-
-    const updatedSystems = systems.map(s => {
-      if (s.id === systemId) {
-        return {
-          ...s,
-          name,
-          description,
-          color,
+    setIsSaving(true);
+    
+    try {
+        const updatedData: Partial<System> = {
+            name,
+            description,
+            color,
         };
-      }
-      return s;
-    });
-
-    localStorage.setItem(SYSTEMS_STORAGE_KEY, JSON.stringify(updatedSystems));
-    alert('Sistema actualizado con éxito.');
-    router.push('/dashboard/systems');
+        await updateSystem(systemId, updatedData);
+        alert('Sistema actualizado con éxito.');
+        router.push('/dashboard/systems');
+    } catch (error) {
+        console.error("Failed to update system:", error);
+        alert("Error al actualizar el sistema.");
+    } finally {
+        setIsSaving(false);
+    }
   }
 
   if (loading) {
@@ -128,7 +132,7 @@ export default function EditSystemPage() {
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-2xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={isSaving}>
              <ArrowLeft className="h-4 w-4" />
              <span className="sr-only">Atrás</span>
            </Button>
@@ -145,11 +149,11 @@ export default function EditSystemPage() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="nombre">Nombre del Sistema</Label>
-                <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required style={{ color: color, fontWeight: 'bold' }} />
+                <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required style={{ color: color, fontWeight: 'bold' }} disabled={isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
-                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} required className="min-h-32" />
+                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} required className="min-h-32" disabled={isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="color">Color del Sistema</Label>
@@ -160,6 +164,7 @@ export default function EditSystemPage() {
                         value={color}
                         onChange={(e) => setColor(e.target.value)}
                         className="h-10 w-14 cursor-pointer p-1"
+                        disabled={isSaving}
                     />
                     <Input
                         type="text"
@@ -167,13 +172,16 @@ export default function EditSystemPage() {
                         onChange={(e) => setColor(e.target.value)}
                         className="w-28"
                         placeholder="#3b82f6"
+                        disabled={isSaving}
                     />
                 </div>
               </div>
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
-            <Button type="submit">Guardar Cambios</Button>
+            <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Guardando..." : "Guardar Cambios"}
+            </Button>
           </CardFooter>
         </Card>
       </div>

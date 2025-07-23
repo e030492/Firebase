@@ -12,8 +12,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -34,31 +32,10 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
-import { 
-    CEDULAS_STORAGE_KEY,
-    CLIENTS_STORAGE_KEY,
-    EQUIPMENTS_STORAGE_KEY,
-    USERS_STORAGE_KEY,
-    SYSTEMS_STORAGE_KEY,
-    PROTOCOLS_STORAGE_KEY,
-    mockCedulas, 
-    mockClients, 
-    mockEquipments, 
-    mockUsers, 
-    mockSystems, 
-    mockProtocols,
-} from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
+import { getCedula, updateCedula, getClients, getSystems, getEquipments, getUsers, getProtocols, Cedula, Client, Equipment, User, System, Protocol, ProtocolStep } from '@/lib/services';
 
-type Cedula = typeof mockCedulas[0];
-type Client = typeof mockClients[0];
-type Equipment = typeof mockEquipments[0];
-type User = typeof mockUsers[0];
-type System = typeof mockSystems[0];
-type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string; notes?: string };
-type Protocol = { equipmentId: string; steps: ProtocolStep[] };
 
 export default function EditCedulaPage() {
   const params = useParams();
@@ -66,12 +43,12 @@ export default function EditCedulaPage() {
   const cedulaId = params.id as string;
   const { can } = usePermissions();
 
-  const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
-  const [clients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
-  const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
-  const [users] = useLocalStorageSync<User[]>(USERS_STORAGE_KEY, mockUsers);
-  const [systems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
-  const [protocols] = useLocalStorageSync<Protocol[]>(PROTOCOLS_STORAGE_KEY, mockProtocols);
+  const [cedula, setCedula] = useState<Cedula | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+  const [protocols, setProtocols] = useState<Protocol[]>([]);
 
   const [folio, setFolio] = useState('');
   const [clientId, setClientId] = useState('');
@@ -94,75 +71,96 @@ export default function EditCedulaPage() {
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const dataLoadedRef = useRef(false);
 
   useEffect(() => {
-    const allDataReady = cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0;
+    async function loadInitialData() {
+        if (!cedulaId) return;
+        try {
+            const [
+                cedulaData,
+                clientsData,
+                equipmentsData,
+                usersData,
+                systemsData,
+                protocolsData
+            ] = await Promise.all([
+                getCedula(cedulaId),
+                getClients(),
+                getEquipments(),
+                getUsers(),
+                getSystems(),
+                getProtocols()
+            ]);
 
-    if (cedulaId && !dataLoadedRef.current && allDataReady) {
-        const foundCedula = cedulas.find(c => c.id === cedulaId);
-
-        if (foundCedula) {
-            setFolio(foundCedula.folio);
-            setDescription(foundCedula.description);
-            setStatus(foundCedula.status);
-            setSemaforo(foundCedula.semaforo || '');
-
-            if (foundCedula.creationDate) {
-                const dateObj = new Date(foundCedula.creationDate);
-                setCreationDate(dateObj);
-                setCreationTime(format(dateObj, 'HH:mm'));
-            }
-
-            const foundClient = clients.find(c => c.name === foundCedula.client);
-            if (foundClient) setClientId(foundClient.id);
-            
-            const currentTechnicians = users.filter(u => u.role === 'Técnico');
-            const currentSupervisors = users.filter(u => u.role === 'Supervisor');
-            setTechnicians(currentTechnicians);
-            setSupervisors(currentSupervisors);
-
-            const foundTechnician = currentTechnicians.find(u => u.name === foundCedula.technician);
-            if (foundTechnician) setTechnicianId(foundTechnician.id);
-
-            const foundSupervisor = currentSupervisors.find(u => u.name === foundCedula.supervisor);
-            if (foundSupervisor) setSupervisorId(foundSupervisor.id);
-
-            const foundEquipment = allEquipments.find(e => e.name === foundCedula.equipment && e.client === foundCedula.client);
-            if (foundEquipment) {
-                setEquipmentId(foundEquipment.id);
-                setSerialNumber(foundEquipment.serial);
-                const foundSystem = systems.find(s => s.name === foundEquipment.system);
-                if (foundSystem) setSystemId(foundSystem.id);
-
-                // **Critical Fix**: Prioritize existing protocol steps from the cedula itself.
-                if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
-                    setProtocolSteps(foundCedula.protocolSteps.map(s => ({
-                        step: s.step,
-                        priority: s.priority,
-                        percentage: Number(s.completion) || 0, // Ensure 'completion' is mapped to 'percentage'
-                        imageUrl: s.imageUrl || '',
-                        notes: s.notes || '',
-                    })));
-                } else {
-                    // Only use the base protocol if the cedula has NO steps.
-                    const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
-                    const baseProtocolSteps = equipmentProtocol?.steps || [];
-                    setProtocolSteps(baseProtocolSteps.map(s => ({...s, percentage: 0, imageUrl: '', notes: ''})));
-                }
+            if (cedulaData) {
+                setClients(clientsData);
+                setAllEquipments(equipmentsData);
+                setUsers(usersData);
+                setSystems(systemsData);
+                setProtocols(protocolsData);
+                setCedula(cedulaData);
             } else {
-                setProtocolSteps([]);
+                setNotFound(true);
             }
-            
-            dataLoadedRef.current = true;
-            setLoading(false);
-        } else {
+        } catch (error) {
+            console.error("Failed to load data for cedula editing", error);
             setNotFound(true);
-            setLoading(false);
         }
     }
-  }, [cedulaId, cedulas, clients, allEquipments, users, systems, protocols]);
+    loadInitialData();
+  }, [cedulaId]);
+  
+  useEffect(() => {
+    if (cedula && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && !dataLoadedRef.current) {
+        setFolio(cedula.folio);
+        setDescription(cedula.description);
+        setStatus(cedula.status);
+        setSemaforo(cedula.semaforo || '');
 
+        if (cedula.creationDate) {
+            const dateObj = new Date(cedula.creationDate);
+            setCreationDate(dateObj);
+            setCreationTime(format(dateObj, 'HH:mm'));
+        }
+
+        const foundClient = clients.find(c => c.name === cedula.client);
+        if (foundClient) setClientId(foundClient.id);
+        
+        const currentTechnicians = users.filter(u => u.role === 'Técnico');
+        const currentSupervisors = users.filter(u => u.role === 'Supervisor');
+        setTechnicians(currentTechnicians);
+        setSupervisors(currentSupervisors);
+
+        const foundTechnician = currentTechnicians.find(u => u.name === cedula.technician);
+        if (foundTechnician) setTechnicianId(foundTechnician.id);
+
+        const foundSupervisor = currentSupervisors.find(u => u.name === cedula.supervisor);
+        if (foundSupervisor) setSupervisorId(foundSupervisor.id);
+
+        const foundEquipment = allEquipments.find(e => e.name === cedula.equipment && e.client === cedula.client);
+        if (foundEquipment) {
+            setEquipmentId(foundEquipment.id);
+            setSerialNumber(foundEquipment.serial);
+            const foundSystem = systems.find(s => s.name === foundEquipment.system);
+            if (foundSystem) setSystemId(foundSystem.id);
+
+            if (cedula.protocolSteps && cedula.protocolSteps.length > 0) {
+                setProtocolSteps(cedula.protocolSteps);
+            } else {
+                const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
+                const baseProtocolSteps = equipmentProtocol?.steps || [];
+                setProtocolSteps(baseProtocolSteps.map(s => ({...s, imageUrl: '', notes: ''})));
+            }
+        } else {
+            setProtocolSteps([]);
+        }
+        
+        dataLoadedRef.current = true;
+        setLoading(false);
+    }
+  }, [cedula, clients, allEquipments, users, systems, protocols]);
 
   useEffect(() => {
     if (clientId && systemId) {
@@ -195,17 +193,14 @@ export default function EditCedulaPage() {
   const handleEquipmentChange = (newEquipmentId: string) => {
     setEquipmentId(newEquipmentId);
     const selectedEquipment = allEquipments.find(eq => eq.id === newEquipmentId);
-    if (selectedEquipment) {
-      setSerialNumber(selectedEquipment.serial);
-    } else {
-      setSerialNumber('');
-    }
+    setSerialNumber(selectedEquipment?.serial || '');
   };
   
   const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
     setProtocolSteps(prev => {
         const newSteps = [...prev];
-        (newSteps[index] as any)[field] = value;
+        const updatedStep = { ...newSteps[index], [field]: value };
+        newSteps[index] = updatedStep;
         return newSteps;
     });
   };
@@ -221,9 +216,9 @@ export default function EditCedulaPage() {
     }
   };
 
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
 
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
@@ -237,44 +232,35 @@ export default function EditCedulaPage() {
         finalDateTime.setMinutes(parseInt(minutes, 10));
     }
     
-    const cedulaIndex = cedulas.findIndex(c => c.id === cedulaId);
-
-    if (cedulaIndex === -1) {
-        alert('Error: No se pudo encontrar la cédula para actualizar.');
-        return;
+    const updatedData: Partial<Cedula> = {
+        folio,
+        client: clientName,
+        equipment: equipmentName,
+        technician: technicianName,
+        supervisor: supervisorName,
+        creationDate: creationDate ? finalDateTime.toISOString() : '',
+        status: status as Cedula['status'],
+        description,
+        semaforo: semaforo as Cedula['semaforo'],
+        protocolSteps: protocolSteps.map(step => ({
+          step: step.step,
+          priority: step.priority,
+          completion: Number(step.completion) || 0,
+          imageUrl: step.imageUrl || '',
+          notes: step.notes || '',
+        })),
+    };
+      
+    try {
+        await updateCedula(cedulaId, updatedData);
+        alert('Cédula actualizada con éxito.');
+        router.push('/dashboard/cedulas');
+    } catch (error) {
+        console.error("Failed to update cedula:", error);
+        alert('Error: No se pudo actualizar la cédula.');
+    } finally {
+        setIsSaving(false);
     }
-    
-    setCedulas(prevCedulas => {
-      const newCedulas = [...prevCedulas];
-      const cedulaToUpdate = newCedulas[cedulaIndex];
-      
-      const updatedCedula = {
-          ...cedulaToUpdate,
-          folio,
-          client: clientName,
-          equipment: equipmentName,
-          technician: technicianName,
-          supervisor: supervisorName,
-          creationDate: creationDate ? finalDateTime.toISOString() : '',
-          status: status as Cedula['status'],
-          description,
-          semaforo: semaforo as Cedula['semaforo'],
-          // **Critical Fix**: Ensure all fields from the form state are correctly mapped back.
-          protocolSteps: protocolSteps.map(step => ({
-            step: step.step,
-            priority: step.priority,
-            completion: Number(step.percentage) || 0, // Map 'percentage' back to 'completion'
-            imageUrl: step.imageUrl || '',
-            notes: step.notes || '',
-          })),
-      };
-      
-      newCedulas[cedulaIndex] = updatedCedula;
-      return newCedulas;
-    });
-
-    alert('Cédula actualizada con éxito.');
-    router.push('/dashboard/cedulas');
   }
 
   const canUpdateCedulas = can('update', 'cedulas');
@@ -372,7 +358,7 @@ export default function EditCedulaPage() {
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={isSaving}>
              <ArrowLeft className="h-4 w-4" />
              <span className="sr-only">Atrás</span>
            </Button>
@@ -391,7 +377,7 @@ export default function EditCedulaPage() {
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="folio">Folio</Label>
-                   <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required disabled={!canUpdateCedulas} />
+                   <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required disabled={!canUpdateCedulas || isSaving} />
                  </div>
                  <div className="grid gap-3">
                     <Label htmlFor="creationDate">Fecha y Hora de Creación</Label>
@@ -404,7 +390,7 @@ export default function EditCedulaPage() {
                                         "w-full justify-start text-left font-normal",
                                         !creationDate && "text-muted-foreground"
                                     )}
-                                    disabled={!canUpdateCedulas}
+                                    disabled={!canUpdateCedulas || isSaving}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
@@ -425,7 +411,7 @@ export default function EditCedulaPage() {
                             className="w-auto"
                             value={creationTime}
                             onChange={e => setCreationTime(e.target.value)}
-                            disabled={!canUpdateCedulas}
+                            disabled={!canUpdateCedulas || isSaving}
                         />
                     </div>
                 </div>
@@ -433,7 +419,7 @@ export default function EditCedulaPage() {
               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select value={clientId} onValueChange={handleClientChange} required disabled={!canUpdateCedulas}>
+                  <Select value={clientId} onValueChange={handleClientChange} required disabled={!canUpdateCedulas || isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -446,7 +432,7 @@ export default function EditCedulaPage() {
                 </div>
                 <div className="grid gap-3">
                    <Label htmlFor="system">Sistema</Label>
-                   <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId || !canUpdateCedulas}>
+                   <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId || !canUpdateCedulas || isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un sistema" />
                     </SelectTrigger>
@@ -460,7 +446,7 @@ export default function EditCedulaPage() {
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="equipment">Equipo</Label>
-                <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || !canUpdateCedulas}>
+                <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || !canUpdateCedulas || isSaving}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione un equipo" />
                   </SelectTrigger>
@@ -478,7 +464,7 @@ export default function EditCedulaPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                    <Label htmlFor="technician">Técnico Asignado</Label>
-                   <Select value={technicianId} onValueChange={setTechnicianId} required disabled={!canUpdateCedulas}>
+                   <Select value={technicianId} onValueChange={setTechnicianId} required disabled={!canUpdateCedulas || isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un técnico" />
                     </SelectTrigger>
@@ -491,7 +477,7 @@ export default function EditCedulaPage() {
                  </div>
                  <div className="grid gap-3">
                    <Label htmlFor="supervisor">Supervisor</Label>
-                   <Select value={supervisorId} onValueChange={setSupervisorId} required disabled={!canUpdateCedulas}>
+                   <Select value={supervisorId} onValueChange={setSupervisorId} required disabled={!canUpdateCedulas || isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un supervisor" />
                     </SelectTrigger>
@@ -506,7 +492,7 @@ export default function EditCedulaPage() {
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required disabled={!canUpdateCedulas}>
+                   <Select value={status} onValueChange={setStatus} required disabled={!canUpdateCedulas || isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un estado" />
                     </SelectTrigger>
@@ -519,7 +505,7 @@ export default function EditCedulaPage() {
                  </div>
                  <div className="grid gap-3">
                     <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
-                    <Select value={semaforo} onValueChange={setSemaforo} disabled={!canUpdateCedulas}>
+                    <Select value={semaforo} onValueChange={setSemaforo} disabled={!canUpdateCedulas || isSaving}>
                         <SelectTrigger id="semaforo" className="w-full">
                             <SelectValue placeholder="Seleccione un estado" />
                         </SelectTrigger>
@@ -548,7 +534,7 @@ export default function EditCedulaPage() {
                </div>
                 <div className="grid gap-3">
                   <Label htmlFor="description">Descripción del Trabajo</Label>
-                  <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" disabled={!canUpdateCedulas}/>
+                  <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" disabled={!canUpdateCedulas || isSaving}/>
                 </div>
             </div>
           </CardContent>
@@ -575,7 +561,7 @@ export default function EditCedulaPage() {
                                             <Camera className="h-10 w-10 text-muted-foreground" />
                                         </div>
                                     )}
-                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={!canUpdateCedulas}>
+                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={!canUpdateCedulas || isSaving}>
                                         <Camera className="mr-2 h-4 w-4" />
                                         {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
                                     </Button>
@@ -586,15 +572,15 @@ export default function EditCedulaPage() {
                                         capture="environment"
                                         onChange={(e) => handleImageChange(index, e)}
                                         className="hidden"
-                                        disabled={!canUpdateCedulas}
+                                        disabled={!canUpdateCedulas || isSaving}
                                     />
                                 </div>
                                 <div className="grid gap-3">
                                     <Label htmlFor={`step-percentage-${index}`}>% Ejecutado</Label>
                                     <Select
-                                        value={String(step.percentage || '0')}
-                                        onValueChange={(value) => handleStepChange(index, 'percentage', Number(value))}
-                                        disabled={!canUpdateCedulas}
+                                        value={String(step.completion || '0')}
+                                        onValueChange={(value) => handleStepChange(index, 'completion', Number(value))}
+                                        disabled={!canUpdateCedulas || isSaving}
                                     >
                                         <SelectTrigger id={`step-percentage-${index}`} className="w-auto">
                                             <SelectValue placeholder="% Ejecutado" />
@@ -618,7 +604,7 @@ export default function EditCedulaPage() {
                                     value={step.notes || ''}
                                     onChange={(e) => handleStepChange(index, 'notes', e.target.value)}
                                     className="min-h-24"
-                                    disabled={!canUpdateCedulas}
+                                    disabled={!canUpdateCedulas || isSaving}
                                 />
                             </div>
                         </div>
@@ -631,7 +617,9 @@ export default function EditCedulaPage() {
 
         {canUpdateCedulas && (
             <div className="flex justify-start">
-                <Button type="submit">Guardar Cambios</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? "Guardando..." : "Guardar Cambios"}
+                </Button>
             </div>
         )}
         </div>
@@ -639,5 +627,3 @@ export default function EditCedulaPage() {
     </form>
   );
 }
-
-    

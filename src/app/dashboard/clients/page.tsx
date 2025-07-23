@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -33,27 +34,29 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { mockClients } from '@/lib/mock-data';
+import { getClients, deleteClient, Client } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-type Client = typeof mockClients[0];
 type SortableKey = 'name' | 'responsable' | 'direccion';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
 
-
   useEffect(() => {
-    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    if (storedClients) {
-      setClients(JSON.parse(storedClients));
-    } else {
-      // Initialize with mock data if not present
-      localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(mockClients));
-      setClients(mockClients);
+    async function loadClients() {
+      try {
+        const fetchedClients = await getClients();
+        setClients(fetchedClients);
+      } catch (error) {
+        console.error("Failed to fetch clients:", error);
+      } finally {
+        setLoading(false);
+      }
     }
+    loadClients();
   }, []);
 
   const sortedClients = useMemo(() => {
@@ -90,14 +93,42 @@ export default function ClientsPage() {
     return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
   };
 
-  const handleDeleteClient = () => {
+  const handleDeleteClient = async () => {
     if (clientToDelete) {
-      const updatedClients = clients.filter((client) => client.id !== clientToDelete.id)
-      setClients(updatedClients);
-      localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(updatedClients));
-      setClientToDelete(null); // Close the dialog
+      try {
+        await deleteClient(clientToDelete.id);
+        setClients(clients.filter((client) => client.id !== clientToDelete.id));
+      } catch (error) {
+        console.error("Failed to delete client:", error);
+        alert("Error al eliminar el cliente.");
+      } finally {
+        setClientToDelete(null);
+      }
     }
   };
+  
+  if (loading) {
+    return (
+        <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+            <div className="flex items-center justify-between">
+                <div className="grid gap-2">
+                    <Skeleton className="h-9 w-40" />
+                    <Skeleton className="h-5 w-80" />
+                </div>
+                <Skeleton className="h-10 w-32" />
+            </div>
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="space-y-4">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   return (
     <>

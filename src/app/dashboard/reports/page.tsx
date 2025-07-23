@@ -11,24 +11,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Printer, ChevronDown, Camera, ArrowLeft, ShieldCheck, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { 
-    CEDULAS_STORAGE_KEY, 
-    CLIENTS_STORAGE_KEY, 
-    EQUIPMENTS_STORAGE_KEY, 
-    SYSTEMS_STORAGE_KEY,
-    mockCedulas, 
-    mockClients, 
-    mockEquipments, 
-    mockSystems
-} from '@/lib/mock-data';
+import { getCedulas, getClients, getEquipments, getSystems, Cedula, Client, Equipment, System } from '@/lib/services';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
+import { Skeleton } from '@/components/ui/skeleton';
 
-type Cedula = typeof mockCedulas[0];
-type Client = typeof mockClients[0];
-type Equipment = typeof mockEquipments[0];
-type System = typeof mockSystems[0];
+
 type EnrichedCedula = Cedula & { 
   equipmentDetails?: Equipment; 
   clientDetails?: Client; 
@@ -188,11 +176,12 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
 }
 
 export default function ReportsPage() {
-  const [cedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
-  const [clients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
-  const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
-  const [systems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
-
+  const [cedulas, setCedulas] = useState<Cedula[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
@@ -203,6 +192,28 @@ export default function ReportsPage() {
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'creationDate', direction: 'descending' });
 
   const [reportData, setReportData] = useState<EnrichedCedula[] | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+        try {
+            const [cedulasData, clientsData, equipmentsData, systemsData] = await Promise.all([
+                getCedulas(),
+                getClients(),
+                getEquipments(),
+                getSystems(),
+            ]);
+            setCedulas(cedulasData);
+            setClients(clientsData);
+            setAllEquipments(equipmentsData);
+            setSystems(systemsData);
+        } catch (error) {
+            console.error("Failed to load report data:", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+    loadData();
+  }, []);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -340,6 +351,24 @@ export default function ReportsPage() {
         return 'secondary';
     }
   };
+  
+  if (loading) {
+      return (
+        <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+          <Skeleton className="h-9 w-80 mb-2" />
+          <Skeleton className="h-5 w-96" />
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-64" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-40 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      );
+  }
 
   if (reportData) {
     return <ReportView data={reportData} onBack={() => setReportData(null)} />;

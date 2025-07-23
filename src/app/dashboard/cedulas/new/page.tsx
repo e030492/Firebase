@@ -12,8 +12,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -33,23 +31,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { mockCedulas, mockClients, mockEquipments, mockUsers, mockSystems, mockProtocols } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
+import { getClients, getSystems, getEquipments, getProtocols, getUsers, createCedula, Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const USERS_STORAGE_KEY = 'guardian_shield_users';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
-
-type Cedula = typeof mockCedulas[0];
-type Client = typeof mockClients[0];
-type Equipment = typeof mockEquipments[0];
-type User = typeof mockUsers[0];
-type System = typeof mockSystems[0];
-type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string; notes?: string };
-type Protocol = { equipmentId: string; steps: ProtocolStep[] };
 
 export default function NewCedulaPage() {
   const router = useRouter();
@@ -68,6 +53,7 @@ export default function NewCedulaPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [allSystems, setAllSystems] = useState<System[]>([]);
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [filteredSystems, setFilteredSystems] = useState<System[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
@@ -79,21 +65,33 @@ export default function NewCedulaPage() {
   const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
   const [imageUrls, setImageUrls] = useState<{ [step: string]: string }>({});
   const [notes, setNotes] = useState<{ [step: string]: string }>({});
+  
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    setClients(storedClients ? JSON.parse(storedClients) : mockClients);
-
-    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    setAllSystems(storedSystems ? JSON.parse(storedSystems) : mockSystems);
-    
-    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    setAllEquipments(storedEquipments ? JSON.parse(storedEquipments) : mockEquipments);
-
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const allUsers: User[] = storedUsers ? JSON.parse(storedUsers) : mockUsers;
-    setTechnicians(allUsers.filter(user => user.role === 'Técnico'));
-    setSupervisors(allUsers.filter(user => user.role === 'Supervisor'));
+    async function loadData() {
+        try {
+            const [clientsData, systemsData, equipmentsData, usersData, protocolsData] = await Promise.all([
+                getClients(),
+                getSystems(),
+                getEquipments(),
+                getUsers(),
+                getProtocols()
+            ]);
+            setClients(clientsData);
+            setAllSystems(systemsData);
+            setAllEquipments(equipmentsData);
+            setTechnicians(usersData.filter(user => user.role === 'Técnico'));
+            setSupervisors(usersData.filter(user => user.role === 'Supervisor'));
+            setProtocols(protocolsData);
+        } catch (error) {
+            console.error("Failed to load initial data", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -110,6 +108,9 @@ export default function NewCedulaPage() {
     } else {
       setFilteredSystems([]);
     }
+    setSystemId('');
+    setEquipmentId('');
+    setFilteredEquipments([]);
   }, [clientId, clients, allEquipments, allSystems]);
 
   useEffect(() => {
@@ -125,13 +126,12 @@ export default function NewCedulaPage() {
     } else {
       setFilteredEquipments([]);
     }
+    setEquipmentId('');
   }, [clientId, systemId, clients, allSystems, allEquipments]);
   
   useEffect(() => {
     setSerialNumber(''); // Reset serial number when equipment changes
     if (equipmentId) {
-        const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
-        const protocols: Protocol[] = storedProtocols ? JSON.parse(storedProtocols) : mockProtocols;
         const equipmentProtocol = protocols.find(p => p.equipmentId === equipmentId);
         
         const selectedEquipment = allEquipments.find(eq => eq.id === equipmentId);
@@ -164,25 +164,8 @@ export default function NewCedulaPage() {
         setImageUrls({});
         setNotes({});
     }
-  }, [equipmentId, allEquipments]);
+  }, [equipmentId, allEquipments, protocols]);
 
-
-  const handleClientChange = (newClientId: string) => {
-    setClientId(newClientId);
-    setSystemId('');
-    setEquipmentId('');
-    setFilteredSystems([]);
-    setFilteredEquipments([]);
-  };
-
-  const handleSystemChange = (newSystemId: string) => {
-    setSystemId(newSystemId);
-    setEquipmentId('');
-  };
-  
-  const handleEquipmentChange = (newEquipmentId: string) => {
-    setEquipmentId(newEquipmentId);
-  }
 
   const handlePercentageChange = (step: string, value: string) => {
     setCompletionPercentages(prev => ({ ...prev, [step]: value }));
@@ -203,15 +186,13 @@ export default function NewCedulaPage() {
     setNotes(prev => ({ ...prev, [step]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!folio || !clientId || !equipmentId || !technicianId || !supervisorId || !creationDate || !description) {
         alert('Por favor, complete todos los campos.');
         return;
     }
-
-    const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
-    let cedulas: Cedula[] = storedCedulas ? JSON.parse(storedCedulas) : [];
+    setIsSaving(true);
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(eq => eq.id === equipmentId)?.name || '';
@@ -223,8 +204,7 @@ export default function NewCedulaPage() {
     finalDate.setHours(parseInt(hours, 10));
     finalDate.setMinutes(parseInt(minutes, 10));
 
-    const newCedula: Cedula = {
-      id: new Date().getTime().toString(),
+    const newCedulaData: Omit<Cedula, 'id'> = {
       folio,
       client: clientName,
       equipment: equipmentName,
@@ -243,18 +223,40 @@ export default function NewCedulaPage() {
       })),
     };
 
-    cedulas.push(newCedula);
-    localStorage.setItem(CEDULAS_STORAGE_KEY, JSON.stringify(cedulas));
-
-    alert('Cédula creada con éxito.');
-    router.push('/dashboard/cedulas');
+    try {
+        await createCedula(newCedulaData);
+        alert('Cédula creada con éxito.');
+        router.push('/dashboard/cedulas');
+    } catch (error) {
+        console.error("Failed to create cedula:", error);
+        alert("Error al crear la cédula.");
+        setIsSaving(false);
+    }
   };
+
+  if (loading) {
+      return (
+          <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
+              <div className="flex items-center gap-4">
+                  <Skeleton className="h-7 w-7" />
+                  <div className="grid gap-2">
+                      <Skeleton className="h-6 w-60" />
+                      <Skeleton className="h-4 w-80" />
+                  </div>
+              </div>
+              <Card>
+                  <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
+                  <CardContent><Skeleton className="h-96 w-full" /></CardContent>
+              </Card>
+          </div>
+      );
+  }
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={isSaving}>
              <ArrowLeft className="h-4 w-4" />
              <span className="sr-only">Atrás</span>
            </Button>
@@ -275,7 +277,7 @@ export default function NewCedulaPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
                     <Label htmlFor="folio">Folio</Label>
-                    <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required />
+                    <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required disabled={isSaving}/>
                     </div>
                     <div className="grid gap-3">
                         <Label htmlFor="creationDate">Fecha y Hora de Creación</Label>
@@ -288,6 +290,7 @@ export default function NewCedulaPage() {
                                             "w-full justify-start text-left font-normal",
                                             !creationDate && "text-muted-foreground"
                                         )}
+                                        disabled={isSaving}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
@@ -308,6 +311,7 @@ export default function NewCedulaPage() {
                                 className="w-auto"
                                 value={creationTime}
                                 onChange={e => setCreationTime(e.target.value)}
+                                disabled={isSaving}
                             />
                         </div>
                     </div>
@@ -315,7 +319,7 @@ export default function NewCedulaPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
                     <Label htmlFor="client">Cliente</Label>
-                    <Select onValueChange={handleClientChange} required>
+                    <Select onValueChange={setClientId} required disabled={isSaving}>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione un cliente" />
                         </SelectTrigger>
@@ -328,7 +332,7 @@ export default function NewCedulaPage() {
                     </div>
                     <div className="grid gap-3">
                     <Label htmlFor="system">Sistema</Label>
-                    <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId}>
+                    <Select value={systemId} onValueChange={setSystemId} required disabled={!clientId || isSaving}>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione un sistema" />
                         </SelectTrigger>
@@ -346,7 +350,7 @@ export default function NewCedulaPage() {
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="equipment">Equipo</Label>
-                    <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId}>
+                    <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId || isSaving}>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione un equipo" />
                         </SelectTrigger>
@@ -366,7 +370,7 @@ export default function NewCedulaPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
                     <Label htmlFor="technician">Técnico Asignado</Label>
-                    <Select onValueChange={setTechnicianId} required>
+                    <Select onValueChange={setTechnicianId} required disabled={isSaving}>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione un técnico" />
                         </SelectTrigger>
@@ -379,7 +383,7 @@ export default function NewCedulaPage() {
                     </div>
                     <div className="grid gap-3">
                     <Label htmlFor="supervisor">Supervisor</Label>
-                    <Select onValueChange={setSupervisorId} required>
+                    <Select onValueChange={setSupervisorId} required disabled={isSaving}>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione un supervisor" />
                         </SelectTrigger>
@@ -394,7 +398,7 @@ export default function NewCedulaPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
                     <Label htmlFor="status">Estado</Label>
-                    <Select value={status} onValueChange={setStatus} required>
+                    <Select value={status} onValueChange={setStatus} required disabled={isSaving}>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione un estado" />
                         </SelectTrigger>
@@ -407,7 +411,7 @@ export default function NewCedulaPage() {
                     </div>
                      <div className="grid gap-3">
                         <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
-                        <Select value={semaforo} onValueChange={setSemaforo}>
+                        <Select value={semaforo} onValueChange={setSemaforo} disabled={isSaving}>
                             <SelectTrigger id="semaforo" className="w-full">
                                 <SelectValue placeholder="Seleccione un estado" />
                             </SelectTrigger>
@@ -436,7 +440,7 @@ export default function NewCedulaPage() {
                 </div>
                     <div className="grid gap-3">
                     <Label htmlFor="description">Descripción del Trabajo</Label>
-                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" />
+                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" disabled={isSaving} />
                 </div>
                 </div>
             </CardContent>
@@ -463,7 +467,7 @@ export default function NewCedulaPage() {
                                             <Camera className="h-10 w-10 text-muted-foreground" />
                                         </div>
                                     )}
-                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()}>
+                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={isSaving}>
                                         <Camera className="mr-2 h-4 w-4" />
                                         {imageUrls[step.step] ? 'Cambiar Foto' : 'Subir Foto'}
                                     </Button>
@@ -474,6 +478,7 @@ export default function NewCedulaPage() {
                                         capture="environment"
                                         onChange={(e) => handleImageChange(step.step, e)}
                                         className="hidden"
+                                        disabled={isSaving}
                                     />
                                 </div>
                                 <div className="grid gap-3">
@@ -481,6 +486,7 @@ export default function NewCedulaPage() {
                                     <Select
                                         value={completionPercentages[step.step] || '0'}
                                         onValueChange={(value) => handlePercentageChange(step.step, value)}
+                                        disabled={isSaving}
                                     >
                                         <SelectTrigger id={`step-percentage-${index}`} className="w-auto">
                                             <SelectValue placeholder="% Ejecutado" />
@@ -504,6 +510,7 @@ export default function NewCedulaPage() {
                                     value={notes[step.step] || ''}
                                     onChange={(e) => handleNotesChange(step.step, e.target.value)}
                                     className="min-h-24"
+                                    disabled={isSaving}
                                 />
                             </div>
                         </div>
@@ -515,14 +522,12 @@ export default function NewCedulaPage() {
             )}
             
             <div className="flex justify-start">
-                <Button type="submit">Guardar Cédula</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? "Guardando..." : "Guardar Cédula"}
+                </Button>
             </div>
         </div>
       </div>
     </form>
   );
 }
-
-    
-
-    

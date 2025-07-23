@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -16,68 +17,71 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
-    mockUsers, 
-    mockClients, 
-    mockSystems, 
-    mockEquipments, 
-    mockProtocols, 
-    mockCedulas,
-    USERS_STORAGE_KEY,
-    CLIENTS_STORAGE_KEY,
-    SYSTEMS_STORAGE_KEY,
-    EQUIPMENTS_STORAGE_KEY,
-    PROTOCOLS_STORAGE_KEY,
-    CEDULAS_STORAGE_KEY,
     ACTIVE_USER_STORAGE_KEY
 } from '@/lib/mock-data';
-
-type User = typeof mockUsers[0];
-
+import { checkAndSeedDatabase } from '@/lib/services';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This effect runs on the client and ensures that all necessary
-    // data stores are initialized in localStorage if they don't exist.
-    // This prevents data loss when a new session is started.
-    const initializeDataStore = (key: string, data: any) => {
-        if (!localStorage.getItem(key)) {
-            localStorage.setItem(key, JSON.stringify(data));
+    // This effect runs on the client and ensures that the
+    // Firebase database is seeded with initial data if it's empty.
+    const initializeDatabase = async () => {
+        try {
+            await checkAndSeedDatabase();
+        } catch (error) {
+            console.error("Failed to initialize database:", error);
+            setError("Error al conectar con la base de datos.");
+        } finally {
+            setLoading(false);
         }
     };
+    
+    initializeDatabase();
 
-    initializeDataStore(USERS_STORAGE_KEY, mockUsers);
-    initializeDataStore(CLIENTS_STORAGE_KEY, mockClients);
-    initializeDataStore(SYSTEMS_STORAGE_KEY, mockSystems);
-    initializeDataStore(EQUIPMENTS_STORAGE_KEY, mockEquipments);
-    initializeDataStore(PROTOCOLS_STORAGE_KEY, mockProtocols);
-    initializeDataStore(CEDULAS_STORAGE_KEY, mockCedulas);
-
-    // Clear any previous active user on login page load
+    // Clear any previous active user from local storage on login page load
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const users: User[] = storedUsers ? JSON.parse(storedUsers) : mockUsers;
+    try {
+        const { getUsers } = await import('@/lib/services');
+        const users = await getUsers();
+        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    if (user && user.password === password) {
-      localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-      router.push('/dashboard');
-    } else {
-      setError('Email o contraseña incorrectos.');
+        if (user && user.password === password) {
+            localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
+            router.push('/dashboard');
+        } else {
+            setError('Email o contraseña incorrectos.');
+        }
+    } catch (err) {
+        console.error("Login error:", err);
+        setError("No se pudo verificar el usuario. Intente de nuevo.");
+    } finally {
+        setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+        <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+            <div className="flex flex-col items-center gap-4 text-center">
+                <ShieldCheck className="h-16 w-16 animate-pulse text-primary" />
+                <h1 className="text-xl font-medium text-muted-foreground">Conectando con la base de datos...</h1>
+            </div>
+        </main>
+    )
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -100,16 +104,18 @@ export default function LoginPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading}/>
               </div>
               {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
             </CardContent>
             <CardFooter className="flex-col gap-4">
-              <Button type="submit" className="w-full">Acceder</Button>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Verificando...' : 'Acceder'}
+              </Button>
                <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
                 ¿Olvidó su contraseña?
               </Link>

@@ -34,28 +34,31 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
-import { mockUsers } from '@/lib/mock-data';
 import { usePermissions } from '@/hooks/use-permissions';
+import { getUsers, deleteUser, User } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const USERS_STORAGE_KEY = 'guardian_shield_users';
-type User = typeof mockUsers[0];
 type SortableKey = 'name' | 'email' | 'role';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const { can } = usePermissions();
 
   useEffect(() => {
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
-    } else {
-      // Initialize with mock data if not present
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(mockUsers));
-      setUsers(mockUsers);
+    async function loadUsers() {
+      try {
+        const fetchedUsers = await getUsers();
+        setUsers(fetchedUsers);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      } finally {
+        setLoading(false);
+      }
     }
+    loadUsers();
   }, []);
 
   const sortedUsers = useMemo(() => {
@@ -92,18 +95,46 @@ export default function UsersPage() {
     return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
   };
 
-  const handleDeleteUser = () => {
+  const handleDeleteUser = async () => {
     if (userToDelete) {
-      const updatedUsers = users.filter((user) => user.id !== userToDelete.id)
-      setUsers(updatedUsers);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-      setUserToDelete(null); // Close the dialog
+      try {
+        await deleteUser(userToDelete.id);
+        setUsers(users.filter((user) => user.id !== userToDelete.id));
+      } catch (error) {
+        console.error("Failed to delete user:", error);
+        alert("Error al eliminar el usuario.");
+      } finally {
+        setUserToDelete(null);
+      }
     }
   };
 
   const canCreate = can('create', 'users');
   const canUpdate = can('update', 'users');
   const canDelete = can('delete', 'users');
+  
+  if (loading) {
+    return (
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+        <div className="flex items-center justify-between">
+          <div className="grid gap-2">
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-5 w-80" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <>

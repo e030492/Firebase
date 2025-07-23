@@ -31,10 +31,8 @@ import {
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
-import { mockUsers } from '@/lib/mock-data';
+import { createUser, User } from '@/lib/services';
 
-const USERS_STORAGE_KEY = 'guardian_shield_users';
-type User = typeof mockUsers[0];
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
 type ActionKey = keyof Permissions[ModuleKey];
@@ -98,6 +96,7 @@ export default function NewUserPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [permissions, setPermissions] = useState<Permissions>(initialPermissions);
+  const [loading, setLoading] = useState(false);
 
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
     setPermissions(prev => ({
@@ -115,7 +114,7 @@ export default function NewUserPage() {
     setPermissions(newPermissions);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !role || !password) {
       alert('Por favor, complete todos los campos.');
@@ -126,30 +125,33 @@ export default function NewUserPage() {
         alert('Las contraseñas no coinciden.');
         return;
     }
+    
+    setLoading(true);
 
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    let users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
+    try {
+        const newUser: Omit<User, 'id'> = {
+            name,
+            email,
+            role: valueToRoleMap[role],
+            password,
+            permissions,
+        };
 
-    const newUser: User = {
-      id: new Date().getTime().toString(),
-      name,
-      email,
-      role: valueToRoleMap[role],
-      password,
-      permissions,
-    };
-
-    users.push(newUser);
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-    alert('Usuario creado con éxito.');
-    router.push('/dashboard/users');
+        await createUser(newUser);
+        alert('Usuario creado con éxito.');
+        router.push('/dashboard/users');
+    } catch (error) {
+        console.error("Failed to create user:", error);
+        alert("Error al crear el usuario.");
+        setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-4xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={loading}>
              <ArrowLeft className="h-4 w-4" />
              <span className="sr-only">Atrás</span>
            </Button>
@@ -168,15 +170,15 @@ export default function NewUserPage() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="nombre">Nombre Completo</Label>
-                <Input id="nombre" placeholder="Ej. Juan Pérez" value={name} onChange={e => setName(e.target.value)} required />
+                <Input id="nombre" placeholder="Ej. Juan Pérez" value={name} onChange={e => setName(e.target.value)} required disabled={loading} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="ejemplo@correo.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                <Input id="email" type="email" placeholder="ejemplo@correo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="rol">Rol</Label>
-                 <Select onValueChange={handleRoleChange} value={role} required>
+                 <Select onValueChange={handleRoleChange} value={role} required disabled={loading}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione un rol" />
                   </SelectTrigger>
@@ -189,11 +191,11 @@ export default function NewUserPage() {
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading} />
               </div>
                <div className="grid gap-3">
                 <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
-                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={loading} />
               </div>
             </div>
           </CardContent>
@@ -223,18 +225,21 @@ export default function NewUserPage() {
                                     <Checkbox
                                         checked={permissions[module.key].create}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'create', !!checked)}
+                                        disabled={loading}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key].update}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'update', !!checked)}
+                                        disabled={loading}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key].delete}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'delete', !!checked)}
+                                        disabled={loading}
                                     />
                                 </TableCell>
                             </TableRow>
@@ -243,7 +248,9 @@ export default function NewUserPage() {
                 </Table>
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
-                <Button type="submit">Guardar Usuario</Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Guardando..." : "Guardar Usuario"}
+                </Button>
             </CardFooter>
         </Card>
       </div>

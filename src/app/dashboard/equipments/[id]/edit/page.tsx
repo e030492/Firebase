@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
@@ -32,15 +33,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
-
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-
-type Equipment = typeof mockEquipments[0];
-type Client = typeof mockClients[0];
-type System = typeof mockSystems[0];
+import { getEquipment, getClients, getSystems, updateEquipment, Equipment, Client, System } from '@/lib/services';
 
 
 export default function EditEquipmentPage() {
@@ -70,52 +63,58 @@ export default function EditEquipmentPage() {
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // Load static data first
-    const allClients: Client[] = JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]');
-    setClients(allClients);
-    const allSystems: System[] = JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]');
-    setSystems(allSystems);
+    async function loadData() {
+        if (!equipmentId) return;
+        try {
+            const [equipmentData, clientsData, systemsData] = await Promise.all([
+                getEquipment(equipmentId),
+                getClients(),
+                getSystems(),
+            ]);
 
-    // Then load and process equipment data
-    if (equipmentId && allClients.length > 0) {
-      const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-      const equipments: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : [];
-      const foundEquipment = equipments.find(e => e.id === equipmentId);
+            setClients(clientsData);
+            setSystems(systemsData);
+            
+            if (equipmentData) {
+                setName(equipmentData.name);
+                setDescription(equipmentData.description);
+                setBrand(equipmentData.brand || '');
+                setModel(equipmentData.model || '');
+                setType(equipmentData.type || '');
+                setSerial(equipmentData.serial || '');
+                setLocation(equipmentData.location);
+                setStatus(equipmentData.status);
+                setImageUrl(equipmentData.imageUrl || null);
+                
+                if (equipmentData.maintenanceStartDate) {
+                    setMaintenanceStartDate(new Date(equipmentData.maintenanceStartDate + 'T00:00:00'));
+                }
+                setMaintenancePeriodicity(equipmentData.maintenancePeriodicity || '');
+                
+                const foundClient = clientsData.find(c => c.name === equipmentData.client);
+                if (foundClient) {
+                    setClientId(foundClient.id);
+                    setClientWarehouses(foundClient.almacenes || []);
+                }
 
-      if (foundEquipment) {
-        setName(foundEquipment.name);
-        setDescription(foundEquipment.description);
-        setBrand(foundEquipment.brand || '');
-        setModel(foundEquipment.model || '');
-        setType(foundEquipment.type || '');
-        setSerial(foundEquipment.serial || '');
-        setLocation(foundEquipment.location);
-        setStatus(foundEquipment.status);
-        setImageUrl(foundEquipment.imageUrl || null);
-        
-        if (foundEquipment.maintenanceStartDate) {
-          setMaintenanceStartDate(new Date(foundEquipment.maintenanceStartDate + 'T00:00:00'));
+                const foundSystem = systemsData.find(s => s.name === equipmentData.system);
+                if (foundSystem) {
+                    setSystemId(foundSystem.id);
+                }
+            } else {
+                setNotFound(true);
+            }
+        } catch (error) {
+            console.error("Failed to load data for equipment editing:", error);
+            setNotFound(true);
+        } finally {
+            setLoading(false);
         }
-        setMaintenancePeriodicity(foundEquipment.maintenancePeriodicity || '');
-        
-        const foundClient = allClients.find(c => c.name === foundEquipment.client);
-        if (foundClient) {
-          setClientId(foundClient.id);
-          setClientWarehouses(foundClient.almacenes || []);
-        }
-
-        const foundSystem = allSystems.find(s => s.name === foundEquipment.system);
-        if (foundSystem) {
-          setSystemId(foundSystem.id);
-        }
-
-      } else {
-        setNotFound(true);
-      }
-      setLoading(false);
     }
+    loadData();
   }, [equipmentId]);
   
   const handleClientChange = (newClientId: string) => {
@@ -136,18 +135,15 @@ export default function EditEquipmentPage() {
     }
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    let equipments: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : [];
+    setIsSaving(true);
 
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const systemName = systems.find(s => s.id === systemId)?.name || '';
 
-    const updatedEquipments = equipments.map(eq => {
-      if (eq.id === equipmentId) {
-        return {
-          ...eq,
+    try {
+        const updatedData: Partial<Equipment> = {
           name,
           description,
           brand,
@@ -162,13 +158,16 @@ export default function EditEquipmentPage() {
           maintenancePeriodicity: maintenancePeriodicity,
           imageUrl: imageUrl || '',
         };
-      }
-      return eq;
-    });
-
-    localStorage.setItem(EQUIPMENTS_STORAGE_KEY, JSON.stringify(updatedEquipments));
-    alert('Equipo actualizado con éxito.');
-    router.push('/dashboard/equipments');
+        
+        await updateEquipment(equipmentId, updatedData);
+        alert('Equipo actualizado con éxito.');
+        router.push('/dashboard/equipments');
+    } catch (error) {
+        console.error("Failed to update equipment:", error);
+        alert("Error al actualizar el equipo.");
+    } finally {
+        setIsSaving(false);
+    }
   }
 
   if (loading) {
@@ -275,7 +274,7 @@ export default function EditEquipmentPage() {
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={isSaving}>
              <ArrowLeft className="h-4 w-4" />
              <span className="sr-only">Atrás</span>
            </Button>
@@ -292,30 +291,30 @@ export default function EditEquipmentPage() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
-                <Input id="name" value={name} onChange={e => setName(e.target.value)} required />
+                <Input id="name" value={name} onChange={e => setName(e.target.value)} required disabled={isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
-                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required className="min-h-32" />
+                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required className="min-h-32" disabled={isSaving}/>
               </div>
                <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="brand">Marca</Label>
-                  <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ej. Hikvision" required />
+                  <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ej. Hikvision" required disabled={isSaving}/>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="model">Modelo</Label>
-                  <Input id="model" value={model} onChange={e => setModel(e.target.value)} placeholder="Ej. DS-2DE4225IW-DE" required />
+                  <Input id="model" value={model} onChange={e => setModel(e.target.value)} placeholder="Ej. DS-2DE4225IW-DE" required disabled={isSaving}/>
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="type">Tipo</Label>
-                  <Input id="type" value={type} onChange={e => setType(e.target.value)} placeholder="Ej. Domo PTZ" required />
+                  <Input id="type" value={type} onChange={e => setType(e.target.value)} placeholder="Ej. Domo PTZ" required disabled={isSaving}/>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="serial">Número de Serie</Label>
-                  <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" required />
+                  <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" required disabled={isSaving}/>
                 </div>
               </div>
               <div className="grid gap-3">
@@ -335,8 +334,9 @@ export default function EditEquipmentPage() {
                     ref={fileInputRef}
                     onChange={handleImageChange}
                     className="hidden"
+                    disabled={isSaving}
                 />
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
                     <Camera className="mr-2 h-4 w-4" />
                     {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
                 </Button>
@@ -344,7 +344,7 @@ export default function EditEquipmentPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select value={clientId} onValueChange={handleClientChange} required>
+                  <Select value={clientId} onValueChange={handleClientChange} required disabled={isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -357,7 +357,7 @@ export default function EditEquipmentPage() {
                 </div>
                  <div className="grid gap-3">
                   <Label htmlFor="location">Almacén / Ubicación</Label>
-                  <Select value={location} onValueChange={setLocation} required disabled={!clientId}>
+                  <Select value={location} onValueChange={setLocation} required disabled={!clientId || isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un almacén" />
                     </SelectTrigger>
@@ -376,7 +376,7 @@ export default function EditEquipmentPage() {
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="system">Sistema Asociado</Label>
-                   <Select value={systemId} onValueChange={setSystemId} required>
+                   <Select value={systemId} onValueChange={setSystemId} required disabled={isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un sistema" />
                     </SelectTrigger>
@@ -389,7 +389,7 @@ export default function EditEquipmentPage() {
                  </div>
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required>
+                   <Select value={status} onValueChange={setStatus} required disabled={isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un estado" />
                     </SelectTrigger>
@@ -412,6 +412,7 @@ export default function EditEquipmentPage() {
                                     "w-full justify-start text-left font-normal",
                                     !maintenanceStartDate && "text-muted-foreground"
                                 )}
+                                disabled={isSaving}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {maintenanceStartDate ? format(maintenanceStartDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
@@ -430,7 +431,7 @@ export default function EditEquipmentPage() {
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="maintenancePeriodicity">Mantenimiento Recomendado</Label>
-                    <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required>
+                    <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required disabled={isSaving}>
                         <SelectTrigger id="maintenancePeriodicity">
                             <SelectValue placeholder="Seleccione una periodicidad" />
                         </SelectTrigger>
@@ -446,7 +447,9 @@ export default function EditEquipmentPage() {
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
-            <Button type="submit">Guardar Cambios</Button>
+            <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Guardando..." : "Guardar Cambios"}
+            </Button>
           </CardFooter>
         </Card>
       </div>

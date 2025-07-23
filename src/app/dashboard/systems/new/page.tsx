@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -13,40 +14,40 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { mockSystems } from '@/lib/mock-data';
 import { ArrowLeft } from 'lucide-react';
-
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-type System = typeof mockSystems[0];
+import { createSystem, System } from '@/lib/services';
 
 export default function NewSystemPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#3b82f6');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !description) {
         alert('Por favor, complete todos los campos.');
         return;
     }
-
-    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    let systems: System[] = storedSystems ? JSON.parse(storedSystems) : [];
     
-    const newSystem: System = {
-      id: new Date().getTime().toString(), // Simple unique ID
-      name,
-      description,
-      color,
-    };
+    setLoading(true);
 
-    systems.push(newSystem);
-    localStorage.setItem(SYSTEMS_STORAGE_KEY, JSON.stringify(systems));
+    try {
+        const newSystem: Omit<System, 'id'> = {
+          name,
+          description,
+          color,
+        };
 
-    alert('Sistema creado con éxito.');
-    router.push('/dashboard/systems');
+        await createSystem(newSystem);
+        alert('Sistema creado con éxito.');
+        router.push('/dashboard/systems');
+    } catch (error) {
+        console.error("Failed to create system:", error);
+        alert("Error al crear el sistema.");
+        setLoading(false);
+    }
   };
 
 
@@ -54,7 +55,7 @@ export default function NewSystemPage() {
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-2xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={loading}>
              <ArrowLeft className="h-4 w-4" />
              <span className="sr-only">Atrás</span>
            </Button>
@@ -77,6 +78,7 @@ export default function NewSystemPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   style={{ color: color, fontWeight: 'bold' }}
+                  disabled={loading}
                 />
               </div>
               <div className="grid gap-3">
@@ -88,6 +90,7 @@ export default function NewSystemPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
                <div className="grid gap-3">
@@ -99,6 +102,7 @@ export default function NewSystemPage() {
                         value={color}
                         onChange={(e) => setColor(e.target.value)}
                         className="h-10 w-14 cursor-pointer p-1"
+                        disabled={loading}
                     />
                     <Input
                         type="text"
@@ -106,13 +110,16 @@ export default function NewSystemPage() {
                         onChange={(e) => setColor(e.target.value)}
                         className="w-28"
                         placeholder="#3b82f6"
+                        disabled={loading}
                     />
                 </div>
               </div>
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
-            <Button type="submit">Guardar Sistema</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Guardando..." : "Guardar Sistema"}
+            </Button>
           </CardFooter>
         </Card>
       </div>

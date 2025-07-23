@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -31,15 +32,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
-
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-
-type Equipment = typeof mockEquipments[0];
-type Client = typeof mockClients[0];
-type System = typeof mockSystems[0];
+import { getClients, getSystems, createEquipment, Equipment, Client, System } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function NewEquipmentPage() {
@@ -64,13 +58,25 @@ export default function NewEquipmentPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    setClients(storedClients ? JSON.parse(storedClients) : []);
-    
-    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    setSystems(storedSystems ? JSON.parse(storedSystems) : []);
+    async function loadInitialData() {
+        try {
+            const [clientsData, systemsData] = await Promise.all([
+                getClients(),
+                getSystems(),
+            ]);
+            setClients(clientsData);
+            setSystems(systemsData);
+        } catch (error) {
+            console.error("Failed to load data for new equipment page", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+    loadInitialData();
   }, []);
 
   useEffect(() => {
@@ -80,13 +86,9 @@ export default function NewEquipmentPage() {
     } else {
       setClientWarehouses([]);
     }
+    setLocation(''); // Reset location when client changes
   }, [clientId, clients]);
   
-  const handleClientChange = (newClientId: string) => {
-    setClientId(newClientId);
-    setLocation('');
-  };
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -98,48 +100,68 @@ export default function NewEquipmentPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !description || !clientId || !systemId || !location || !status || !brand || !model || !type || !serial || !maintenancePeriodicity) {
         alert('Por favor, complete todos los campos.');
         return;
     }
-
-    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    let equipments: Equipment[] = storedEquipments ? JSON.parse(storedEquipments) : [];
+    
+    setIsSaving(true);
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const systemName = systems.find(s => s.id === systemId)?.name || '';
 
-    const newEquipment: Equipment = {
-      id: new Date().getTime().toString(),
-      name,
-      description,
-      brand,
-      model,
-      type,
-      serial,
-      client: clientName,
-      system: systemName,
-      location,
-      status: status as Equipment['status'],
-      maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
-      maintenancePeriodicity: maintenancePeriodicity,
-      imageUrl: imageUrl || '',
-    };
+    try {
+        const newEquipment: Omit<Equipment, 'id'> = {
+          name,
+          description,
+          brand,
+          model,
+          type,
+          serial,
+          client: clientName,
+          system: systemName,
+          location,
+          status: status as Equipment['status'],
+          maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
+          maintenancePeriodicity: maintenancePeriodicity,
+          imageUrl: imageUrl || '',
+        };
 
-    equipments.push(newEquipment);
-    localStorage.setItem(EQUIPMENTS_STORAGE_KEY, JSON.stringify(equipments));
-
-    alert('Equipo creado con éxito.');
-    router.push('/dashboard/equipments');
+        await createEquipment(newEquipment);
+        alert('Equipo creado con éxito.');
+        router.push('/dashboard/equipments');
+    } catch (error) {
+        console.error("Failed to create equipment:", error);
+        alert("Error al crear el equipo.");
+        setIsSaving(false);
+    }
   };
+  
+  if (loading) {
+    return (
+        <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
+             <div className="flex items-center gap-4">
+                <Skeleton className="h-7 w-7" />
+                <div className="grid gap-2">
+                    <Skeleton className="h-6 w-60" />
+                    <Skeleton className="h-4 w-80" />
+                </div>
+            </div>
+            <Card>
+                <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
+                <CardContent><Skeleton className="h-96 w-full" /></CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={isSaving}>
              <ArrowLeft className="h-4 w-4" />
              <span className="sr-only">Atrás</span>
            </Button>
@@ -158,30 +180,30 @@ export default function NewEquipmentPage() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
-                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Cámara IP" required />
+                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Cámara IP" required disabled={isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
-                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el equipo" required className="min-h-32" />
+                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el equipo" required className="min-h-32" disabled={isSaving}/>
               </div>
                <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="brand">Marca</Label>
-                  <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ej. Hikvision" required />
+                  <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ej. Hikvision" required disabled={isSaving}/>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="model">Modelo</Label>
-                  <Input id="model" value={model} onChange={e => setModel(e.target.value)} placeholder="Ej. DS-2DE4225IW-DE" required />
+                  <Input id="model" value={model} onChange={e => setModel(e.target.value)} placeholder="Ej. DS-2DE4225IW-DE" required disabled={isSaving}/>
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="type">Tipo</Label>
-                  <Input id="type" value={type} onChange={e => setType(e.target.value)} placeholder="Ej. Domo PTZ" required />
+                  <Input id="type" value={type} onChange={e => setType(e.target.value)} placeholder="Ej. Domo PTZ" required disabled={isSaving}/>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="serial">Número de Serie</Label>
-                  <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" required />
+                  <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" required disabled={isSaving}/>
                 </div>
               </div>
               <div className="grid gap-3">
@@ -195,8 +217,9 @@ export default function NewEquipmentPage() {
                   ref={fileInputRef}
                   onChange={handleImageChange}
                   className="hidden"
+                  disabled={isSaving}
                 />
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
                     <Camera className="mr-2 h-4 w-4" />
                     {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
                 </Button>
@@ -204,7 +227,7 @@ export default function NewEquipmentPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select onValueChange={handleClientChange} required>
+                  <Select onValueChange={setClientId} required disabled={isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -217,7 +240,7 @@ export default function NewEquipmentPage() {
                 </div>
                  <div className="grid gap-3">
                   <Label htmlFor="location">Almacén / Ubicación</Label>
-                  <Select value={location} onValueChange={setLocation} required disabled={!clientId}>
+                  <Select value={location} onValueChange={setLocation} required disabled={!clientId || isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un almacén" />
                     </SelectTrigger>
@@ -236,7 +259,7 @@ export default function NewEquipmentPage() {
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                   <Label htmlFor="system">Sistema Asociado</Label>
-                  <Select onValueChange={setSystemId} required>
+                  <Select onValueChange={setSystemId} required disabled={isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un sistema" />
                     </SelectTrigger>
@@ -249,7 +272,7 @@ export default function NewEquipmentPage() {
                  </div>
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required>
+                   <Select value={status} onValueChange={setStatus} required disabled={isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un estado" />
                     </SelectTrigger>
@@ -272,6 +295,7 @@ export default function NewEquipmentPage() {
                                     "w-full justify-start text-left font-normal",
                                     !maintenanceStartDate && "text-muted-foreground"
                                 )}
+                                disabled={isSaving}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {maintenanceStartDate ? format(maintenanceStartDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
@@ -290,7 +314,7 @@ export default function NewEquipmentPage() {
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="maintenancePeriodicity">Mantenimiento Recomendado</Label>
-                    <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required>
+                    <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required disabled={isSaving}>
                         <SelectTrigger id="maintenancePeriodicity">
                             <SelectValue placeholder="Seleccione una periodicidad" />
                         </SelectTrigger>
@@ -306,7 +330,9 @@ export default function NewEquipmentPage() {
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
-            <Button type="submit">Guardar Equipo</Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Guardando..." : "Guardar Equipo"}
+            </Button>
           </CardFooter>
         </Card>
       </div>

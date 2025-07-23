@@ -26,7 +26,6 @@ import {
 } from '@/components/ui/table';
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera } from 'lucide-react';
-import { mockEquipments, mockProtocols, mockClients, mockSystems } from '@/lib/mock-data';
 import { suggestMaintenanceProtocol } from '@/ai/flows/suggest-maintenance-protocol';
 import {
   Dialog,
@@ -58,24 +57,17 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { getEquipments, getProtocols, getClients, getSystems, updateProtocol, deleteProtocol, createProtocol, Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-
-type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; imageUrl?: string };
-type Protocol = { equipmentId: string; steps: ProtocolStep[] };
-type Equipment = typeof mockEquipments[0];
-type Client = typeof mockClients[0];
-type System = typeof mockSystems[0];
 type EditingStepInfo = {
   equipmentId: string;
+  protocolId: string;
   originalStepText: string;
   currentData: ProtocolStep;
 };
 type DeletingStepInfo = {
-    equipmentId: string;
+    protocolId: string;
     stepToDelete: ProtocolStep;
 };
 
@@ -84,9 +76,11 @@ export default function ProtocolsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [editingStep, setEditingStep] = useState<EditingStepInfo | null>(null);
   const [deletingStep, setDeletingStep] = useState<DeletingStepInfo | null>(null);
-  const [equipmentToDelete, setEquipmentToDelete] = useState<string | null>(null);
+  const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
@@ -97,22 +91,25 @@ export default function ProtocolsPage() {
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load Equipments
-    const storedEquipmentsData = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    const equipmentsData: Equipment[] = storedEquipmentsData ? JSON.parse(storedEquipmentsData) : mockEquipments;
-    setAllEquipments(equipmentsData);
-    
-    // Load Protocols
-    const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
-    setProtocols(storedProtocols ? JSON.parse(storedProtocols) : mockProtocols);
-
-    // Load Clients
-    const storedClientsData = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    setClients(storedClientsData ? JSON.parse(storedClientsData) : mockClients);
-
-    // Load Systems
-    const storedSystemsData = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    setSystems(storedSystemsData ? JSON.parse(storedSystemsData) : mockSystems);
+    async function loadData() {
+        try {
+            const [equipmentsData, protocolsData, clientsData, systemsData] = await Promise.all([
+                getEquipments(),
+                getProtocols(),
+                getClients(),
+                getSystems(),
+            ]);
+            setAllEquipments(equipmentsData);
+            setProtocols(protocolsData);
+            setClients(clientsData);
+            setSystems(systemsData);
+        } catch (error) {
+            console.error("Failed to load protocols page data", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+    loadData();
   }, []);
   
   const filteredEquipments = useMemo(() => {
@@ -136,8 +133,8 @@ export default function ProtocolsPage() {
   }, [selectedClientId, selectedSystemId, allEquipments, clients, systems]);
 
 
-  const getProtocolsForEquipment = (equipmentId: string) => {
-    return protocols.find(p => p.equipmentId === equipmentId)?.steps || [];
+  const getProtocolForEquipment = (equipmentId: string): Protocol | undefined => {
+    return protocols.find(p => p.equipmentId === equipmentId);
   };
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
@@ -181,50 +178,55 @@ export default function ProtocolsPage() {
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingStep) return;
-    const updatedProtocols = protocols.map(p => {
-      if (p.equipmentId === editingStep.equipmentId) {
-        const newSteps = p.steps.map(s => {
-          if (s.step === editingStep.originalStepText) {
-            return {
-                ...editingStep.currentData,
-                percentage: Number(editingStep.currentData.percentage) || 0,
-            };
-          }
-          return s;
-        });
-        return { ...p, steps: newSteps };
-      }
-      return p;
-    });
+    
+    const protocolToUpdate = protocols.find(p => p.id === editingStep.protocolId);
+    if (!protocolToUpdate) return;
 
-    setProtocols(updatedProtocols);
-    localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(updatedProtocols));
-    setEditingStep(null);
+    const newSteps = protocolToUpdate.steps.map(s => 
+        s.step === editingStep.originalStepText ? { ...editingStep.currentData, percentage: Number(editingStep.currentData.percentage || 0)} : s
+    );
+
+    try {
+        await updateProtocol(editingStep.protocolId, { steps: newSteps });
+        setProtocols(protocols.map(p => p.id === editingStep.protocolId ? {...p, steps: newSteps} : p));
+        setEditingStep(null);
+    } catch (error) {
+        console.error("Failed to save step edit:", error);
+        alert("Error al guardar los cambios.");
+    }
   };
 
-  const handleDeleteStep = () => {
+  const handleDeleteStep = async () => {
       if (!deletingStep) return;
-      const updatedProtocols = protocols.map(p => {
-          if (p.equipmentId === deletingStep.equipmentId) {
-              const newSteps = p.steps.filter(s => s.step !== deletingStep.stepToDelete.step);
-              return { ...p, steps: newSteps };
-          }
-          return p;
-      });
+      
+      const protocolToUpdate = protocols.find(p => p.id === deletingStep.protocolId);
+      if (!protocolToUpdate) return;
+      
+      const newSteps = protocolToUpdate.steps.filter(s => s.step !== deletingStep.stepToDelete.step);
 
-      setProtocols(updatedProtocols);
-      localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(updatedProtocols));
-      setDeletingStep(null);
+      try {
+        await updateProtocol(deletingStep.protocolId, { steps: newSteps });
+        setProtocols(protocols.map(p => p.id === deletingStep.protocolId ? {...p, steps: newSteps} : p));
+        setDeletingStep(null);
+      } catch (error) {
+        console.error("Failed to delete step:", error);
+        alert("Error al eliminar el paso.");
+      }
   };
 
-  const handleDeleteProtocol = () => {
-    if (!equipmentToDelete) return;
-    const updatedProtocols = protocols.filter(p => p.equipmentId !== equipmentToDelete);
-    setProtocols(updatedProtocols);
-    localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(updatedProtocols));
-    setEquipmentToDelete(null);
+  const handleDeleteProtocol = async () => {
+    if (!protocolToDelete) return;
+
+    try {
+        await deleteProtocol(protocolToDelete.id);
+        setProtocols(protocols.filter(p => p.id !== protocolToDelete.id));
+        setProtocolToDelete(null);
+    } catch (error) {
+        console.error("Failed to delete protocol:", error);
+        alert("Error al eliminar el protocolo completo.");
+    }
   };
 
   const handleGenerateProtocol = async (equipment: Equipment) => {
@@ -238,16 +240,15 @@ export default function ProtocolsPage() {
       });
 
       if (result && result.length > 0) {
-        const newProtocol: Protocol = {
+        const newProtocolData: Omit<Protocol, 'id'> = {
           equipmentId: equipment.id,
-          steps: result.map(step => ({ ...step, imageUrl: '' })),
+          steps: result.map(step => ({ ...step, imageUrl: '', notes: '', completion: 0 })),
         };
         
-        setProtocols(prevProtocols => {
-            const updatedProtocols = [...prevProtocols, newProtocol];
-            localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(updatedProtocols));
-            return updatedProtocols;
-        });
+        const newProtocolDoc = await createProtocol(newProtocolData);
+        const newProtocol = { id: newProtocolDoc.id, ...newProtocolData };
+
+        setProtocols(prevProtocols => [...prevProtocols, newProtocol]);
 
       } else {
         alert("La IA no pudo generar un protocolo para este equipo.");
@@ -261,6 +262,26 @@ export default function ProtocolsPage() {
       setIsGenerating(null);
     }
   };
+  
+  if(loading) {
+    return (
+       <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+            <div className="flex items-center justify-between">
+                <div className="grid gap-2">
+                    <Skeleton className="h-9 w-80" />
+                    <Skeleton className="h-5 w-96" />
+                </div>
+                <Skeleton className="h-10 w-44" />
+            </div>
+            <Card>
+                <CardContent className="pt-6">
+                    <Skeleton className="h-24 w-full mb-6" />
+                    <Skeleton className="h-64 w-full" />
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
 
   return (
@@ -317,14 +338,16 @@ export default function ProtocolsPage() {
             <Accordion type="single" collapsible className="w-full">
               {filteredEquipments.length > 0 ? (
                 filteredEquipments.map(equipment => {
-                  const equipmentProtocols = getProtocolsForEquipment(equipment.id);
+                  const equipmentProtocol = getProtocolForEquipment(equipment.id);
+                  const equipmentProtocolSteps = equipmentProtocol?.steps || [];
+
                   return (
                     <AccordionItem value={equipment.id} key={equipment.id}>
                         <div className="flex items-center w-full">
                            <AccordionTrigger className="flex-1 text-lg font-medium hover:no-underline py-4">
                               <div className="flex items-center gap-4 text-left">
                                   <span>{equipment.name} <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span></span>
-                                  <Badge variant="outline">{equipmentProtocols.length} {equipmentProtocols.length === 1 ? 'paso' : 'pasos'}</Badge>
+                                  <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
                               </div>
                            </AccordionTrigger>
                            <div className="px-4">
@@ -336,7 +359,7 @@ export default function ProtocolsPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    {equipmentProtocols.length > 0 ? (
+                                    {equipmentProtocol ? (
                                         <>
                                             <DropdownMenuItem asChild>
                                                 <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
@@ -347,7 +370,7 @@ export default function ProtocolsPage() {
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
                                                 className="text-destructive focus:text-destructive"
-                                                onSelect={() => setEquipmentToDelete(equipment.id)}
+                                                onSelect={() => setProtocolToDelete(equipmentProtocol)}
                                             >
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 <span>Eliminar protocolo</span>
@@ -371,19 +394,18 @@ export default function ProtocolsPage() {
                            </div>
                         </div>
                       <AccordionContent>
-                        {equipmentProtocols.length > 0 ? (
+                        {equipmentProtocolSteps.length > 0 ? (
                           <Table>
                             <TableHeader>
                               <TableRow>
                                 <TableHead className="w-16 hidden sm:table-cell">Imagen</TableHead>
                                 <TableHead className="w-[50%]">Paso del Protocolo</TableHead>
                                 <TableHead>Prioridad</TableHead>
-                                <TableHead>% Estimado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {equipmentProtocols.map((protocolStep, index) => (
+                              {equipmentProtocolSteps.map((protocolStep, index) => (
                                 <TableRow key={index}>
                                   <TableCell className="hidden sm:table-cell">
                                     {protocolStep.imageUrl ? (
@@ -400,7 +422,6 @@ export default function ProtocolsPage() {
                                       {protocolStep.priority}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell>{protocolStep.percentage}%</TableCell>
                                   <TableCell className="text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -409,11 +430,11 @@ export default function ProtocolsPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onSelect={() => setEditingStep({ equipmentId: equipment.id, originalStepText: protocolStep.step, currentData: { ...protocolStep }})}>
+                                            <DropdownMenuItem onSelect={() => setEditingStep({ protocolId: equipmentProtocol!.id, originalStepText: protocolStep.step, currentData: { ...protocolStep }})}>
                                                 <Edit className="mr-2 h-4 w-4" />
                                                 <span>Editar</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeletingStep({ equipmentId: equipment.id, stepToDelete: protocolStep })}>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeletingStep({ protocolId: equipmentProtocol!.id, stepToDelete: protocolStep })}>
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 <span>Eliminar</span>
                                             </DropdownMenuItem>
@@ -491,10 +512,6 @@ export default function ProtocolsPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="step-percentage">Porcentaje (%)</Label>
-                        <Input id="step-percentage" type="number" min="0" max="100" value={editingStep?.currentData.percentage || 0} onChange={(e) => handleEditChange('percentage', e.target.value)} />
-                    </div>
                 </div>
             </div>
             <DialogFooter>
@@ -521,7 +538,7 @@ export default function ProtocolsPage() {
     </AlertDialog>
 
      {/* Delete Protocol Confirmation Dialog */}
-    <AlertDialog open={!!equipmentToDelete} onOpenChange={(open) => !open && setEquipmentToDelete(null)}>
+    <AlertDialog open={!!protocolToDelete} onOpenChange={(open) => !open && setProtocolToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>¿Está seguro de eliminar todo el protocolo?</AlertDialogTitle>
@@ -530,7 +547,7 @@ export default function ProtocolsPage() {
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setEquipmentToDelete(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => setProtocolToDelete(null)}>Cancelar</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDeleteProtocol} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
                     Sí, eliminar todo
                 </AlertDialogAction>

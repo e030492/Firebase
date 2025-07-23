@@ -38,29 +38,33 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, HardHat, ChevronDown } from 'lucide-react';
-import { mockEquipments } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { getEquipments, deleteEquipment, deleteProtocolByEquipmentId, Equipment } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-type Equipment = typeof mockEquipments[0];
 type SortableKey = keyof Equipment;
 
 export default function EquipmentsPage() {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    if (storedEquipments) {
-      setEquipments(JSON.parse(storedEquipments));
-    } else {
-      localStorage.setItem(EQUIPMENTS_STORAGE_KEY, JSON.stringify(mockEquipments));
-      setEquipments(mockEquipments);
+    async function loadEquipments() {
+        try {
+            const fetchedEquipments = await getEquipments();
+            setEquipments(fetchedEquipments);
+        } catch (error) {
+            console.error("Failed to load equipments:", error);
+        } finally {
+            setLoading(false);
+        }
     }
+    loadEquipments();
   }, []);
 
   const sortedEquipments = useMemo(() => {
@@ -97,12 +101,18 @@ export default function EquipmentsPage() {
     return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
   };
 
-  const handleDeleteEquipment = () => {
+  const handleDeleteEquipment = async () => {
     if (equipmentToDelete) {
-      const updatedEquipments = equipments.filter((eq) => eq.id !== equipmentToDelete.id)
-      setEquipments(updatedEquipments);
-      localStorage.setItem(EQUIPMENTS_STORAGE_KEY, JSON.stringify(updatedEquipments));
-      setEquipmentToDelete(null);
+      try {
+        await deleteEquipment(equipmentToDelete.id);
+        await deleteProtocolByEquipmentId(equipmentToDelete.id);
+        setEquipments(equipments.filter((eq) => eq.id !== equipmentToDelete.id));
+      } catch (error) {
+        console.error("Failed to delete equipment:", error);
+        alert("Error al eliminar el equipo y su protocolo asociado.");
+      } finally {
+        setEquipmentToDelete(null);
+      }
     }
   };
   
@@ -122,6 +132,29 @@ export default function EquipmentsPage() {
   const handleToggleDetails = (equipmentId: string) => {
     setExpandedEquipmentId(prevId => prevId === equipmentId ? null : equipmentId);
   };
+  
+  if (loading) {
+      return (
+          <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+              <div className="flex items-center justify-between">
+                  <div className="grid gap-2">
+                      <Skeleton className="h-9 w-40" />
+                      <Skeleton className="h-5 w-80" />
+                  </div>
+                  <Skeleton className="h-10 w-32" />
+              </div>
+              <Card>
+                  <CardContent className="pt-6">
+                      <div className="space-y-4">
+                          <Skeleton className="h-16 w-full" />
+                          <Skeleton className="h-16 w-full" />
+                          <Skeleton className="h-16 w-full" />
+                      </div>
+                  </CardContent>
+              </Card>
+          </div>
+      );
+  }
 
 
   return (
@@ -277,7 +310,7 @@ export default function EquipmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro de que quieres eliminar este equipo?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente el equipo.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el equipo y su protocolo de mantenimiento asociado.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

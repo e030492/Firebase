@@ -39,21 +39,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, Camera } from 'lucide-react';
-import { mockCedulas, mockClients, mockEquipments, mockSystems } from '@/lib/mock-data';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
+import { getCedulas, getClients, getEquipments, getSystems, deleteCedula, Cedula, Client, Equipment, System } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-
-type Cedula = typeof mockCedulas[0];
-type Client = typeof mockClients[0];
-type Equipment = typeof mockEquipments[0];
-type System = typeof mockSystems[0];
 type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo' | 'system';
 type AugmentedCedula = Cedula & { system: string; serial: string; systemColor?: string; };
 
@@ -62,6 +54,7 @@ export default function CedulasPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
+  const [loading, setLoading] = useState(true);
   const { can } = usePermissions();
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -76,22 +69,25 @@ export default function CedulasPage() {
   const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedCedulas = localStorage.getItem(CEDULAS_STORAGE_KEY);
-    if (storedCedulas) {
-      setCedulas(JSON.parse(storedCedulas));
-    } else {
-      localStorage.setItem(CEDULAS_STORAGE_KEY, JSON.stringify(mockCedulas));
-      setCedulas(mockCedulas);
+    async function loadData() {
+      try {
+        const [cedulasData, clientsData, equipmentsData, systemsData] = await Promise.all([
+          getCedulas(),
+          getClients(),
+          getEquipments(),
+          getSystems(),
+        ]);
+        setCedulas(cedulasData);
+        setClients(clientsData);
+        setAllEquipments(equipmentsData);
+        setSystems(systemsData);
+      } catch (error) {
+        console.error("Failed to load data for cedulas page", error);
+      } finally {
+        setLoading(false);
+      }
     }
-    
-    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    setClients(storedClients ? JSON.parse(storedClients) : mockClients);
-    
-    const storedEquipments = localStorage.getItem(EQUIPMENTS_STORAGE_KEY);
-    setAllEquipments(storedEquipments ? JSON.parse(storedEquipments) : mockEquipments);
-
-    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    setSystems(storedSystems ? JSON.parse(storedSystems) : mockSystems);
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -175,12 +171,17 @@ export default function CedulasPage() {
     return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
   };
 
-  const handleDeleteCedula = () => {
+  const handleDeleteCedula = async () => {
     if (cedulaToDelete) {
-      const updatedCedulas = cedulas.filter((c) => c.id !== cedulaToDelete.id)
-      setCedulas(updatedCedulas);
-      localStorage.setItem(CEDULAS_STORAGE_KEY, JSON.stringify(updatedCedulas));
-      setCedulaToDelete(null);
+      try {
+        await deleteCedula(cedulaToDelete.id);
+        setCedulas(cedulas.filter((c) => c.id !== cedulaToDelete.id));
+      } catch (error) {
+        console.error("Failed to delete cedula:", error);
+        alert("Error al eliminar la cédula.");
+      } finally {
+        setCedulaToDelete(null);
+      }
     }
   };
   
@@ -217,6 +218,27 @@ export default function CedulasPage() {
   const canCreateCedulas = can('create', 'cedulas');
   const canUpdateCedulas = can('update', 'cedulas');
   const canDeleteCedulas = can('delete', 'cedulas');
+
+  if (loading) {
+      return (
+          <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+              <div className="flex items-center justify-between">
+                  <div className="grid gap-2">
+                      <Skeleton className="h-9 w-80" />
+                      <Skeleton className="h-5 w-96" />
+                  </div>
+                  <Skeleton className="h-10 w-36" />
+              </div>
+              <Card>
+                  <CardContent className="pt-6">
+                       <Skeleton className="h-24 w-full mb-6" />
+                       <Skeleton className="h-40 w-full" />
+                  </CardContent>
+              </Card>
+          </div>
+      );
+  }
+
 
   return (
     <>

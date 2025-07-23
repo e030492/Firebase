@@ -145,7 +145,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{clientCount}</div>
               <p className="text-xs text-muted-foreground">
-                Total de clientes registrados en el sistema.
+                Próximo mantenimiento: {nextMaintenanceDate}
               </p>
             </CardContent>
           </Card>

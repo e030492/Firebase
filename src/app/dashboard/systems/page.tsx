@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -33,26 +34,30 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { mockSystems } from '@/lib/mock-data';
+import { getSystems, deleteSystem, System } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
-type System = typeof mockSystems[0];
 type SortableKey = 'name' | 'description';
 
 
 export default function SystemsPage() {
   const [systems, setSystems] = useState<System[]>([]);
+  const [loading, setLoading] = useState(true);
   const [systemToDelete, setSystemToDelete] = useState<System | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
 
   useEffect(() => {
-    const storedSystems = localStorage.getItem(SYSTEMS_STORAGE_KEY);
-    if (storedSystems) {
-      setSystems(JSON.parse(storedSystems));
-    } else {
-      localStorage.setItem(SYSTEMS_STORAGE_KEY, JSON.stringify(mockSystems));
-      setSystems(mockSystems);
+    async function loadSystems() {
+      try {
+        const fetchedSystems = await getSystems();
+        setSystems(fetchedSystems);
+      } catch (error) {
+        console.error("Failed to fetch systems:", error);
+      } finally {
+        setLoading(false);
+      }
     }
+    loadSystems();
   }, []);
 
   const sortedSystems = useMemo(() => {
@@ -89,14 +94,42 @@ export default function SystemsPage() {
     return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
   };
 
-  const handleDeleteSystem = () => {
+  const handleDeleteSystem = async () => {
     if (systemToDelete) {
-      const updatedSystems = systems.filter((system) => system.id !== systemToDelete.id)
-      setSystems(updatedSystems);
-      localStorage.setItem(SYSTEMS_STORAGE_KEY, JSON.stringify(updatedSystems));
-      setSystemToDelete(null);
+      try {
+        await deleteSystem(systemToDelete.id);
+        setSystems(systems.filter((system) => system.id !== systemToDelete.id));
+      } catch (error) {
+        console.error("Failed to delete system:", error);
+        alert("Error al eliminar el sistema.");
+      } finally {
+        setSystemToDelete(null);
+      }
     }
   };
+  
+  if (loading) {
+      return (
+          <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+              <div className="flex items-center justify-between">
+                  <div className="grid gap-2">
+                      <Skeleton className="h-9 w-64" />
+                      <Skeleton className="h-5 w-96" />
+                  </div>
+                  <Skeleton className="h-10 w-36" />
+              </div>
+              <Card>
+                  <CardContent className="pt-6">
+                      <div className="space-y-4">
+                          <Skeleton className="h-12 w-full" />
+                          <Skeleton className="h-12 w-full" />
+                          <Skeleton className="h-12 w-full" />
+                      </div>
+                  </CardContent>
+              </Card>
+          </div>
+      );
+  }
 
   return (
     <>

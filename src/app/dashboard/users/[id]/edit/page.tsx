@@ -32,13 +32,10 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockUsers } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
+import { getUser, updateUser, User } from '@/lib/services';
 
-const USERS_STORAGE_KEY = 'guardian_shield_users';
-
-type User = typeof mockUsers[0];
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
 type ActionKey = keyof Permissions[ModuleKey];
@@ -115,22 +112,29 @@ export default function EditUserPage() {
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userId) {
-      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      const users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
-      const foundUser = users.find(u => u.id === userId);
-
-      if (foundUser) {
-        setName(foundUser.name);
-        setEmail(foundUser.email);
-        setRole(roleToValueMap[foundUser.role] || '');
-        setPermissions(foundUser.permissions || initialPermissions);
-      } else {
-        setNotFound(true);
-      }
-      setLoading(false);
+        const fetchUser = async () => {
+            try {
+                const foundUser = await getUser(userId);
+                if (foundUser) {
+                    setName(foundUser.name);
+                    setEmail(foundUser.email);
+                    setRole(roleToValueMap[foundUser.role] || '');
+                    setPermissions(foundUser.permissions || initialPermissions);
+                } else {
+                    setNotFound(true);
+                }
+            } catch (error) {
+                console.error("Failed to fetch user:", error);
+                setNotFound(true);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUser();
     }
   }, [userId]);
 
@@ -150,36 +154,35 @@ export default function EditUserPage() {
     setPermissions(newPermissions);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password && password !== confirmPassword) {
         alert('Las nuevas contraseñas no coinciden.');
         return;
     }
     
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    const users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
+    setIsSaving(true);
 
-    const updatedUsers = users.map(u => {
-      if (u.id === userId) {
-        const updatedUser: User = {
-          ...u,
-          name,
-          email,
-          role: valueToRoleMap[role] || u.role,
-          permissions,
+    try {
+        const updatedData: Partial<User> = {
+            name,
+            email,
+            role: valueToRoleMap[role],
+            permissions,
         };
         if (password) {
-            updatedUser.password = password;
+            updatedData.password = password;
         }
-        return updatedUser;
-      }
-      return u;
-    });
 
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-    alert('Usuario actualizado con éxito.');
-    router.push('/dashboard/users');
+        await updateUser(userId, updatedData);
+        alert('Usuario actualizado con éxito.');
+        router.push('/dashboard/users');
+    } catch (error) {
+        console.error("Failed to update user:", error);
+        alert("Error al actualizar el usuario.");
+    } finally {
+        setIsSaving(false);
+    }
   }
 
   const canUpdateUsers = can('update', 'users');
@@ -250,7 +253,7 @@ export default function EditUserPage() {
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-4xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={isSaving}>
              <ArrowLeft className="h-4 w-4" />
              <span className="sr-only">Atrás</span>
            </Button>
@@ -267,15 +270,15 @@ export default function EditUserPage() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="nombre">Nombre Completo</Label>
-                <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required disabled={!canUpdateUsers} />
+                <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required disabled={!canUpdateUsers || isSaving} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!canUpdateUsers} />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!canUpdateUsers || isSaving} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="rol">Rol</Label>
-                 <Select value={role} onValueChange={handleRoleChange} required disabled={!canUpdateUsers}>
+                 <Select value={role} onValueChange={handleRoleChange} required disabled={!canUpdateUsers || isSaving}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione un rol" />
                   </SelectTrigger>
@@ -289,11 +292,11 @@ export default function EditUserPage() {
               <Separator />
                <div className="grid gap-3">
                 <Label htmlFor="password">Nueva Contraseña (opcional)</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Dejar en blanco para no cambiar" disabled={!canUpdateUsers}/>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Dejar en blanco para no cambiar" disabled={!canUpdateUsers || isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
-                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={!canUpdateUsers} />
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={!canUpdateUsers || isSaving} />
               </div>
             </div>
           </CardContent>
@@ -323,21 +326,21 @@ export default function EditUserPage() {
                                     <Checkbox
                                         checked={permissions[module.key]?.create}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'create', !!checked)}
-                                        disabled={!canUpdateUsers}
+                                        disabled={!canUpdateUsers || isSaving}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key]?.update}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'update', !!checked)}
-                                        disabled={!canUpdateUsers}
+                                        disabled={!canUpdateUsers || isSaving}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key]?.delete}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'delete', !!checked)}
-                                        disabled={!canUpdateUsers}
+                                        disabled={!canUpdateUsers || isSaving}
                                     />
                                 </TableCell>
                             </TableRow>
@@ -347,7 +350,9 @@ export default function EditUserPage() {
             </CardContent>
             {canUpdateUsers && (
                 <CardFooter className="border-t px-6 py-4">
-                    <Button type="submit">Guardar Cambios</Button>
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? "Guardando..." : "Guardar Cambios"}
+                    </Button>
                 </CardFooter>
             )}
         </Card>

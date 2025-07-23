@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useActionState, useState, useEffect, Suspense } from 'react';
@@ -40,24 +41,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Terminal, Loader2, Save, ArrowLeft } from 'lucide-react';
-import { mockEquipments, mockClients, mockSystems } from '@/lib/mock-data';
+import { getEquipments, getClients, getSystems, getProtocols, createProtocol, updateProtocol, Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Keys for localStorage
-const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
-const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
-const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 
-// Types
-type Equipment = typeof mockEquipments[0];
-type Client = typeof mockClients[0];
-type System = typeof mockSystems[0];
-type ProtocolStep = SuggestMaintenanceProtocolOutput[0] & { imageUrl?: string };
-type Protocol = {
-  equipmentId: string;
-  steps: ProtocolStep[];
-};
 type State = {
   result: SuggestMaintenanceProtocolOutput | null;
   error: string | null;
@@ -109,7 +96,9 @@ function ProtocolGenerator() {
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Selection states
   const [clientId, setClientId] = useState('');
@@ -120,15 +109,32 @@ function ProtocolGenerator() {
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   const [isModificationMode, setIsModificationMode] = useState(false);
   
-  // Load initial data from localStorage
+  // Load initial data from Firebase
   useEffect(() => {
-    setClients(JSON.parse(localStorage.getItem(CLIENTS_STORAGE_KEY) || '[]'));
-    setSystems(JSON.parse(localStorage.getItem(SYSTEMS_STORAGE_KEY) || '[]'));
-    setAllEquipments(JSON.parse(localStorage.getItem(EQUIPMENTS_STORAGE_KEY) || '[]'));
+    async function loadData() {
+        try {
+            const [clientsData, systemsData, equipmentsData, protocolsData] = await Promise.all([
+                getClients(),
+                getSystems(),
+                getEquipments(),
+                getProtocols()
+            ]);
+            setClients(clientsData);
+            setSystems(systemsData);
+            setAllEquipments(equipmentsData);
+            setProtocols(protocolsData);
+        } catch (error) {
+            console.error("Failed to load data for protocol generator:", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+    loadData();
   }, []);
 
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
+    if (loading) return; // Wait for data to load
     const equipmentIdParam = searchParams.get('equipmentId');
     if (equipmentIdParam && allEquipments.length && clients.length && systems.length) {
         const equipment = allEquipments.find(e => e.id === equipmentIdParam);
@@ -137,18 +143,15 @@ function ProtocolGenerator() {
             const client = clients.find(c => c.name === equipment.client);
             const system = systems.find(s => s.name === equipment.system);
 
-            if (client) {
-                setClientId(client.id);
-            }
-            if (system) {
-                setSystemId(system.id);
-            }
+            if (client) setClientId(client.id);
+            if (system) setSystemId(system.id);
+            
             setSelectedEquipmentId(equipment.id);
             setEquipmentName(equipment.name);
             setEquipmentDescription(equipment.description);
         }
     }
-  }, [searchParams, allEquipments, clients, systems]);
+  }, [searchParams, allEquipments, clients, systems, loading]);
 
 
   // Filter equipments when client or system changes
@@ -224,36 +227,49 @@ function ProtocolGenerator() {
   };
   
   // Save protocol logic
-  const handleSaveProtocol = () => {
+  const handleSaveProtocol = async () => {
     if (!selectedEquipmentId || selectedSteps.length === 0) {
       alert("Por favor, seleccione un equipo y al menos un paso del protocolo antes de guardar.");
       return;
     }
     
-    const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
-    let protocols: Protocol[] = storedProtocols ? JSON.parse(storedProtocols) : [];
+    const existingProtocol = protocols.find(p => p.equipmentId === selectedEquipmentId);
     
-    const existingProtocolIndex = protocols.findIndex(p => p.equipmentId === selectedEquipmentId);
-    
-    if (existingProtocolIndex > -1) {
-      const stepMap = new Map(protocols[existingProtocolIndex].steps.map(item => [item.step, item]));
+    if (existingProtocol) {
+      // Merge new steps with existing ones, avoiding duplicates
+      const stepMap = new Map(existingProtocol.steps.map(item => [item.step, item]));
       selectedSteps.forEach(newStep => {
-        const existingStep = stepMap.get(newStep.step);
-        stepMap.set(newStep.step, {
-          ...newStep,
-          imageUrl: existingStep?.imageUrl || '',
-        });
+          const formattedNewStep: ProtocolStep = {
+              ...newStep,
+              completion: 0,
+              notes: '',
+              imageUrl: '',
+          };
+          stepMap.set(newStep.step, formattedNewStep);
       });
-      protocols[existingProtocolIndex].steps = Array.from(stepMap.values());
+      
+      try {
+        await updateProtocol(existingProtocol.id, { steps: Array.from(stepMap.values()) });
+      } catch (error) {
+        console.error("Failed to update protocol:", error);
+        alert("Error al actualizar el protocolo.");
+        return;
+      }
     } else {
-      const newProtocol: Protocol = {
+      // Create new protocol
+      const newProtocol: Omit<Protocol, 'id'> = {
         equipmentId: selectedEquipmentId,
-        steps: selectedSteps.map(s => ({ ...s, imageUrl: '' })),
+        steps: selectedSteps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
       };
-      protocols.push(newProtocol);
+      try {
+        await createProtocol(newProtocol);
+      } catch (error) {
+        console.error("Failed to create protocol:", error);
+        alert("Error al crear el protocolo.");
+        return;
+      }
     }
 
-    localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(protocols));
     alert('Protocolo guardado con éxito.');
     router.push('/dashboard/protocols');
   };
