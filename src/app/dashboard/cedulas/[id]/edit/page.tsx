@@ -131,15 +131,17 @@ export default function EditCedulaPage() {
                 const foundSystem = systems.find(s => s.name === foundEquipment.system);
                 if (foundSystem) setSystemId(foundSystem.id);
 
+                // **Critical Fix**: Prioritize existing protocol steps from the cedula itself.
                 if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
                     setProtocolSteps(foundCedula.protocolSteps.map(s => ({
                         step: s.step,
                         priority: s.priority,
-                        percentage: Number(s.completion) || 0,
+                        percentage: Number(s.completion) || 0, // Ensure 'completion' is mapped to 'percentage'
                         imageUrl: s.imageUrl || '',
                         notes: s.notes || '',
                     })));
                 } else {
+                    // Only use the base protocol if the cedula has NO steps.
                     const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
                     const baseProtocolSteps = equipmentProtocol?.steps || [];
                     setProtocolSteps(baseProtocolSteps.map(s => ({...s, percentage: 0, imageUrl: '', notes: ''})));
@@ -241,12 +243,13 @@ export default function EditCedulaPage() {
           status: status as Cedula['status'],
           description,
           semaforo: semaforo as Cedula['semaforo'],
+          // **Critical Fix**: Ensure all fields from the form state are correctly mapped back.
           protocolSteps: protocolSteps.map(step => ({
-          step: step.step,
-          priority: step.priority,
-          completion: Number(step.percentage) || 0,
-          imageUrl: step.imageUrl || '',
-          notes: step.notes || '',
+            step: step.step,
+            priority: step.priority,
+            completion: Number(step.percentage) || 0, // Map 'percentage' back to 'completion'
+            imageUrl: step.imageUrl || '',
+            notes: step.notes || '',
           })),
       };
       
@@ -616,5 +619,3 @@ export default function EditCedulaPage() {
     </form>
   );
 }
-
-    

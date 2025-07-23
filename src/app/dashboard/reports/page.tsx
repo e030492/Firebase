@@ -38,7 +38,6 @@ type EnrichedCedula = Cedula & {
   systemColor?: string;
 };
 
-// Componente aislado para la vista de impresión
 function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => void }) {
     const reportDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 
