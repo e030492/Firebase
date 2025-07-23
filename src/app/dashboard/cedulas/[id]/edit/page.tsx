@@ -94,7 +94,9 @@ export default function EditCedulaPage() {
   const dataLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (cedulaId && !dataLoadedRef.current && cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0) {
+    const allDataReady = cedulas.length > 0 && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && protocols.length > 0;
+
+    if (cedulaId && !dataLoadedRef.current && allDataReady) {
         const foundCedula = cedulas.find(c => c.id === cedulaId);
 
         if (foundCedula) {
@@ -129,8 +131,6 @@ export default function EditCedulaPage() {
                 const foundSystem = systems.find(s => s.name === foundEquipment.system);
                 if (foundSystem) setSystemId(foundSystem.id);
 
-                // ** CRITICAL FIX **
-                // Prioritize steps already saved in the cedula. Only load from the protocol template if the cedula has no steps.
                 if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
                     setProtocolSteps(foundCedula.protocolSteps.map(s => ({
                         step: s.step,
@@ -145,7 +145,7 @@ export default function EditCedulaPage() {
                     setProtocolSteps(baseProtocolSteps.map(s => ({...s, percentage: 0, imageUrl: '', notes: ''})));
                 }
             } else {
-                setProtocolSteps([]); // Clear steps if no equipment is found
+                setProtocolSteps([]);
             }
             
             dataLoadedRef.current = true;
