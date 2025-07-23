@@ -4,9 +4,19 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import {
   getClients, getEquipments, getSystems, getUsers, getProtocols, getCedulas,
-  checkAndSeedDatabase,
   Client, Equipment, System, User, Protocol, Cedula
 } from '@/lib/services';
+import { 
+    mockUsers, 
+    mockClients, 
+    mockSystems, 
+    mockEquipments, 
+    mockProtocols, 
+    mockCedulas 
+} from '@/lib/mock-data';
+import { writeBatch, collection, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
 
 type DataContextType = {
   clients: Client[];
@@ -80,15 +90,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const seedDatabase = useCallback(async () => {
     setLoading(true);
     setError("Sembrando base de datos...");
-    const { seeded, error: seedError } = await checkAndSeedDatabase();
-    if (seeded) {
-      await loadData(); // Reload all data after seeding to update the state
-    } else if (seedError) {
-        setError(seedError);
-        setLoading(false);
-    } else {
-        // If not seeded because data exists, the normal loadData already handled it.
-        setError(null);
+    
+    try {
+        const collections = {
+            users: mockUsers,
+            clients: mockClients,
+            systems: mockSystems,
+            equipments: mockEquipments,
+            protocols: mockProtocols,
+            cedulas: mockCedulas
+        };
+
+        for (const [collectionName, mockData] of Object.entries(collections)) {
+            const batch = writeBatch(db);
+            mockData.forEach(item => {
+                const { id, ...data } = item; // Exclude mock ID
+                const docRef = doc(collection(db, collectionName));
+                batch.set(docRef, data);
+            });
+            await batch.commit();
+        }
+        await loadData(); // Reload all data after seeding to update the state
+    } catch (error) {
+        console.error("Error seeding database:", error);
+        setError(error instanceof Error ? error.message : "Unknown error");
+    } finally {
         setLoading(false);
     }
   }, [loadData]);
