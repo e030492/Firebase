@@ -18,8 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
     ACTIVE_USER_STORAGE_KEY,
+    mockUsers,
 } from '@/lib/mock-data';
-import { getUsers, User, seedDatabase } from '@/lib/services';
+import { User, seedDatabase } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 
@@ -30,40 +31,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  const [users, setUsers] = useState<User[]>([]);
+  // Start with mockUsers directly
+  const [users, setUsers] = useState<User[]>(mockUsers as User[]);
   const [loginError, setLoginError] = useState('');
 
   // Debug states
-  const [systemStatus, setSystemStatus] = useState<Status>("loading");
-  const [statusMessage, setStatusMessage] = useState('Cargando datos iniciales...');
-  const [userCount, setUserCount] = useState(0);
+  const [systemStatus, setSystemStatus] = useState<Status>("success");
+  const [statusMessage, setStatusMessage] = useState('Datos de demostración precargados. Listo para iniciar sesión.');
+  const [userCount, setUserCount] = useState(mockUsers.length);
   const [isSeeding, setIsSeeding] = useState(false);
-
-  async function loadInitialData() {
-    try {
-      setSystemStatus("loading");
-      setStatusMessage("Obteniendo usuarios desde la base de datos...");
-      const usersData = await getUsers();
-      setUsers(usersData);
-      setUserCount(usersData.length);
-      
-      if (usersData.length === 0) {
-          setSystemStatus("error");
-          setStatusMessage("Error: La colección de usuarios está vacía. La base de datos puede no estar inicializada.");
-      } else {
-          setSystemStatus("success");
-          setStatusMessage("Datos cargados correctamente.");
-      }
-    } catch (e: any) {
-      console.error("Failed to load users", e);
-      setSystemStatus("error");
-      setStatusMessage(`Error de conexión: ${e.message}`);
-    }
-  }
 
   useEffect(() => {
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-    loadInitialData();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -75,6 +54,9 @@ export default function LoginPage() {
     if (user) {
         if (user.password === password) {
             localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
+            // Before navigating, ensure the DB has this user at least
+            // This is a simplified check for the demo
+            await seedDatabase();
             router.push('/dashboard/dashboard');
         } else {
             setLoginError('Contraseña incorrecta.');
@@ -83,21 +65,6 @@ export default function LoginPage() {
         setLoginError('Usuario no encontrado.');
     }
   };
-
-  const handleSeedDatabase = async () => {
-      setIsSeeding(true);
-      setStatusMessage("Iniciando sembrado de base de datos... Esto puede tardar unos segundos.");
-      try {
-          await seedDatabase();
-          setStatusMessage("¡Base de datos sembrada con éxito! Recargando datos...");
-          await loadInitialData(); // Recarga los datos para actualizar el estado de la UI
-      } catch(e: any) {
-          setSystemStatus("error");
-          setStatusMessage(`Error en el sembrado: ${e.message}`);
-      } finally {
-          setIsSeeding(false);
-      }
-  }
 
   const isLoading = systemStatus === "loading" || isSeeding;
 
@@ -118,18 +85,10 @@ export default function LoginPage() {
             <CardHeader>
               <CardTitle>Iniciar Sesión</CardTitle>
               <CardDescription>
-                {isLoading 
-                  ? "Verificando estado del sistema..." 
-                  : "Ingrese sus credenciales para acceder."}
+                Ingrese sus credenciales para acceder.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {systemStatus === 'loading' && !isSeeding ? (
-                  <div className="space-y-4">
-                      <div className="space-y-2"><Label>Email</Label><Skeleton className="h-10 w-full"/></div>
-                      <div className="space-y-2"><Label>Contraseña</Label><Skeleton className="h-10 w-full"/></div>
-                  </div>
-              ) : (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -140,7 +99,6 @@ export default function LoginPage() {
                     <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading}/>
                   </div>
                 </>
-              )}
               {loginError && <p className="text-sm font-medium text-destructive pt-2">{loginError}</p>}
             </CardContent>
             <CardFooter className="flex-col gap-4">
@@ -179,21 +137,9 @@ export default function LoginPage() {
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center">
-                    <p className="font-semibold">Usuarios encontrados:</p>
+                    <p className="font-semibold">Usuarios precargados:</p>
                     <p className="font-mono text-lg">{userCount}</p>
                 </div>
-                 {userCount === 0 && systemStatus === 'error' && (
-                    <>
-                        <Separator />
-                        <div className="pt-2">
-                            <p className="text-muted-foreground mb-3 text-center">Si esta es la primera vez que ejecuta la aplicación, la base de datos necesita ser inicializada.</p>
-                            <Button onClick={handleSeedDatabase} className="w-full" variant="destructive" disabled={isSeeding}>
-                                {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isSeeding ? 'Sembrando...' : 'Inicializar Base de Datos'}
-                            </Button>
-                        </div>
-                    </>
-                 )}
             </CardContent>
         </Card>
 
