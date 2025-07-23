@@ -72,6 +72,8 @@ export default function NewCedulaPage() {
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
+  
+  const [serialNumber, setSerialNumber] = useState('');
 
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
   const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
@@ -126,11 +128,17 @@ export default function NewCedulaPage() {
   }, [clientId, systemId, clients, allSystems, allEquipments]);
   
   useEffect(() => {
+    setSerialNumber(''); // Reset serial number when equipment changes
     if (equipmentId) {
         const storedProtocols = localStorage.getItem(PROTOCOLS_STORAGE_KEY);
         const protocols: Protocol[] = storedProtocols ? JSON.parse(storedProtocols) : mockProtocols;
         const equipmentProtocol = protocols.find(p => p.equipmentId === equipmentId);
         
+        const selectedEquipment = allEquipments.find(eq => eq.id === equipmentId);
+        if (selectedEquipment) {
+            setSerialNumber(selectedEquipment.serial);
+        }
+
         if (equipmentProtocol) {
             setProtocolSteps(equipmentProtocol.steps);
             const initialPercentages = equipmentProtocol.steps.reduce((acc, step) => {
@@ -156,7 +164,7 @@ export default function NewCedulaPage() {
         setImageUrls({});
         setNotes({});
     }
-  }, [equipmentId]);
+  }, [equipmentId, allEquipments]);
 
 
   const handleClientChange = (newClientId: string) => {
@@ -171,6 +179,10 @@ export default function NewCedulaPage() {
     setSystemId(newSystemId);
     setEquipmentId('');
   };
+  
+  const handleEquipmentChange = (newEquipmentId: string) => {
+    setEquipmentId(newEquipmentId);
+  }
 
   const handlePercentageChange = (step: string, value: string) => {
     setCompletionPercentages(prev => ({ ...prev, [step]: value }));
@@ -332,10 +344,9 @@ export default function NewCedulaPage() {
                     </Select>
                     </div>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div className="grid gap-3">
+                <div className="grid gap-3">
                     <Label htmlFor="equipment">Equipo</Label>
-                    <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId}>
+                    <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId}>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione un equipo" />
                         </SelectTrigger>
@@ -347,7 +358,12 @@ export default function NewCedulaPage() {
                         ))}
                         </SelectContent>
                     </Select>
-                    </div>
+                </div>
+                <div className="grid gap-3">
+                    <Label htmlFor="serial">Número de Serie</Label>
+                    <Input id="serial" value={serialNumber} readOnly disabled />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
                     <Label htmlFor="technician">Técnico Asignado</Label>
                     <Select onValueChange={setTechnicianId} required>
@@ -357,6 +373,19 @@ export default function NewCedulaPage() {
                         <SelectContent>
                         {technicians.map(t => (
                             <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="supervisor">Supervisor</Label>
+                    <Select onValueChange={setSupervisorId} required>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un supervisor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {supervisors.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
@@ -376,18 +405,33 @@ export default function NewCedulaPage() {
                         </SelectContent>
                     </Select>
                     </div>
-                    <div className="grid gap-3">
-                    <Label htmlFor="supervisor">Supervisor</Label>
-                    <Select onValueChange={setSupervisorId} required>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un supervisor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {supervisors.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
+                     <div className="grid gap-3">
+                        <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
+                        <Select value={semaforo} onValueChange={setSemaforo}>
+                            <SelectTrigger id="semaforo" className="w-full">
+                                <SelectValue placeholder="Seleccione un estado" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Verde">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-3 w-3 rounded-full bg-green-500" />
+                                        <span>Verde (Óptimo)</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="Naranja">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-3 w-3 rounded-full bg-orange-500" />
+                                        <span>Naranja (Con Observaciones)</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="Rojo">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-3 w-3 rounded-full bg-red-500" />
+                                        <span>Rojo (Crítico)</span>
+                                    </div>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
                     <div className="grid gap-3">
@@ -470,43 +514,6 @@ export default function NewCedulaPage() {
             </Card>
             )}
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Evaluación Final del Equipo</CardTitle>
-                    <CardDescription>Seleccione el estado final del equipo después del mantenimiento.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid gap-3">
-                        <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
-                        <Select value={semaforo} onValueChange={setSemaforo}>
-                            <SelectTrigger id="semaforo" className="w-full">
-                                <SelectValue placeholder="Seleccione un estado" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Verde">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-3 w-3 rounded-full bg-green-500" />
-                                        <span>Verde (Óptimo)</span>
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="Naranja">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-3 w-3 rounded-full bg-orange-500" />
-                                        <span>Naranja (Con Observaciones)</span>
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="Rojo">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-3 w-3 rounded-full bg-red-500" />
-                                        <span>Rojo (Crítico)</span>
-                                    </div>
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
-
             <div className="flex justify-start">
                 <Button type="submit">Guardar Cédula</Button>
             </div>
@@ -515,5 +522,7 @@ export default function NewCedulaPage() {
     </form>
   );
 }
+
+    
 
     

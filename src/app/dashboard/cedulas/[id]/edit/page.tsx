@@ -84,6 +84,7 @@ export default function EditCedulaPage() {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('');
   const [semaforo, setSemaforo] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
 
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
@@ -130,6 +131,7 @@ export default function EditCedulaPage() {
             const foundEquipment = allEquipments.find(e => e.name === foundCedula.equipment && e.client === foundCedula.client);
             if (foundEquipment) {
                 setEquipmentId(foundEquipment.id);
+                setSerialNumber(foundEquipment.serial);
                 const foundSystem = systems.find(s => s.name === foundEquipment.system);
                 if (foundSystem) setSystemId(foundSystem.id);
 
@@ -181,11 +183,23 @@ export default function EditCedulaPage() {
     setSystemId('');
     setEquipmentId('');
     setFilteredEquipments([]);
+    setSerialNumber('');
   };
 
   const handleSystemChange = (newSystemId: string) => {
     setSystemId(newSystemId);
     setEquipmentId('');
+    setSerialNumber('');
+  };
+
+  const handleEquipmentChange = (newEquipmentId: string) => {
+    setEquipmentId(newEquipmentId);
+    const selectedEquipment = allEquipments.find(eq => eq.id === newEquipmentId);
+    if (selectedEquipment) {
+      setSerialNumber(selectedEquipment.serial);
+    } else {
+      setSerialNumber('');
+    }
   };
   
   const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
@@ -444,20 +458,24 @@ export default function EditCedulaPage() {
                   </Select>
                  </div>
               </div>
+              <div className="grid gap-3">
+                <Label htmlFor="equipment">Equipo</Label>
+                <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || !canUpdateCedulas}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione un equipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredEquipments.map(eq => (
+                      <SelectItem key={eq.id} value={eq.id}>{eq.name} ({eq.serial})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-3">
+                  <Label htmlFor="serial">Número de Serie</Label>
+                  <Input id="serial" value={serialNumber} readOnly disabled />
+              </div>
               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                  <Label htmlFor="equipment">Equipo</Label>
-                  <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId || !canUpdateCedulas}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un equipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredEquipments.map(eq => (
-                        <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="grid gap-3">
                    <Label htmlFor="technician">Técnico Asignado</Label>
                    <Select value={technicianId} onValueChange={setTechnicianId} required disabled={!canUpdateCedulas}>
@@ -468,21 +486,6 @@ export default function EditCedulaPage() {
                       {technicians.map(t => (
                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                 </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                   <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required disabled={!canUpdateCedulas}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pendiente">Pendiente</SelectItem>
-                      <SelectItem value="En Progreso">En Progreso</SelectItem>
-                      <SelectItem value="Completada">Completada</SelectItem>
                     </SelectContent>
                   </Select>
                  </div>
@@ -499,6 +502,49 @@ export default function EditCedulaPage() {
                     </SelectContent>
                   </Select>
                  </div>
+               </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                   <Label htmlFor="status">Estado</Label>
+                   <Select value={status} onValueChange={setStatus} required disabled={!canUpdateCedulas}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pendiente">Pendiente</SelectItem>
+                      <SelectItem value="En Progreso">En Progreso</SelectItem>
+                      <SelectItem value="Completada">Completada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                 </div>
+                 <div className="grid gap-3">
+                    <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
+                    <Select value={semaforo} onValueChange={setSemaforo} disabled={!canUpdateCedulas}>
+                        <SelectTrigger id="semaforo" className="w-full">
+                            <SelectValue placeholder="Seleccione un estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Verde">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-3 w-3 rounded-full bg-green-500" />
+                                    <span>Verde (Óptimo)</span>
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="Naranja">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-3 w-3 rounded-full bg-orange-500" />
+                                    <span>Naranja (Con Observaciones)</span>
+                                </div>
+                            </SelectItem>
+                            <SelectItem value="Rojo">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-3 w-3 rounded-full bg-red-500" />
+                                    <span>Rojo (Crítico)</span>
+                                </div>
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
                </div>
                 <div className="grid gap-3">
                   <Label htmlFor="description">Descripción del Trabajo</Label>
@@ -582,43 +628,6 @@ export default function EditCedulaPage() {
             </CardContent>
           </Card>
         )}
-        
-        <Card>
-            <CardHeader>
-                <CardTitle>Evaluación Final del Equipo</CardTitle>
-                <CardDescription>Seleccione el estado final del equipo después del mantenimiento.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="grid gap-3">
-                    <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
-                    <Select value={semaforo} onValueChange={setSemaforo} disabled={!canUpdateCedulas}>
-                        <SelectTrigger id="semaforo" className="w-full">
-                            <SelectValue placeholder="Seleccione un estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Verde">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-3 w-3 rounded-full bg-green-500" />
-                                    <span>Verde (Óptimo)</span>
-                                </div>
-                            </SelectItem>
-                            <SelectItem value="Naranja">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-3 w-3 rounded-full bg-orange-500" />
-                                    <span>Naranja (Con Observaciones)</span>
-                                </div>
-                            </SelectItem>
-                            <SelectItem value="Rojo">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-3 w-3 rounded-full bg-red-500" />
-                                    <span>Rojo (Crítico)</span>
-                                </div>
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardContent>
-        </Card>
 
         {canUpdateCedulas && (
             <div className="flex justify-start">
@@ -630,3 +639,5 @@ export default function EditCedulaPage() {
     </form>
   );
 }
+
+    
