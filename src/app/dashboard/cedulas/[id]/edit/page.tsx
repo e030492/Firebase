@@ -217,7 +217,6 @@ export default function EditCedulaPage() {
         finalDateTime.setMinutes(parseInt(minutes, 10));
     }
     
-    // Create a new array from the current state to avoid mutation issues
     const currentCedulas = [...cedulas];
     const cedulaIndex = currentCedulas.findIndex(c => c.id === cedulaId);
 
