@@ -41,31 +41,17 @@ import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, HardHat, C
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { getEquipments, deleteEquipment, deleteProtocolByEquipmentId, Equipment } from '@/lib/services';
+import { deleteEquipment, deleteProtocolByEquipmentId, Equipment } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useData } from '@/hooks/use-data-provider';
 
 type SortableKey = keyof Equipment;
 
 export default function EquipmentsPage() {
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { allEquipments: equipments, loading, refreshData } = useData();
   const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadEquipments() {
-        try {
-            const fetchedEquipments = await getEquipments();
-            setEquipments(fetchedEquipments);
-        } catch (error) {
-            console.error("Failed to load equipments:", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-    loadEquipments();
-  }, []);
 
   const sortedEquipments = useMemo(() => {
     let sortableItems = [...equipments];
@@ -109,7 +95,7 @@ export default function EquipmentsPage() {
       try {
         await deleteEquipment(equipmentToDelete.id);
         await deleteProtocolByEquipmentId(equipmentToDelete.id);
-        setEquipments(equipments.filter((eq) => eq.id !== equipmentToDelete.id));
+        await refreshData();
       } catch (error) {
         console.error("Failed to delete equipment:", error);
         alert("Error al eliminar el equipo y su protocolo asociado.");

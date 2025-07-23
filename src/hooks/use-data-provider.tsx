@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { 
     getCedulas, 
     getClients, 
@@ -17,7 +17,6 @@ import {
     Protocol,
     User
 } from "@/lib/services";
-import { usePathname } from "next/navigation";
 
 type DataContextType = {
     loading: boolean;
@@ -28,6 +27,7 @@ type DataContextType = {
     protocols: Protocol[];
     users: User[];
     error: string | null;
+    refreshData: () => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType>({
@@ -39,6 +39,7 @@ const DataContext = createContext<DataContextType>({
     protocols: [],
     users: [],
     error: null,
+    refreshData: async () => {},
 });
 
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -53,73 +54,56 @@ export function DataProvider({ children }: { children: ReactNode }) {
         users: [],
     });
 
-    const pathname = usePathname();
-
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const [
-                    cedulasData,
-                    clientsData,
-                    equipmentsData,
-                    systemsData,
-                    protocolsData,
-                    usersData
-                ] = await Promise.all([
-                    getCedulas(),
-                    getClients(),
-                    getEquipments(),
-                    getSystems(),
-                    getProtocols(),
-                    getUsers()
-                ]);
-
-                if (usersData.length === 0 && pathname.startsWith('/dashboard')) {
-                    console.log("No users found, attempting to seed database...");
-                    await seedDatabase();
-                    // Recargar los datos despues de sembrar
-                    const [
-                        refreshedCedulas, refreshedClients, refreshedEquipments, 
-                        refreshedSystems, refreshedProtocols, refreshedUsers
-                    ] = await Promise.all([
-                        getCedulas(), getClients(), getEquipments(), 
-                        getSystems(), getProtocols(), getUsers()
-                    ]);
-                     setData({
-                        cedulas: refreshedCedulas,
-                        clients: refreshedClients,
-                        allEquipments: refreshedEquipments,
-                        systems: refreshedSystems,
-                        protocols: refreshedProtocols,
-                        users: refreshedUsers,
-                    } as any);
-
-                } else {
-                     setData({
-                        cedulas: cedulasData,
-                        clients: clientsData,
-                        allEquipments: equipmentsData,
-                        systems: systemsData,
-                        protocols: protocolsData,
-                        users: usersData,
-                    } as any);
-                }
-
-            } catch (e: any) {
-                console.error("Failed to load dashboard data:", e);
-                setError("No se pudieron cargar los datos del dashboard. Verifique su conexión y la configuración de Firebase.");
-            } finally {
-                setLoading(false);
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            // First, check if users exist to decide whether to seed
+            let usersList = await getUsers();
+            if (usersList.length === 0) {
+                console.log("No users found, attempting to seed database...");
+                await seedDatabase();
+                // After seeding, refetch users
+                usersList = await getUsers();
             }
-        };
 
-        loadData();
+            const [
+                cedulasData,
+                clientsData,
+                equipmentsData,
+                systemsData,
+                protocolsData,
+            ] = await Promise.all([
+                getCedulas(),
+                getClients(),
+                getEquipments(),
+                getSystems(),
+                getProtocols(),
+            ]);
+
+            setData({
+                users: usersList,
+                cedulas: cedulasData,
+                clients: clientsData,
+                allEquipments: equipmentsData,
+                systems: systemsData,
+                protocols: protocolsData,
+            } as any);
+
+        } catch (e: any) {
+            console.error("Failed to load dashboard data:", e);
+            setError("No se pudieron cargar los datos del dashboard. Verifique su conexión y la configuración de Firebase.");
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
     return (
-        <DataContext.Provider value={{ loading, error, ...data }}>
+        <DataContext.Provider value={{ loading, error, ...data, refreshData: loadData }}>
             {children}
         </DataContext.Provider>
     );

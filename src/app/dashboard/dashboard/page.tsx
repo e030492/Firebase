@@ -9,74 +9,26 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Activity, Building, HardHat } from 'lucide-react';
+import { Activity, Building, HardHat, Server, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import type { Equipment } from '@/lib/services';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
 export default function DashboardPage() {
-  const { clients, allEquipments, cedulas, loading } = useData();
+  const { clients, allEquipments, cedulas, loading, error } = useData();
 
   const [clientCount, setClientCount] = useState(0);
   const [equipmentCount, setEquipmentCount] = useState(0);
   const [pendingCedulasCount, setPendingCedulasCount] = useState(0);
-  const [nextMaintenanceDate, setNextMaintenanceDate] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loading) return;
-
-    try {
+    if (!loading) {
         setClientCount(clients.length);
         setEquipmentCount(allEquipments.length);
-        
         const pendingCount = cedulas.filter((c: any) => c.status === 'Pendiente' || c.status === 'En Progreso').length;
         setPendingCedulasCount(pendingCount);
-
-        const nextDates = allEquipments
-          .map((e: Equipment) => {
-            if (!e.maintenanceStartDate || !e.maintenancePeriodicity) {
-                return null;
-            }
-
-            // Ensure the date is parsed correctly, even without timezone info
-            const start = new Date(e.maintenanceStartDate.includes('T') ? e.maintenanceStartDate : e.maintenanceStartDate + 'T00:00:00');
-            if (isNaN(start.getTime())) return null;
-
-            const periods: { [key: string]: number } = {
-                'Mensual': 1,
-                'Trimestral': 3,
-                'Semestral': 6,
-                'Anual': 12
-            };
-
-            const monthsToAdd = periods[e.maintenancePeriodicity as keyof typeof periods];
-            if (!monthsToAdd) return null;
-
-            let nextDate = new Date(start);
-            const now = new Date();
-            
-            while (nextDate <= now) {
-                nextDate.setMonth(nextDate.getMonth() + monthsToAdd);
-            }
-            return nextDate;
-          })
-          .filter((d): d is Date => d !== null && !isNaN(d.getTime()))
-          .sort((a, b) => a.getTime() - b.getTime());
-
-        if (nextDates.length > 0) {
-          setNextMaintenanceDate(nextDates[0].toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          }));
-        } else {
-            setNextMaintenanceDate('Sin mantenimientos programados');
-        }
-
-    } catch (error) {
-        console.error("Failed to process dashboard data:", error);
-        setError("No se pudieron cargar los datos del dashboard.");
     }
   }, [loading, clients, allEquipments, cedulas]);
 
@@ -87,53 +39,23 @@ export default function DashboardPage() {
                 <Skeleton className="h-9 w-64" />
                 <Skeleton className="h-5 w-80" />
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Clientes Activos</CardTitle>
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-12 mb-2" />
-                        <Skeleton className="h-4 w-full" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Equipos Monitoreados</CardTitle>
-                        <HardHat className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-16 mb-2" />
-                        <Skeleton className="h-4 w-4/5" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Mantenimientos Pendientes</CardTitle>
-                        <Activity className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-10 mb-2" />
-                        <Skeleton className="h-4 w-3/4" />
-                    </CardContent>
-                </Card>
-            </div>
-             <p className="text-sm text-muted-foreground">Cargando datos del dashboard. Si esto tarda demasiado, verifique su conexión a internet.</p>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Estado del Sistema</CardTitle>
+                    <Server className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-4 text-lg font-bold">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary"/>
+                        <p>Cargando datos del dashboard...</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                        Esto puede tardar un momento la primera vez. La aplicación se está sincronizando con la base de datos.
+                    </p>
+                </CardContent>
+            </Card>
         </div>
       )
-  }
-
-    if (error) {
-    return (
-        <div className="flex flex-col items-center justify-center gap-4 text-center h-full mt-10">
-            <h1 className="text-2xl font-bold text-destructive">Error al Cargar</h1>
-            <p className="text-muted-foreground max-w-md">{error}</p>
-            <Button variant="outline" onClick={() => window.location.reload()}>
-                Reintentar
-            </Button>
-        </div>
-    )
   }
 
   return (
@@ -184,6 +106,38 @@ export default function DashboardPage() {
             </Card>
         </Link>
       </div>
+        <Card className="shadow-lg bg-muted/30">
+            <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                    <Server className="h-4 w-4" />
+                    <span>Estado del Sistema</span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-3">
+                <div className="flex items-start gap-3">
+                    {error ? <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" /> : <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />}
+                    <div>
+                        <p className="font-semibold">Mensaje:</p>
+                        <p className="text-muted-foreground break-words">{error || 'Todos los sistemas están operativos. Los datos del dashboard se han cargado correctamente.'}</p>
+                    </div>
+                </div>
+                <Separator />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex justify-between items-center">
+                      <p className="font-semibold">Clientes:</p>
+                      <p className="font-mono text-lg">{clients.length}</p>
+                  </div>
+                   <div className="flex justify-between items-center">
+                      <p className="font-semibold">Equipos:</p>
+                      <p className="font-mono text-lg">{allEquipments.length}</p>
+                  </div>
+                   <div className="flex justify-between items-center">
+                      <p className="font-semibold">Cédulas:</p>
+                      <p className="font-mono text-lg">{cedulas.length}</p>
+                  </div>
+                </div>
+            </CardContent>
+        </Card>
     </div>
   );
 }
