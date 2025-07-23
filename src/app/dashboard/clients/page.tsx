@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,16 +34,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { deleteClient, Client } from '@/lib/services';
+import { getClients, deleteClient, Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useData } from '@/hooks/use-data-provider';
 
 type SortableKey = 'name' | 'responsable' | 'direccion';
 
 export default function ClientsPage() {
-  const { clients, loading, deleteItem } = useData();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
+
+  useEffect(() => {
+    async function loadClients() {
+      setLoading(true);
+      try {
+        const clientsData = await getClients();
+        setClients(clientsData);
+      } catch (error) {
+        console.error("Failed to load clients:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadClients();
+  }, []);
 
   const sortedClients = useMemo(() => {
     let sortableItems = [...clients];
@@ -83,7 +98,7 @@ export default function ClientsPage() {
     if (clientToDelete) {
       try {
         await deleteClient(clientToDelete.id);
-        deleteItem('clients', clientToDelete.id);
+        setClients(clients.filter(c => c.id !== clientToDelete.id));
       } catch (error) {
         console.error("Failed to delete client:", error);
         alert("Error al eliminar el cliente.");

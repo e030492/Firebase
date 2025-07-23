@@ -19,19 +19,33 @@ import { Label } from '@/components/ui/label';
 import { 
     ACTIVE_USER_STORAGE_KEY
 } from '@/lib/mock-data';
-import { useData } from '@/hooks/use-data-provider';
+import { getUsers, User, seedDatabase } from '@/lib/services';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { loading: dataLoading, users, seedDatabase } = useData();
+  
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
-    // Clear any previous active user from local storage on login page load
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+    async function loadUsers() {
+      try {
+        const usersData = await getUsers();
+        setUsers(usersData);
+      } catch (e) {
+        console.error("Failed to load users", e);
+        setError("No se pudo conectar a la base de datos.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadUsers();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,13 +54,13 @@ export default function LoginPage() {
     setIsLoggingIn(true);
 
     try {
-        // If the database is empty (checked by the provider), and the user is admin, seed the database.
         if (users.length === 0 && email.toLowerCase() === 'admin@escuadra.com' && password === 'admin') {
             setError("Base de datos no inicializada. Sembrando datos...");
-            await seedDatabase(); // This now comes from the context
+            await seedDatabase();
             setError("Base de datos sembrada. Por favor, inicie sesión de nuevo.");
+            const usersData = await getUsers();
+            setUsers(usersData);
             setIsLoggingIn(false);
-            // We don't log in immediately to ensure the user sees the message and the data is re-fetched.
             return;
         }
 
@@ -66,7 +80,7 @@ export default function LoginPage() {
     }
   };
 
-  const isLoading = dataLoading || isLoggingIn;
+  const isLoading = loading || isLoggingIn;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -84,26 +98,33 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <CardHeader>
               <CardTitle>Iniciar Sesión</CardTitle>
-              <CardDescription>
-                {dataLoading 
-                    ? "Conectando a la base de datos..." 
-                    : "Ingrese sus credenciales para acceder al sistema."}
-              </CardDescription>
+               {isLoading && !error && (
+                 <CardDescription>Conectando a la base de datos...</CardDescription>
+               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading}/>
-              </div>
+              {isLoading ? (
+                  <div className="space-y-4">
+                      <div className="space-y-2"><Label>Email</Label><Skeleton className="h-10 w-full"/></div>
+                      <div className="space-y-2"><Label>Contraseña</Label><Skeleton className="h-10 w-full"/></div>
+                  </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading}/>
+                  </div>
+                </>
+              )}
               {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
             </CardContent>
             <CardFooter className="flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Verificando...' : 'Acceder'}
+                {isLoggingIn ? 'Verificando...' : (loading ? 'Cargando...' : 'Acceder')}
               </Button>
                <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
                 ¿Olvidó su contraseña?

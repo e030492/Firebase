@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -35,17 +35,32 @@ import {
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/use-permissions';
-import { deleteUser, User } from '@/lib/services';
+import { getUsers, deleteUser, User } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useData } from '@/hooks/use-data-provider';
 
 type SortableKey = 'name' | 'email' | 'role';
 
 export default function UsersPage() {
-  const { users, loading, deleteItem } = useData();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const { can } = usePermissions();
+
+  useEffect(() => {
+    async function loadUsers() {
+      setLoading(true);
+      try {
+        const usersData = await getUsers();
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Failed to load users:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadUsers();
+  }, []);
 
   const sortedUsers = useMemo(() => {
     let sortableItems = [...users];
@@ -85,7 +100,7 @@ export default function UsersPage() {
     if (userToDelete) {
       try {
         await deleteUser(userToDelete.id);
-        deleteItem('users', userToDelete.id);
+        setUsers(users.filter(u => u.id !== userToDelete.id));
       } catch (error) {
         console.error("Failed to delete user:", error);
         alert("Error al eliminar el usuario.");

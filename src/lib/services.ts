@@ -113,3 +113,24 @@ export async function updateCedula(id: string, data: Partial<Cedula>) {
 export async function deleteCedula(id: string) {
     return await deleteDoc(doc(db, 'cedulas', id));
 }
+
+export const seedDatabase = async () => {
+  const collections = {
+      users: mockUsers,
+      clients: mockClients,
+      systems: mockSystems,
+      equipments: mockEquipments,
+      protocols: mockProtocols,
+      cedulas: mockCedulas
+  };
+
+  for (const [collectionName, mockData] of Object.entries(collections)) {
+      const batch = writeBatch(db);
+      mockData.forEach(item => {
+          const { id, ...data } = item; // Exclude mock ID
+          const docRef = doc(collection(db, collectionName));
+          batch.set(docRef, data);
+      });
+      await batch.commit();
+  }
+};
