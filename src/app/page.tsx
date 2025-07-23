@@ -43,6 +43,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+    // On mount, we can ensure the database is seeded without blocking the UI
+    seedDatabase().catch(err => {
+        console.error("Initial seeding failed:", err);
+        setSystemStatus("error");
+        setStatusMessage("Error al conectar con la base de datos en segundo plano.");
+    });
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -54,9 +60,6 @@ export default function LoginPage() {
     if (user) {
         if (user.password === password) {
             localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-            // Before navigating, ensure the DB has this user at least
-            // This is a simplified check for the demo
-            await seedDatabase();
             router.push('/dashboard/dashboard');
         } else {
             setLoginError('Contraseña incorrecta.');
@@ -66,7 +69,7 @@ export default function LoginPage() {
     }
   };
 
-  const isLoading = systemStatus === "loading" || isSeeding;
+  const isLoading = isSeeding;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">

@@ -30,26 +30,31 @@ const collectionsToSeed = {
 };
 
 export const seedDatabase = async () => {
-  console.log("Seeding database...");
+  console.log("Checking if database needs seeding...");
   const batch = writeBatch(db);
-  for (const [collectionName, { data }] of Object.entries(collectionsToSeed)) {
-      const collectionRef = collection(db, collectionName);
-      // Check if collection is empty before seeding
-      const snapshot = await getDocs(query(collectionRef));
-      if (snapshot.empty) {
-        console.log(`Seeding collection: ${collectionName}`);
-        data.forEach(item => {
-            const { id, ...dataToSave } = item as any; // Cast to any to handle different types
-            const docRef = doc(collectionRef); // Let Firestore generate the ID
-            batch.set(docRef, dataToSave);
-        });
-      } else {
-        console.log(`Collection ${collectionName} already has data. Skipping.`);
+  let hasSeeded = false;
+  
+  // Specifically check the users collection to decide if we should seed.
+  const usersSnapshot = await getDocs(collection(db, "users"));
+  if (usersSnapshot.empty) {
+      console.log("Database is empty. Seeding all collections...");
+      hasSeeded = true;
+      for (const [collectionName, { data }] of Object.entries(collectionsToSeed)) {
+          console.log(`Seeding collection: ${collectionName}`);
+          data.forEach(item => {
+              const { id, ...dataToSave } = item as any; // Cast to any to handle different types
+              const docRef = doc(collection(db, collectionName)); // Let Firestore generate the ID
+              batch.set(docRef, dataToSave);
+          });
       }
+      await batch.commit();
+      console.log("Database seeding process completed.");
+  } else {
+      console.log("Database already has data. Skipping seed.");
   }
-  await batch.commit();
-  console.log("Database seeding process completed.");
+  return hasSeeded;
 };
+
 
 // Generic function to fetch all documents from a collection
 async function getCollection<T extends {id: string}>(collectionName: string): Promise<T[]> {
@@ -58,8 +63,6 @@ async function getCollection<T extends {id: string}>(collectionName: string): Pr
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
   } catch (error) {
     console.error(`Could not connect to Firestore to get ${collectionName}. Error:`, error);
-    // Return an empty array or handle error as needed, but don't fallback to localStorage here
-    // to keep logic simple and predictable.
     return [];
   }
 }
