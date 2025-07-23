@@ -82,12 +82,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setError("Sembrando base de datos...");
     const { seeded, error: seedError } = await checkAndSeedDatabase();
     if (seeded) {
-      await loadData(); // Reload all data after seeding
+      await loadData(); // Reload all data after seeding to update the state
     } else if (seedError) {
-        setError(seedError)
+        setError(seedError);
+        setLoading(false);
+    } else {
+        // If not seeded because data exists, the normal loadData already handled it.
+        setError(null);
+        setLoading(false);
     }
-    // If not seeded because data exists, the normal loadData already handled it.
-    setLoading(false);
   }, [loadData]);
   
   const addItem = useCallback(<T extends { id: string }>(collectionName: keyof typeof data, item: T) => {

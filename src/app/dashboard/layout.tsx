@@ -28,7 +28,6 @@ import {
 import type { mockUsers } from '@/lib/mock-data';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { PermissionsProvider } from '@/hooks/use-permissions.tsx';
-import { DataProvider } from '@/hooks/use-data-provider';
 
 type User = (typeof mockUsers)[0];
 
@@ -68,7 +67,6 @@ export default function DashboardLayout({
 
   return (
     <PermissionsProvider>
-      <DataProvider>
         <SidebarProvider>
           <Sidebar>
             <SidebarHeader>
@@ -125,7 +123,6 @@ export default function DashboardLayout({
             <main className="flex-1 p-4 md:p-6">{children}</main>
           </SidebarInset>
         </SidebarProvider>
-      </DataProvider>
     </PermissionsProvider>
   );
 }
