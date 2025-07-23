@@ -4,6 +4,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { getClients, getEquipments, getSystems, getUsers, getProtocols, getCedulas, seedDatabase, Client, Equipment, System, User, Protocol, Cedula } from "@/lib/services";
 
+type Status = 'idle' | 'loading' | 'success' | 'error';
+
 type DataContextType = {
   clients: Client[];
   equipments: Equipment[];
@@ -11,8 +13,9 @@ type DataContextType = {
   users: User[];
   protocols: Protocol[];
   cedulas: Cedula[];
-  loading: boolean;
+  status: Status;
   error: string | null;
+  statusMessage: string;
   refreshData: () => Promise<void>;
 };
 
@@ -25,21 +28,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState('Sistema inactivo.');
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    setStatus('loading');
     setError(null);
+    setStatusMessage('Sincronizando con la base de datos...');
     try {
-      // First, check if the users collection is empty. If so, seed the database.
+      
       const initialUsers = await getUsers();
       if (initialUsers.length === 0) {
-        console.log("Database empty, seeding...");
+        setStatusMessage("Base de datos vacía. Sembrando datos iniciales...");
         await seedDatabase();
       }
 
-      // Then, fetch all data.
+      setStatusMessage("Cargando colecciones...");
       const [
         clientsData,
         equipmentsData,
@@ -63,12 +68,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setProtocols(protocolsData);
       setCedulas(cedulasData);
 
+      setStatus('success');
+      setStatusMessage('Datos sincronizados correctamente.');
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
       console.error("Failed to load data:", err);
       setError(errorMessage);
-    } finally {
-      setLoading(false);
+      setStatus('error');
+      setStatusMessage('Error de conexión con la base de datos.');
     }
   }, []);
 
@@ -83,8 +91,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     users,
     protocols,
     cedulas,
-    loading,
+    loading: status === 'loading', // For convenience in components
+    status,
     error,
+    statusMessage,
     refreshData: loadData,
   };
 

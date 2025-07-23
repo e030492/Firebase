@@ -93,38 +93,6 @@ export default function DashboardPage() {
             </Card>
         </Link>
       </div>
-        <Card className="shadow-lg bg-muted/30">
-            <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                    <Server className="h-4 w-4" />
-                    <span>Estado del Sistema</span>
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm space-y-3">
-                <div className="flex items-start gap-3">
-                    {error ? <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" /> : <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />}
-                    <div>
-                        <p className="font-semibold">Mensaje:</p>
-                        <p className="text-muted-foreground break-words">{error ? `Error: ${error}` : 'Todos los sistemas están operativos. Los datos del dashboard se han cargado correctamente.'}</p>
-                    </div>
-                </div>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex justify-between items-center">
-                      <p className="font-semibold">Clientes:</p>
-                      <p className="font-mono text-lg">{clients.length}</p>
-                  </div>
-                   <div className="flex justify-between items-center">
-                      <p className="font-semibold">Equipos:</p>
-                      <p className="font-mono text-lg">{equipments.length}</p>
-                  </div>
-                   <div className="flex justify-between items-center">
-                      <p className="font-semibold">Cédulas:</p>
-                      <p className="font-mono text-lg">{cedulas.length}</p>
-                  </div>
-                </div>
-            </CardContent>
-        </Card>
     </div>
   );
 }
