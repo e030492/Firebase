@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Printer, ChevronDown, Camera, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Printer, ChevronDown, Camera, ArrowLeft, ShieldCheck, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { 
     CEDULAS_STORAGE_KEY, 
     CLIENTS_STORAGE_KEY, 
@@ -33,10 +33,11 @@ type EnrichedCedula = Cedula & {
   equipmentDetails?: Equipment; 
   clientDetails?: Client; 
   systemDetails?: System;
-  system?: string;
+  system: string;
   warehouse?: string;
   systemColor?: string;
 };
+type SortableKey = 'folio' | 'client' | 'system' | 'equipment' | 'creationDate';
 
 function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => void }) {
     const reportDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -198,6 +199,8 @@ export default function ReportsPage() {
   const [selectedCedulaIds, setSelectedCedulaIds] = useState<string[]>([]);
   const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
 
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'creationDate', direction: 'descending' });
+
   const [reportData, setReportData] = useState<EnrichedCedula[] | null>(null);
 
   useEffect(() => {
@@ -211,8 +214,8 @@ export default function ReportsPage() {
     }
   }, [selectedClientId, clients]);
 
-  const filteredCedulas = useMemo((): EnrichedCedula[] => {
-    let filtered = cedulas.map(cedula => {
+  const filteredAndSortedCedulas = useMemo((): EnrichedCedula[] => {
+    let filtered: EnrichedCedula[] = cedulas.map(cedula => {
       const equipment = allEquipments.find(eq => eq.name === cedula.equipment && eq.client === cedula.client);
       const systemName = equipment?.system || '';
       const systemInfo = systems.find(s => s.name === systemName);
@@ -239,12 +242,44 @@ export default function ReportsPage() {
         filtered = filtered.filter(c => c.system === systemName);
       }
     }
-    return filtered.sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
-  }, [cedulas, allEquipments, clients, systems, selectedClientId, selectedWarehouse, selectedSystemId]);
+
+    if (sortConfig !== null) {
+      filtered.sort((a, b) => {
+        const key = sortConfig.key as keyof typeof a;
+        if (a[key] < b[key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[key] > b[key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [cedulas, allEquipments, clients, systems, selectedClientId, selectedWarehouse, selectedSystemId, sortConfig]);
+
+  const requestSort = (key: SortableKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const getSortIcon = (key: SortableKey) => {
+    if (sortConfig?.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+        return <ArrowUp className="ml-2 h-4 w-4 text-foreground" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
+  };
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-      setSelectedCedulaIds(filteredCedulas.map(c => c.id));
+      setSelectedCedulaIds(filteredAndSortedCedulas.map(c => c.id));
     } else {
       setSelectedCedulaIds([]);
     }
@@ -272,7 +307,7 @@ export default function ReportsPage() {
         equipmentDetails: equipment,
         clientDetails: client,
         systemDetails: system,
-      };
+      } as EnrichedCedula;
     }).filter((item): item is EnrichedCedula => item !== null);
 
     if (dataForReport.length > 0) {
@@ -282,12 +317,12 @@ export default function ReportsPage() {
     }
   };
 
-  const isAllSelected = filteredCedulas.length > 0 && selectedCedulaIds.length === filteredCedulas.length;
-  const isSomeSelected = selectedCedulaIds.length > 0 && selectedCedulaIds.length < filteredCedulas.length;
+  const isAllSelected = filteredAndSortedCedulas.length > 0 && selectedCedulaIds.length === filteredAndSortedCedulas.length;
+  const isSomeSelected = selectedCedulaIds.length > 0 && selectedCedulaIds.length < filteredAndSortedCedulas.length;
   const selectionState = isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false);
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : prevId));
+    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : cedulaId));
   };
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
@@ -361,7 +396,7 @@ export default function ReportsPage() {
         <CardHeader>
           <CardTitle>Seleccionar Cédulas</CardTitle>
           <CardDescription>
-            Se encontraron {filteredCedulas.length} cédulas. Seleccione las que desea incluir en el reporte.
+            Se encontraron {filteredAndSortedCedulas.length} cédulas. Seleccione las que desea incluir en el reporte.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -372,20 +407,47 @@ export default function ReportsPage() {
                             <TableHead className="w-[50px]">
                                 <Checkbox onClick={(e) => e.stopPropagation()} onCheckedChange={handleSelectAll} checked={selectionState} aria-label="Seleccionar todo" />
                             </TableHead>
-                            <TableHead>Folio</TableHead>
-                            <TableHead>Cliente</TableHead>
-                            <TableHead>Sistema</TableHead>
-                            <TableHead>Equipo</TableHead>
-                            <TableHead className="hidden md:table-cell">Fecha</TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('folio')}>
+                                    Folio
+                                    {getSortIcon('folio')}
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('client')}>
+                                    Cliente
+                                    {getSortIcon('client')}
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('system')}>
+                                    Sistema
+                                    {getSortIcon('system')}
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('equipment')}>
+                                    Equipo
+                                    {getSortIcon('equipment')}
+                                </Button>
+                            </TableHead>
+                            <TableHead className="hidden md:table-cell">
+                                <Button variant="ghost" onClick={() => requestSort('creationDate')}>
+                                    Fecha
+                                    {getSortIcon('creationDate')}
+                                </Button>
+                            </TableHead>
                             <TableHead className="w-[50px]"><span className="sr-only">Detalles</span></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredCedulas.length > 0 ? (
-                            filteredCedulas.map(cedula => (
+                        {filteredAndSortedCedulas.length > 0 ? (
+                            filteredAndSortedCedulas.map(cedula => (
                                 <Fragment key={cedula.id}>
                                 <TableRow
                                   data-state={selectedCedulaIds.includes(cedula.id) ? "selected" : ""}
+                                  onClick={() => handleToggleDetails(cedula.id)}
+                                  className="cursor-pointer"
                                 >
                                     <TableCell onClick={(e) => e.stopPropagation()}>
                                         <Checkbox 
@@ -394,15 +456,15 @@ export default function ReportsPage() {
                                             aria-label={`Seleccionar cédula ${cedula.folio}`}
                                         />
                                     </TableCell>
-                                    <TableCell className="font-medium" onClick={() => handleToggleDetails(cedula.id)}>{cedula.folio}</TableCell>
-                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.client}</TableCell>
-                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>
+                                    <TableCell className="font-medium">{cedula.folio}</TableCell>
+                                    <TableCell>{cedula.client}</TableCell>
+                                    <TableCell>
                                         <span className="font-medium" style={{ color: cedula.systemColor }}>
                                             {cedula.system}
                                         </span>
                                     </TableCell>
-                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.equipment}</TableCell>
-                                    <TableCell className="hidden md:table-cell" onClick={() => handleToggleDetails(cedula.id)}>{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
+                                    <TableCell>{cedula.equipment}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
                                     <TableCell>
                                         <Button
                                             variant="ghost"
@@ -523,3 +585,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
