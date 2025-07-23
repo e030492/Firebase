@@ -11,40 +11,11 @@ import {
 } from '@/components/ui/card';
 import { Activity, Building, HardHat } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getClients, getEquipments, getCedulas, Client, Equipment, Cedula } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
-  const [clientCount, setClientCount] = useState(0);
-  const [equipmentCount, setEquipmentCount] = useState(0);
-  const [pendingCedulasCount, setPendingCedulasCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadDashboardData() {
-        setLoading(true);
-        setError(null);
-        try {
-            const [clientsData, equipmentsData, cedulasData] = await Promise.all([
-                getClients(),
-                getEquipments(),
-                getCedulas(),
-            ]);
-
-            setClientCount(clientsData.length);
-            setEquipmentCount(equipmentsData.length);
-            const pendingCount = cedulasData.filter((c: any) => c.status === 'Pendiente' || c.status === 'En Progreso').length;
-            setPendingCedulasCount(pendingCount);
-
-        } catch (e) {
-            console.error("Failed to process dashboard data:", e);
-            setError("No se pudieron cargar los datos del dashboard.");
-        } finally {
-            setLoading(false);
-        }
-    }
-    loadDashboardData();
-  }, []);
+  const { clients, allEquipments, cedulas, loading, error } = useData();
 
   if (loading) {
       return (
@@ -101,6 +72,11 @@ export default function DashboardPage() {
         </div>
     )
   }
+
+  const clientCount = clients.length;
+  const equipmentCount = allEquipments.length;
+  const pendingCedulasCount = cedulas.filter((c: any) => c.status === 'Pendiente' || c.status === 'En Progreso').length;
+
 
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">

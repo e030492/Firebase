@@ -34,14 +34,21 @@ export const seedDatabase = async () => {
   const batch = writeBatch(db);
   for (const [collectionName, mockData] of Object.entries(collectionsToSeed)) {
       const collectionRef = collection(db, collectionName);
-      mockData.forEach(item => {
-          const { id, ...data } = item; // Exclude mock ID from data
-          const docRef = doc(collectionRef); // Let Firestore generate the ID
-          batch.set(docRef, data);
-      });
+      // Check if collection is empty before seeding
+      const snapshot = await getDocs(query(collectionRef));
+      if (snapshot.empty) {
+        console.log(`Seeding collection: ${collectionName}`);
+        mockData.forEach(item => {
+            const { id, ...data } = item; // Exclude mock ID from data
+            const docRef = doc(collectionRef); // Let Firestore generate the ID
+            batch.set(docRef, data);
+        });
+      } else {
+        console.log(`Collection ${collectionName} already has data. Skipping.`);
+      }
   }
   await batch.commit();
-  console.log("Database seeded successfully.");
+  console.log("Database seeding process completed.");
 };
 
 
