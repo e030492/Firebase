@@ -24,6 +24,36 @@ export const mockUsers = [
     }
   },
   {
+    id: '5',
+    name: 'Root Administrator',
+    email: 'root@escuadra.com',
+    role: 'Administrador',
+    password: 'admin',
+    permissions: {
+        clients: { create: true, update: true, delete: true },
+        equipments: { create: true, update: true, delete: true },
+        systems: { create: true, update: true, delete: true },
+        users: { create: true, update: true, delete: true },
+        protocols: { create: true, update: true, delete: true },
+        cedulas: { create: true, update: true, delete: true },
+    }
+  },
+    {
+    id: '6',
+    name: 'Super Admin',
+    email: 'super@escuadra.com',
+    role: 'Administrador',
+    password: 'admin',
+    permissions: {
+        clients: { create: true, update: true, delete: true },
+        equipments: { create: true, update: true, delete: true },
+        systems: { create: true, update: true, delete: true },
+        users: { create: true, update: true, delete: true },
+        protocols: { create: true, update: true, delete: true },
+        cedulas: { create: true, update: true, delete: true },
+    }
+  },
+  {
     id: '2',
     name: 'Blanca (Técnico)',
     email: 'blanca@escuadra.com',
