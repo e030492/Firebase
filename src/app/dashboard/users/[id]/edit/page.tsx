@@ -34,6 +34,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mockUsers } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const USERS_STORAGE_KEY = 'guardian_shield_users';
 
@@ -103,6 +104,7 @@ export default function EditUserPage() {
   const params = useParams();
   const router = useRouter();
   const userId = params.id as string;
+  const { can } = usePermissions();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -179,6 +181,8 @@ export default function EditUserPage() {
     alert('Usuario actualizado con éxito.');
     router.push('/dashboard/users');
   }
+
+  const canUpdateUsers = can('update', 'users');
 
   if (loading) {
     return (
@@ -263,15 +267,15 @@ export default function EditUserPage() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="nombre">Nombre Completo</Label>
-                <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required disabled={!canUpdateUsers} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!canUpdateUsers} />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="rol">Rol</Label>
-                 <Select value={role} onValueChange={handleRoleChange} required>
+                 <Select value={role} onValueChange={handleRoleChange} required disabled={!canUpdateUsers}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione un rol" />
                   </SelectTrigger>
@@ -285,11 +289,11 @@ export default function EditUserPage() {
               <Separator />
                <div className="grid gap-3">
                 <Label htmlFor="password">Nueva Contraseña (opcional)</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Dejar en blanco para no cambiar" />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Dejar en blanco para no cambiar" disabled={!canUpdateUsers}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
-                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={!canUpdateUsers} />
               </div>
             </div>
           </CardContent>
@@ -319,18 +323,21 @@ export default function EditUserPage() {
                                     <Checkbox
                                         checked={permissions[module.key]?.create}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'create', !!checked)}
+                                        disabled={!canUpdateUsers}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key]?.update}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'update', !!checked)}
+                                        disabled={!canUpdateUsers}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key]?.delete}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'delete', !!checked)}
+                                        disabled={!canUpdateUsers}
                                     />
                                 </TableCell>
                             </TableRow>
@@ -338,9 +345,11 @@ export default function EditUserPage() {
                     </TableBody>
                 </Table>
             </CardContent>
-            <CardFooter className="border-t px-6 py-4">
-                <Button type="submit">Guardar Cambios</Button>
-            </CardFooter>
+            {canUpdateUsers && (
+                <CardFooter className="border-t px-6 py-4">
+                    <Button type="submit">Guardar Cambios</Button>
+                </CardFooter>
+            )}
         </Card>
       </div>
     </form>

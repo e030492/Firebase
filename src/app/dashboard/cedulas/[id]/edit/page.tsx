@@ -50,6 +50,7 @@ import {
     mockProtocols,
 } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
+import { usePermissions } from '@/hooks/use-permissions';
 
 type Cedula = typeof mockCedulas[0];
 type Client = typeof mockClients[0];
@@ -63,6 +64,7 @@ export default function EditCedulaPage() {
   const params = useParams();
   const router = useRouter();
   const cedulaId = params.id as string;
+  const { can } = usePermissions();
 
   const [cedulas, setCedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
   const [clients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
@@ -261,6 +263,8 @@ export default function EditCedulaPage() {
     router.push('/dashboard/cedulas');
   }
 
+  const canUpdateCedulas = can('update', 'cedulas');
+
   if (loading) {
     return (
        <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
@@ -373,7 +377,7 @@ export default function EditCedulaPage() {
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="folio">Folio</Label>
-                   <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required />
+                   <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required disabled={!canUpdateCedulas} />
                  </div>
                  <div className="grid gap-3">
                     <Label htmlFor="creationDate">Fecha y Hora de Creación</Label>
@@ -386,6 +390,7 @@ export default function EditCedulaPage() {
                                         "w-full justify-start text-left font-normal",
                                         !creationDate && "text-muted-foreground"
                                     )}
+                                    disabled={!canUpdateCedulas}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
@@ -406,6 +411,7 @@ export default function EditCedulaPage() {
                             className="w-auto"
                             value={creationTime}
                             onChange={e => setCreationTime(e.target.value)}
+                            disabled={!canUpdateCedulas}
                         />
                     </div>
                 </div>
@@ -413,7 +419,7 @@ export default function EditCedulaPage() {
               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select value={clientId} onValueChange={handleClientChange} required>
+                  <Select value={clientId} onValueChange={handleClientChange} required disabled={!canUpdateCedulas}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -426,7 +432,7 @@ export default function EditCedulaPage() {
                 </div>
                 <div className="grid gap-3">
                    <Label htmlFor="system">Sistema</Label>
-                   <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId}>
+                   <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId || !canUpdateCedulas}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un sistema" />
                     </SelectTrigger>
@@ -441,7 +447,7 @@ export default function EditCedulaPage() {
               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                   <Label htmlFor="equipment">Equipo</Label>
-                  <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId}>
+                  <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId || !canUpdateCedulas}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un equipo" />
                     </SelectTrigger>
@@ -454,7 +460,7 @@ export default function EditCedulaPage() {
                 </div>
                 <div className="grid gap-3">
                    <Label htmlFor="technician">Técnico Asignado</Label>
-                   <Select value={technicianId} onValueChange={setTechnicianId} required>
+                   <Select value={technicianId} onValueChange={setTechnicianId} required disabled={!canUpdateCedulas}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un técnico" />
                     </SelectTrigger>
@@ -469,7 +475,7 @@ export default function EditCedulaPage() {
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required>
+                   <Select value={status} onValueChange={setStatus} required disabled={!canUpdateCedulas}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un estado" />
                     </SelectTrigger>
@@ -482,7 +488,7 @@ export default function EditCedulaPage() {
                  </div>
                  <div className="grid gap-3">
                    <Label htmlFor="supervisor">Supervisor</Label>
-                   <Select value={supervisorId} onValueChange={setSupervisorId} required>
+                   <Select value={supervisorId} onValueChange={setSupervisorId} required disabled={!canUpdateCedulas}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un supervisor" />
                     </SelectTrigger>
@@ -496,7 +502,7 @@ export default function EditCedulaPage() {
                </div>
                 <div className="grid gap-3">
                   <Label htmlFor="description">Descripción del Trabajo</Label>
-                  <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" />
+                  <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" disabled={!canUpdateCedulas}/>
                 </div>
             </div>
           </CardContent>
@@ -523,7 +529,7 @@ export default function EditCedulaPage() {
                                             <Camera className="h-10 w-10 text-muted-foreground" />
                                         </div>
                                     )}
-                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()}>
+                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={!canUpdateCedulas}>
                                         <Camera className="mr-2 h-4 w-4" />
                                         {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
                                     </Button>
@@ -534,6 +540,7 @@ export default function EditCedulaPage() {
                                         capture="environment"
                                         onChange={(e) => handleImageChange(index, e)}
                                         className="hidden"
+                                        disabled={!canUpdateCedulas}
                                     />
                                 </div>
                                 <div className="grid gap-3">
@@ -541,6 +548,7 @@ export default function EditCedulaPage() {
                                     <Select
                                         value={String(step.percentage || '0')}
                                         onValueChange={(value) => handleStepChange(index, 'percentage', Number(value))}
+                                        disabled={!canUpdateCedulas}
                                     >
                                         <SelectTrigger id={`step-percentage-${index}`} className="w-auto">
                                             <SelectValue placeholder="% Ejecutado" />
@@ -564,6 +572,7 @@ export default function EditCedulaPage() {
                                     value={step.notes || ''}
                                     onChange={(e) => handleStepChange(index, 'notes', e.target.value)}
                                     className="min-h-24"
+                                    disabled={!canUpdateCedulas}
                                 />
                             </div>
                         </div>
@@ -582,7 +591,7 @@ export default function EditCedulaPage() {
             <CardContent>
                 <div className="grid gap-3">
                     <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
-                    <Select value={semaforo} onValueChange={setSemaforo}>
+                    <Select value={semaforo} onValueChange={setSemaforo} disabled={!canUpdateCedulas}>
                         <SelectTrigger id="semaforo" className="w-full">
                             <SelectValue placeholder="Seleccione un estado" />
                         </SelectTrigger>
@@ -611,9 +620,11 @@ export default function EditCedulaPage() {
             </CardContent>
         </Card>
 
-        <div className="flex justify-start">
-            <Button type="submit">Guardar Cambios</Button>
-        </div>
+        {canUpdateCedulas && (
+            <div className="flex justify-start">
+                <Button type="submit">Guardar Cambios</Button>
+            </div>
+        )}
         </div>
       </div>
     </form>

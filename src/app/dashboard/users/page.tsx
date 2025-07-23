@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -34,6 +35,7 @@ import {
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { mockUsers } from '@/lib/mock-data';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const USERS_STORAGE_KEY = 'guardian_shield_users';
 type User = typeof mockUsers[0];
@@ -43,6 +45,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
+  const { can } = usePermissions();
 
   useEffect(() => {
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
@@ -98,6 +101,10 @@ export default function UsersPage() {
     }
   };
 
+  const canCreate = can('create', 'users');
+  const canUpdate = can('update', 'users');
+  const canDelete = can('delete', 'users');
+
   return (
     <>
       <div className="grid auto-rows-max items-start gap-4 md:gap-8">
@@ -108,12 +115,14 @@ export default function UsersPage() {
               Gestión de usuarios del sistema.
             </p>
           </div>
-          <Link href="/dashboard/users/new">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Crear Usuario
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link href="/dashboard/users/new">
+                <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Crear Usuario
+                </Button>
+            </Link>
+          )}
         </div>
         <Card>
           <CardContent className="pt-6">
@@ -138,9 +147,11 @@ export default function UsersPage() {
                         {getSortIcon('role')}
                     </Button>
                   </TableHead>
-                  <TableHead>
-                    <span className="sr-only">Acciones</span>
-                  </TableHead>
+                  {(canUpdate || canDelete) && (
+                    <TableHead>
+                        <span className="sr-only">Acciones</span>
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -149,28 +160,34 @@ export default function UsersPage() {
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{user.email}</TableCell>
                     <TableCell className="hidden lg:table-cell">{user.role}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                             <Link href={`/dashboard/users/${user.id}/edit`}>Editar</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onSelect={() => setUserToDelete(user)}
-                          >
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+                    {(canUpdate || canDelete) && (
+                        <TableCell>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            {canUpdate && (
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/dashboard/users/${user.id}/edit`}>Editar</Link>
+                                </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                                <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onSelect={() => setUserToDelete(user)}
+                                >
+                                    Eliminar
+                                </DropdownMenuItem>
+                            )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

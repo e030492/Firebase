@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, Fragment } from 'react';
@@ -42,6 +43,7 @@ import { mockCedulas, mockClients, mockEquipments, mockSystems } from '@/lib/moc
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
 const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
@@ -59,6 +61,7 @@ export default function CedulasPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
+  const { can } = usePermissions();
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
@@ -209,6 +212,9 @@ export default function CedulasPage() {
     setExpandedCedulaId(prevId => prevId === cedulaId ? null : cedulaId);
   };
 
+  const canCreateCedulas = can('create', 'cedulas');
+  const canUpdateCedulas = can('update', 'cedulas');
+  const canDeleteCedulas = can('delete', 'cedulas');
 
   return (
     <>
@@ -220,12 +226,14 @@ export default function CedulasPage() {
               Listado de todas las cédulas de trabajo registradas.
             </p>
           </div>
-          <Link href="/dashboard/cedulas/new">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Crear Cédula
-            </Button>
-          </Link>
+          {canCreateCedulas && (
+            <Link href="/dashboard/cedulas/new">
+                <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Crear Cédula
+                </Button>
+            </Link>
+          )}
         </div>
         <Card>
           <CardContent className="pt-6">
@@ -392,26 +400,32 @@ export default function CedulasPage() {
                         <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Toggle menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                               <Link href={`/dashboard/cedulas/${cedula.id}/edit`}>Editar</Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onSelect={() => setCedulaToDelete(cedula)}
-                            >
-                              Eliminar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {(canUpdateCedulas || canDeleteCedulas) && (
+                            <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                {canUpdateCedulas && (
+                                    <DropdownMenuItem asChild>
+                                        <Link href={`/dashboard/cedulas/${cedula.id}/edit`}>Editar</Link>
+                                    </DropdownMenuItem>
+                                )}
+                                {canDeleteCedulas && (
+                                    <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onSelect={() => setCedulaToDelete(cedula)}
+                                    >
+                                    Eliminar
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(cedula.id)}>
