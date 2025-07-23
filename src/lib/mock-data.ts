@@ -1,10 +1,10 @@
 
-export const CEDULAS_STORAGE_KEY = 'escuadra_cedulas';
-export const CLIENTS_STORAGE_KEY = 'escuadra_clients';
-export const EQUIPMENTS_STORAGE_KEY = 'escuadra_equipments';
-export const USERS_STORAGE_KEY = 'escuadra_users';
-export const SYSTEMS_STORAGE_KEY = 'escuadra_systems';
-export const PROTOCOLS_STORAGE_KEY = 'escuadra_protocols';
+export const CEDULAS_STORAGE_KEY = 'guardian_shield_cedulas';
+export const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
+export const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
+export const USERS_STORAGE_KEY = 'guardian_shield_users';
+export const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
+export const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
 
 export const mockUsers = [
   {
@@ -201,6 +201,28 @@ export const mockEquipments = [
   },
 ];
 
+export const mockProtocols = [
+  {
+    equipmentId: '1', // Cámara Domo PTZ
+    steps: [
+      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, percentage: 10, imageUrl: 'https://placehold.co/400x300.png' },
+      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, percentage: 25, imageUrl: '' },
+      { step: 'Comprobar la nitidez de la imagen y el enfoque automático.', priority: 'media' as const, percentage: 20, imageUrl: '' },
+      { step: 'Asegurar que la conexión de red y alimentación esté firme.', priority: 'baja' as const, percentage: 15, imageUrl: '' },
+      { step: 'Actualizar firmware si hay una nueva versión disponible.', priority: 'media' as const, percentage: 30, imageUrl: 'https://placehold.co/400x300.png' },
+    ]
+  },
+  {
+    equipmentId: '2', // Lector de Tarjetas RFID
+    steps: [
+        { step: 'Limpiar la superficie del lector con un paño suave.', priority: 'baja' as const, percentage: 20, imageUrl: '' },
+        { step: 'Probar la lectura con varias tarjetas de prueba.', priority: 'alta' as const, percentage: 40, imageUrl: '' },
+        { step: 'Verificar que los LEDs indicadores (acceso concedido/denegado) funcionen.', priority: 'media' as const, percentage: 30, imageUrl: '' },
+        { step: 'Inspeccionar el cableado por posibles daños.', priority: 'baja' as const, percentage: 10, imageUrl: '' },
+    ]
+  }
+];
+
 export const mockCedulas = [
   {
     id: '1',
@@ -212,10 +234,13 @@ export const mockCedulas = [
     creationDate: '2024-07-20T10:30:00',
     status: 'Pendiente' as const,
     description: 'Revisión trimestral de la cámara de la entrada principal.',
-    protocolSteps: [
-      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, completion: 50, imageUrl: 'https://placehold.co/400x300.png', notes: 'Carcasa con algo de polvo, se limpió.' },
-      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, completion: 25, imageUrl: '', notes: '' },
-    ],
+    protocolSteps: (mockProtocols.find(p => p.equipmentId === '1')?.steps || []).map(step => ({
+        step: step.step,
+        priority: step.priority,
+        completion: 0,
+        imageUrl: '',
+        notes: '',
+    })),
     semaforo: '' as const,
   },
   {
@@ -257,26 +282,4 @@ export const mockCedulas = [
     protocolSteps: [],
     semaforo: '' as const,
   },
-];
-
-export const mockProtocols = [
-  {
-    equipmentId: '1', // Cámara Domo PTZ
-    steps: [
-      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, percentage: 10, imageUrl: 'https://placehold.co/400x300.png' },
-      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, percentage: 25, imageUrl: '' },
-      { step: 'Comprobar la nitidez de la imagen y el enfoque automático.', priority: 'media' as const, percentage: 20, imageUrl: '' },
-      { step: 'Asegurar que la conexión de red y alimentación esté firme.', priority: 'baja' as const, percentage: 15, imageUrl: '' },
-      { step: 'Actualizar firmware si hay una nueva versión disponible.', priority: 'media' as const, percentage: 30, imageUrl: 'https://placehold.co/400x300.png' },
-    ]
-  },
-  {
-    equipmentId: '2', // Lector de Tarjetas RFID
-    steps: [
-        { step: 'Limpiar la superficie del lector con un paño suave.', priority: 'baja' as const, percentage: 20, imageUrl: '' },
-        { step: 'Probar la lectura con varias tarjetas de prueba.', priority: 'alta' as const, percentage: 40, imageUrl: '' },
-        { step: 'Verificar que los LEDs indicadores (acceso concedido/denegado) funcionen.', priority: 'media' as const, percentage: 30, imageUrl: '' },
-        { step: 'Inspeccionar el cableado por posibles daños.', priority: 'baja' as const, percentage: 10, imageUrl: '' },
-    ]
-  }
 ];
