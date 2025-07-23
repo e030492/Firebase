@@ -219,37 +219,41 @@ export default function EditCedulaPage() {
         finalDateTime.setMinutes(parseInt(minutes, 10));
     }
     
-    const currentCedulas = [...cedulas];
-    const cedulaIndex = currentCedulas.findIndex(c => c.id === cedulaId);
+    const cedulaIndex = cedulas.findIndex(c => c.id === cedulaId);
 
     if (cedulaIndex === -1) {
         alert('Error: No se pudo encontrar la cédula para actualizar.');
         return;
     }
     
-    const updatedCedula = {
-        ...currentCedulas[cedulaIndex],
-        folio,
-        client: clientName,
-        equipment: equipmentName,
-        technician: technicianName,
-        supervisor: supervisorName,
-        creationDate: creationDate ? finalDateTime.toISOString() : '',
-        status: status as Cedula['status'],
-        description,
-        semaforo: semaforo as Cedula['semaforo'],
-        protocolSteps: protocolSteps.map(step => ({
-        step: step.step,
-        priority: step.priority,
-        completion: Number(step.percentage) || 0,
-        imageUrl: step.imageUrl || '',
-        notes: step.notes || '',
-        })),
-    };
-    
-    currentCedulas[cedulaIndex] = updatedCedula;
+    setCedulas(prevCedulas => {
+      const newCedulas = [...prevCedulas];
+      const cedulaToUpdate = newCedulas[cedulaIndex];
+      
+      const updatedCedula = {
+          ...cedulaToUpdate,
+          folio,
+          client: clientName,
+          equipment: equipmentName,
+          technician: technicianName,
+          supervisor: supervisorName,
+          creationDate: creationDate ? finalDateTime.toISOString() : '',
+          status: status as Cedula['status'],
+          description,
+          semaforo: semaforo as Cedula['semaforo'],
+          protocolSteps: protocolSteps.map(step => ({
+          step: step.step,
+          priority: step.priority,
+          completion: Number(step.percentage) || 0,
+          imageUrl: step.imageUrl || '',
+          notes: step.notes || '',
+          })),
+      };
+      
+      newCedulas[cedulaIndex] = updatedCedula;
+      return newCedulas;
+    });
 
-    setCedulas(currentCedulas);
     alert('Cédula actualizada con éxito.');
     router.push('/dashboard/cedulas');
   }
