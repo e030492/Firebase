@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { 
     ACTIVE_USER_STORAGE_KEY
 } from '@/lib/mock-data';
-import { getUsers } from '@/lib/services';
+import { getUsers, checkAndSeedDatabase } from '@/lib/services';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,31 +40,16 @@ export default function LoginPage() {
 
     try {
         const users = await getUsers();
-        if (users.length === 0) {
-             setError("La base de datos parece estar vacía o no es accesible. El primer inicio de sesión del admin la inicializará.");
-             // Allow admin to login to seed the database
-             if (email.toLowerCase() === 'admin@escuadra.com' && password === 'admin') {
-                const adminUser = {
-                    id: 'temp-admin',
-                    name: 'Admin User',
-                    email: 'admin@escuadra.com',
-                    role: 'Administrador',
-                    password: 'admin',
-                    permissions: {
-                        clients: { create: true, update: true, delete: true },
-                        equipments: { create: true, update: true, delete: true },
-                        systems: { create: true, update: true, delete: true },
-                        users: { create: true, update: true, delete: true },
-                        protocols: { create: true, update: true, delete: true },
-                        cedulas: { create: true, update: true, delete: true },
-                    }
-                };
-                 localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(adminUser));
-                 router.push('/dashboard');
-                 return;
-             }
-        }
         
+        // Handle database seeding on first admin login
+        if (users.length === 0 && email.toLowerCase() === 'admin@escuadra.com' && password === 'admin') {
+            setError("Base de datos no inicializada. Sembrando datos...");
+            await checkAndSeedDatabase();
+            setError("Base de datos inicializada. Por favor, inicie sesión de nuevo.");
+            setLoading(false);
+            return;
+        }
+
         const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
         if (user && user.password === password) {

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Activity, Building, HardHat } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getClients, getEquipments, getCedulas, checkAndSeedDatabase } from '@/lib/services';
+import { getClients, getEquipments, getCedulas } from '@/lib/services';
 
 export default function DashboardPage() {
   const [clientCount, setClientCount] = useState(0);
@@ -24,11 +24,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboardData() {
         try {
-            // First, check if the database needs seeding. This will only run
-            // if the database is empty, and only for the first user who logs in.
-            await checkAndSeedDatabase();
-            
-            // Then, load all the data for the dashboard cards.
+            // Load all the data for the dashboard cards.
             const [clients, equipments, cedulas] = await Promise.all([
                 getClients(),
                 getEquipments(),
