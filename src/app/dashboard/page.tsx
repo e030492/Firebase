@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Activity, Building, HardHat } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getClients, getEquipments, getCedulas } from '@/lib/services';
+import { getClients, getEquipments, getCedulas, checkAndSeedDatabase } from '@/lib/services';
 
 export default function DashboardPage() {
   const [clientCount, setClientCount] = useState(0);
@@ -19,10 +19,16 @@ export default function DashboardPage() {
   const [pendingCedulasCount, setPendingCedulasCount] = useState(0);
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDashboardData() {
         try {
+            // First, check if the database needs seeding. This will only run
+            // if the database is empty, and only for the first user who logs in.
+            await checkAndSeedDatabase();
+            
+            // Then, load all the data for the dashboard cards.
             const [clients, equipments, cedulas] = await Promise.all([
                 getClients(),
                 getEquipments(),
@@ -77,6 +83,7 @@ export default function DashboardPage() {
 
         } catch (error) {
             console.error("Failed to load dashboard data:", error);
+            setError("No se pudieron cargar los datos del dashboard. Es posible que haya un problema de conexión o de permisos con la base de datos.");
         } finally {
             setLoading(false);
         }
@@ -123,8 +130,21 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
+             <p className="text-sm text-muted-foreground">Cargando datos del dashboard. Si esto tarda demasiado, verifique su conexión a internet.</p>
         </div>
       )
+  }
+
+  if (error) {
+    return (
+        <div className="flex flex-col items-center justify-center gap-4 text-center h-full mt-10">
+            <h1 className="text-2xl font-bold text-destructive">Error al Cargar</h1>
+            <p className="text-muted-foreground max-w-md">{error}</p>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+                Reintentar
+            </Button>
+        </div>
+    )
   }
 
   return (
@@ -145,7 +165,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{clientCount}</div>
               <p className="text-xs text-muted-foreground">
-                Total de clientes registrados en el sistema.
+                Próximo mantenimiento: {nextMaintenanceDate}
               </p>
             </CardContent>
           </Card>

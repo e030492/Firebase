@@ -19,31 +19,16 @@ import { Label } from '@/components/ui/label';
 import { 
     ACTIVE_USER_STORAGE_KEY
 } from '@/lib/mock-data';
-import { checkAndSeedDatabase } from '@/lib/services';
+import { getUsers } from '@/lib/services';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // This effect runs on the client and ensures that the
-    // Firebase database is seeded with initial data if it's empty.
-    const initializeDatabase = async () => {
-        try {
-            await checkAndSeedDatabase();
-        } catch (error) {
-            console.error("Failed to initialize database:", error);
-            setError("Error al conectar con la base de datos.");
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    initializeDatabase();
-
     // Clear any previous active user from local storage on login page load
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
   }, []);
@@ -54,8 +39,32 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-        const { getUsers } = await import('@/lib/services');
         const users = await getUsers();
+        if (users.length === 0) {
+             setError("La base de datos parece estar vacía o no es accesible. El primer inicio de sesión del admin la inicializará.");
+             // Allow admin to login to seed the database
+             if (email.toLowerCase() === 'admin@escuadra.com' && password === 'admin') {
+                const adminUser = {
+                    id: 'temp-admin',
+                    name: 'Admin User',
+                    email: 'admin@escuadra.com',
+                    role: 'Administrador',
+                    password: 'admin',
+                    permissions: {
+                        clients: { create: true, update: true, delete: true },
+                        equipments: { create: true, update: true, delete: true },
+                        systems: { create: true, update: true, delete: true },
+                        users: { create: true, update: true, delete: true },
+                        protocols: { create: true, update: true, delete: true },
+                        cedulas: { create: true, update: true, delete: true },
+                    }
+                };
+                 localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(adminUser));
+                 router.push('/dashboard');
+                 return;
+             }
+        }
+        
         const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
         if (user && user.password === password) {
@@ -66,22 +75,12 @@ export default function LoginPage() {
         }
     } catch (err) {
         console.error("Login error:", err);
-        setError("No se pudo verificar el usuario. Intente de nuevo.");
+        setError("No se pudo verificar el usuario. Verifique su conexión e inténtelo de nuevo.");
     } finally {
         setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-            <div className="flex flex-col items-center gap-4 text-center">
-                <ShieldCheck className="h-16 w-16 animate-pulse text-primary" />
-                <h1 className="text-xl font-medium text-muted-foreground">Conectando con la base de datos...</h1>
-            </div>
-        </main>
-    )
-  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
