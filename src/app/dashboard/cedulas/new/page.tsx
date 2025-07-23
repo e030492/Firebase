@@ -341,7 +341,9 @@ export default function NewCedulaPage() {
                         </SelectTrigger>
                         <SelectContent>
                         {filteredEquipments.map(eq => (
-                            <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                            <SelectItem key={eq.id} value={eq.id}>
+                                {eq.name} ({eq.serial})
+                            </SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
@@ -513,3 +515,5 @@ export default function NewCedulaPage() {
     </form>
   );
 }
+
+    
