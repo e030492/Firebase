@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { 
     ACTIVE_USER_STORAGE_KEY
 } from '@/lib/mock-data';
-import { getUsers, User, seedDatabase } from '@/lib/services';
+import { getUsers, User } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function LoginPage() {
@@ -35,6 +35,8 @@ export default function LoginPage() {
   useEffect(() => {
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
     async function loadUsers() {
+      setError('');
+      setLoading(true);
       try {
         const usersData = await getUsers();
         setUsers(usersData);
@@ -54,16 +56,6 @@ export default function LoginPage() {
     setIsLoggingIn(true);
 
     try {
-        if (users.length === 0 && email.toLowerCase() === 'admin@escuadra.com' && password === 'admin') {
-            setError("Base de datos no inicializada. Sembrando datos...");
-            await seedDatabase();
-            setError("Base de datos sembrada. Por favor, inicie sesión de nuevo.");
-            const usersData = await getUsers();
-            setUsers(usersData);
-            setIsLoggingIn(false);
-            return;
-        }
-
         const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
         if (user && user.password === password) {
@@ -71,6 +63,9 @@ export default function LoginPage() {
             router.push('/dashboard');
         } else {
             setError('Email o contraseña incorrectos.');
+            // Reload users in case they were just seeded
+            const usersData = await getUsers();
+            setUsers(usersData);
         }
     } catch (err) {
         console.error("Login error:", err);
@@ -103,7 +98,7 @@ export default function LoginPage() {
                )}
             </CardHeader>
             <CardContent className="space-y-4">
-              {isLoading ? (
+              {loading ? (
                   <div className="space-y-4">
                       <div className="space-y-2"><Label>Email</Label><Skeleton className="h-10 w-full"/></div>
                       <div className="space-y-2"><Label>Contraseña</Label><Skeleton className="h-10 w-full"/></div>
