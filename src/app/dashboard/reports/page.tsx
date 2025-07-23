@@ -38,131 +38,23 @@ type EnrichedCedula = Cedula & {
   systemColor?: string;
 };
 
+// Componente aislado para la vista de impresión
+function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => void }) {
+    const reportDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 
-export default function ReportsPage() {
-  const [cedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
-  const [clients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
-  const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
-  const [systems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
+    const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
+        switch (priority?.toLowerCase()) {
+          case 'alta':
+            return 'destructive';
+          case 'media':
+            return 'default';
+          case 'baja':
+            return 'secondary';
+          default:
+            return 'secondary';
+        }
+    };
 
-  const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
-  const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
-  const [selectedSystemId, setSelectedSystemId] = useState<string>('');
-  const [selectedCedulaIds, setSelectedCedulaIds] = useState<string[]>([]);
-  const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
-
-  const [isPreviewing, setIsPreviewing] = useState(false);
-  const [reportData, setReportData] = useState<EnrichedCedula[]>([]);
-
-  useEffect(() => {
-    if (selectedClientId) {
-      const client = clients.find(c => c.id === selectedClientId);
-      setClientWarehouses(client?.almacenes.map(a => a.nombre) || []);
-      setSelectedWarehouse('');
-    } else {
-      setClientWarehouses([]);
-      setSelectedWarehouse('');
-    }
-  }, [selectedClientId, clients]);
-
-  const filteredCedulas = useMemo((): EnrichedCedula[] => {
-    let filtered = cedulas.map(cedula => {
-      const equipment = allEquipments.find(eq => eq.name === cedula.equipment && eq.client === cedula.client);
-      const systemName = equipment?.system || '';
-      const systemInfo = systems.find(s => s.name === systemName);
-      return { 
-        ...cedula, 
-        system: systemName, 
-        warehouse: equipment?.location || '',
-        systemColor: systemInfo?.color,
-       };
-    });
-
-    if (selectedClientId) {
-      const clientName = clients.find(c => c.id === selectedClientId)?.name;
-      if (clientName) {
-        filtered = filtered.filter(c => c.client === clientName);
-      }
-    }
-    if (selectedWarehouse) {
-      filtered = filtered.filter(c => c.warehouse === selectedWarehouse);
-    }
-    if (selectedSystemId) {
-      const systemName = systems.find(s => s.id === selectedSystemId)?.name;
-      if (systemName) {
-        filtered = filtered.filter(c => c.system === systemName);
-      }
-    }
-    return filtered.sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
-  }, [cedulas, allEquipments, clients, systems, selectedClientId, selectedWarehouse, selectedSystemId]);
-
-  const handleSelectAll = (checked: boolean | 'indeterminate') => {
-    if (checked === true) {
-      setSelectedCedulaIds(filteredCedulas.map(c => c.id));
-    } else {
-      setSelectedCedulaIds([]);
-    }
-  };
-  
-  const handleSelectCedula = (cedulaId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedCedulaIds(prev => [...prev, cedulaId]);
-    } else {
-      setSelectedCedulaIds(prev => prev.filter(id => id !== cedulaId));
-    }
-  };
-  
-  const handleGenerateReport = () => {
-    const dataForReport = selectedCedulaIds.map(id => {
-      const cedula = cedulas.find(c => c.id === id);
-      if (!cedula) return null;
-      
-      const equipment = allEquipments.find(e => e.name === cedula.equipment && e.client === cedula.client);
-      const client = clients.find(c => c.name === cedula.client);
-      const system = equipment ? systems.find(s => s.name === equipment.system) : undefined;
-      
-      return {
-        ...cedula,
-        equipmentDetails: equipment,
-        clientDetails: client,
-        systemDetails: system,
-      };
-    }).filter((item): item is EnrichedCedula => item !== null);
-
-    if (dataForReport.length > 0) {
-        setReportData(dataForReport);
-        setIsPreviewing(true);
-    } else {
-        alert("Por favor, seleccione al menos una cédula para generar el reporte.");
-    }
-  };
-
-
-  const isAllSelected = filteredCedulas.length > 0 && selectedCedulaIds.length === filteredCedulas.length;
-  const isSomeSelected = selectedCedulaIds.length > 0 && selectedCedulaIds.length < filteredCedulas.length;
-  const selectionState = isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false);
-
-  const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : cedulaId));
-  };
-
-  const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
-    switch (priority?.toLowerCase()) {
-      case 'alta':
-        return 'destructive';
-      case 'media':
-        return 'default';
-      case 'baja':
-        return 'secondary';
-      default:
-        return 'secondary';
-    }
-  };
-  
-  const reportDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  if (isPreviewing) {
     return (
         <div className="report-container">
             <header className="flex items-center justify-between mb-8 print:hidden">
@@ -175,7 +67,7 @@ export default function ReportsPage() {
                         <Printer className="mr-2 h-4 w-4"/>
                         Imprimir / Guardar PDF
                     </Button>
-                    <Button variant="outline" onClick={() => setIsPreviewing(false)}>
+                    <Button variant="outline" onClick={onBack}>
                         <ArrowLeft className="mr-2 h-4 w-4"/>
                         Volver a la selección
                     </Button>
@@ -183,7 +75,7 @@ export default function ReportsPage() {
             </header>
 
             <main className="space-y-8 print:space-y-0">
-                {reportData.map((cedula) => (
+                {data.map((cedula) => (
                     <div key={cedula.id} className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none break-after-page page-break">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
                             <div className="flex items-center gap-4">
@@ -291,7 +183,129 @@ export default function ReportsPage() {
                 ))}
             </main>
         </div>
-      );
+    );
+}
+
+export default function ReportsPage() {
+  const [cedulas] = useLocalStorageSync<Cedula[]>(CEDULAS_STORAGE_KEY, mockCedulas);
+  const [clients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
+  const [allEquipments] = useLocalStorageSync<Equipment[]>(EQUIPMENTS_STORAGE_KEY, mockEquipments);
+  const [systems] = useLocalStorageSync<System[]>(SYSTEMS_STORAGE_KEY, mockSystems);
+
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
+  const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
+  const [selectedSystemId, setSelectedSystemId] = useState<string>('');
+  const [selectedCedulaIds, setSelectedCedulaIds] = useState<string[]>([]);
+  const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
+
+  const [reportData, setReportData] = useState<EnrichedCedula[] | null>(null);
+
+  useEffect(() => {
+    if (selectedClientId) {
+      const client = clients.find(c => c.id === selectedClientId);
+      setClientWarehouses(client?.almacenes.map(a => a.nombre) || []);
+      setSelectedWarehouse('');
+    } else {
+      setClientWarehouses([]);
+      setSelectedWarehouse('');
+    }
+  }, [selectedClientId, clients]);
+
+  const filteredCedulas = useMemo((): EnrichedCedula[] => {
+    let filtered = cedulas.map(cedula => {
+      const equipment = allEquipments.find(eq => eq.name === cedula.equipment && eq.client === cedula.client);
+      const systemName = equipment?.system || '';
+      const systemInfo = systems.find(s => s.name === systemName);
+      return { 
+        ...cedula, 
+        system: systemName, 
+        warehouse: equipment?.location || '',
+        systemColor: systemInfo?.color,
+       };
+    });
+
+    if (selectedClientId) {
+      const clientName = clients.find(c => c.id === selectedClientId)?.name;
+      if (clientName) {
+        filtered = filtered.filter(c => c.client === clientName);
+      }
+    }
+    if (selectedWarehouse) {
+      filtered = filtered.filter(c => c.warehouse === selectedWarehouse);
+    }
+    if (selectedSystemId) {
+      const systemName = systems.find(s => s.id === selectedSystemId)?.name;
+      if (systemName) {
+        filtered = filtered.filter(c => c.system === systemName);
+      }
+    }
+    return filtered.sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
+  }, [cedulas, allEquipments, clients, systems, selectedClientId, selectedWarehouse, selectedSystemId]);
+
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedCedulaIds(filteredCedulas.map(c => c.id));
+    } else {
+      setSelectedCedulaIds([]);
+    }
+  };
+  
+  const handleSelectCedula = (cedulaId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCedulaIds(prev => [...prev, cedulaId]);
+    } else {
+      setSelectedCedulaIds(prev => prev.filter(id => id !== cedulaId));
+    }
+  };
+  
+  const handleGenerateReport = () => {
+    const dataForReport = selectedCedulaIds.map(id => {
+      const cedula = cedulas.find(c => c.id === id);
+      if (!cedula) return null;
+      
+      const equipment = allEquipments.find(e => e.name === cedula.equipment && e.client === cedula.client);
+      const client = clients.find(c => c.name === cedula.client);
+      const system = equipment ? systems.find(s => s.name === equipment.system) : undefined;
+      
+      return {
+        ...cedula,
+        equipmentDetails: equipment,
+        clientDetails: client,
+        systemDetails: system,
+      };
+    }).filter((item): item is EnrichedCedula => item !== null);
+
+    if (dataForReport.length > 0) {
+        setReportData(dataForReport);
+    } else {
+        alert("Por favor, seleccione al menos una cédula para generar el reporte.");
+    }
+  };
+
+  const isAllSelected = filteredCedulas.length > 0 && selectedCedulaIds.length === filteredCedulas.length;
+  const isSomeSelected = selectedCedulaIds.length > 0 && selectedCedulaIds.length < filteredCedulas.length;
+  const selectionState = isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false);
+
+  const handleToggleDetails = (cedulaId: string) => {
+    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : cedulaId));
+  };
+
+  const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
+    switch (priority?.toLowerCase()) {
+      case 'alta':
+        return 'destructive';
+      case 'media':
+        return 'default';
+      case 'baja':
+        return 'secondary';
+      default:
+        return 'secondary';
+    }
+  };
+
+  if (reportData) {
+    return <ReportView data={reportData} onBack={() => setReportData(null)} />;
   }
 
   return (
