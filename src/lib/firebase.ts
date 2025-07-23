@@ -5,7 +5,7 @@ import { getFirestore } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
+// Your web app's Firebase configuration - This is safe to be public
 const firebaseConfig = {
   "projectId": "guardian-shield-k9g9l",
   "appId": "1:224891357938:web:399bcf1f064bdf7bdf9e6b",
@@ -20,4 +20,4 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
-export { app, db };
+export { db };
