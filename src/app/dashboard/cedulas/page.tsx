@@ -55,6 +55,7 @@ type Client = typeof mockClients[0];
 type Equipment = typeof mockEquipments[0];
 type System = typeof mockSystems[0];
 type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo' | 'system';
+type AugmentedCedula = Cedula & { system: string; serial: string; systemColor?: string; };
 
 export default function CedulasPage() {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
@@ -105,13 +106,14 @@ export default function CedulasPage() {
   }, [selectedClientId, clients]);
 
   const filteredAndSortedCedulas = useMemo(() => {
-    const augmentedCedulas = cedulas.map(cedula => {
+    const augmentedCedulas: AugmentedCedula[] = cedulas.map(cedula => {
       const equipment = allEquipments.find(eq => eq.name === cedula.equipment && eq.client === cedula.client);
       const systemName = equipment?.system || '';
       const systemInfo = systems.find(s => s.name === systemName);
       return {
         ...cedula,
         system: systemName,
+        serial: equipment?.serial || 'N/A',
         systemColor: systemInfo?.color,
       };
     });
@@ -376,7 +378,10 @@ export default function CedulasPage() {
                           {cedula.system}
                         </span>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{cedula.equipment}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {cedula.equipment}
+                        <span className="block text-xs text-muted-foreground">({cedula.serial})</span>
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell">{cedula.technician}</TableCell>
                       <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
                        <TableCell className="hidden md:table-cell">
