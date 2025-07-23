@@ -9,15 +9,43 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Activity, Building, HardHat } from 'lucide-react';
+import { Activity, Building, HardHat, Server, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useData } from '@/hooks/use-data-provider';
-import { Button } from '@/components/ui/button';
+import { getClients, getEquipments, getCedulas } from '@/lib/services';
 
 export default function DashboardPage() {
-  const { clients, allEquipments, cedulas, loading, error } = useData();
+    const [counts, setCounts] = useState({ clients: 0, equipments: 0, pendingCedulas: 0 });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  if (loading) {
+    useEffect(() => {
+        async function loadDashboardData() {
+            setLoading(true);
+            try {
+                const [clientsData, equipmentsData, cedulasData] = await Promise.all([
+                    getClients(),
+                    getEquipments(),
+                    getCedulas(),
+                ]);
+
+                const pendingCount = cedulasData.filter((c: any) => c.status === 'Pendiente' || c.status === 'En Progreso').length;
+                
+                setCounts({
+                    clients: clientsData.length,
+                    equipments: equipmentsData.length,
+                    pendingCedulas: pendingCount
+                });
+            } catch (err) {
+                console.error("Failed to load dashboard data:", err);
+                setError("No se pudieron cargar los datos del dashboard. Verifique la conexión.");
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadDashboardData();
+    }, []);
+
+    if (loading) {
       return (
         <div className="grid auto-rows-max items-start gap-4 md:gap-8">
             <div className="grid gap-2">
@@ -56,27 +84,19 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
-             <p className="text-sm text-muted-foreground">Cargando datos del dashboard. Si esto tarda demasiado, verifique su conexión a internet.</p>
         </div>
-      )
-  }
-
-    if (error) {
+      );
+    }
+  
+  if (error) {
     return (
         <div className="flex flex-col items-center justify-center gap-4 text-center h-full mt-10">
+            <AlertTriangle className="h-12 w-12 text-destructive" />
             <h1 className="text-2xl font-bold text-destructive">Error al Cargar</h1>
             <p className="text-muted-foreground max-w-md">{error}</p>
-            <Button variant="outline" onClick={() => window.location.reload()}>
-                Reintentar
-            </Button>
         </div>
-    )
+    );
   }
-
-  const clientCount = clients.length;
-  const equipmentCount = allEquipments.length;
-  const pendingCedulasCount = cedulas.filter((c: any) => c.status === 'Pendiente' || c.status === 'En Progreso').length;
-
 
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
@@ -94,7 +114,7 @@ export default function DashboardPage() {
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{clientCount}</div>
+              <div className="text-2xl font-bold">{counts.clients}</div>
               <p className="text-xs text-muted-foreground">
                 Total de clientes registrados en el sistema.
               </p>
@@ -108,7 +128,7 @@ export default function DashboardPage() {
                 <HardHat className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{equipmentCount}</div>
+                <div className="text-2xl font-bold">{counts.equipments}</div>
                 <p className="text-xs text-muted-foreground">Total de equipos registrados</p>
             </CardContent>
             </Card>
@@ -120,7 +140,7 @@ export default function DashboardPage() {
                 <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{pendingCedulasCount}</div>
+                <div className="text-2xl font-bold">{counts.pendingCedulas}</div>
                 <p className="text-xs text-muted-foreground">Cédulas en progreso o pendientes</p>
             </CardContent>
             </Card>
