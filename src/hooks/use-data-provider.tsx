@@ -41,23 +41,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     setError(null);
     try {
-      // First, check if the database is seeded. We check users collection as a proxy.
-      const initialUsers = await getUsers();
-      if (initialUsers.length === 0) {
-        // If not seeded, we don't proceed to load other data yet.
-        // Seeding will be triggered by an explicit user action (e.g., first admin login).
-        setData(prevData => ({ ...prevData, users: [] }));
-        setLoading(false);
-        return;
-      }
-      
       const [
+        usersData,
         clientsData,
         equipmentsData,
         systemsData,
         protocolsData,
         cedulasData,
       ] = await Promise.all([
+        getUsers(),
         getClients(),
         getEquipments(),
         getSystems(),
@@ -66,10 +58,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       ]);
 
       setData({
+        users: usersData,
         clients: clientsData,
         allEquipments: equipmentsData,
         systems: systemsData,
-        users: initialUsers,
         protocols: protocolsData,
         cedulas: cedulasData,
       });
@@ -87,13 +79,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   
   const seedDatabase = useCallback(async () => {
     setLoading(true);
-    setError("Seeding database...");
+    setError("Sembrando base de datos...");
     const { seeded, error: seedError } = await checkAndSeedDatabase();
     if (seeded) {
       await loadData(); // Reload all data after seeding
     } else if (seedError) {
         setError(seedError)
     }
+    // If not seeded because data exists, the normal loadData already handled it.
     setLoading(false);
   }, [loadData]);
   

@@ -19,7 +19,6 @@ import { Label } from '@/components/ui/label';
 import { 
     ACTIVE_USER_STORAGE_KEY
 } from '@/lib/mock-data';
-import { getUsers, checkAndSeedDatabase } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
