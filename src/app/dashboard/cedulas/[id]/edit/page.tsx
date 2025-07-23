@@ -128,22 +128,24 @@ export default function EditCedulaPage() {
                 setEquipmentId(foundEquipment.id);
                 const foundSystem = systems.find(s => s.name === foundEquipment.system);
                 if (foundSystem) setSystemId(foundSystem.id);
-            }
 
-            if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
-                setProtocolSteps(foundCedula.protocolSteps.map(s => ({
-                    step: s.step,
-                    priority: s.priority,
-                    percentage: Number(s.completion) || 0,
-                    imageUrl: s.imageUrl || '',
-                    notes: s.notes || '',
-                })));
-            } else {
-                 if (foundEquipment) {
+                // ** CRITICAL FIX **
+                // Prioritize steps already saved in the cedula. Only load from the protocol template if the cedula has no steps.
+                if (foundCedula.protocolSteps && foundCedula.protocolSteps.length > 0) {
+                    setProtocolSteps(foundCedula.protocolSteps.map(s => ({
+                        step: s.step,
+                        priority: s.priority,
+                        percentage: Number(s.completion) || 0,
+                        imageUrl: s.imageUrl || '',
+                        notes: s.notes || '',
+                    })));
+                } else {
                     const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
                     const baseProtocolSteps = equipmentProtocol?.steps || [];
                     setProtocolSteps(baseProtocolSteps.map(s => ({...s, percentage: 0, imageUrl: '', notes: ''})));
                 }
+            } else {
+                setProtocolSteps([]); // Clear steps if no equipment is found
             }
             
             dataLoadedRef.current = true;
@@ -610,3 +612,5 @@ export default function EditCedulaPage() {
     </form>
   );
 }
+
+    
