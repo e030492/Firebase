@@ -16,9 +16,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft } from 'lucide-react';
 import { createSystem, System } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 export default function NewSystemPage() {
   const router = useRouter();
+  const { refreshData } = useData();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#3b82f6');
@@ -41,6 +43,7 @@ export default function NewSystemPage() {
         };
 
         await createSystem(newSystem);
+        await refreshData();
         alert('Sistema creado con éxito.');
         router.push('/dashboard/systems');
     } catch (error) {

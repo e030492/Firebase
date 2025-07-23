@@ -28,6 +28,8 @@ import {
 import type { User } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { PermissionsProvider } from '@/hooks/use-permissions';
+import { DataProvider } from '@/hooks/use-data-provider';
+import { DebugWindow } from '@/components/debug-window';
 
 export default function DashboardLayout({
   children,
@@ -64,6 +66,7 @@ export default function DashboardLayout({
 
   return (
     <PermissionsProvider>
+      <DataProvider>
         <SidebarProvider>
           <Sidebar>
             <SidebarHeader>
@@ -118,8 +121,10 @@ export default function DashboardLayout({
               </div>
             </header>
             <main className="flex-1 p-4 md:p-6">{children}</main>
+            <DebugWindow />
           </SidebarInset>
         </SidebarProvider>
+      </DataProvider>
     </PermissionsProvider>
   );
 }

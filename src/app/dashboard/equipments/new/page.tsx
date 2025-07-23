@@ -32,13 +32,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getClients, getSystems, createEquipment, Equipment, Client, System } from '@/lib/services';
+import { createEquipment, Equipment, Client, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useData } from '@/hooks/use-data-provider';
 
 
 export default function NewEquipmentPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { clients, systems, refreshData, loading: dataLoading } = useData();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -54,30 +56,9 @@ export default function NewEquipmentPage() {
   const [model, setModel] = useState('');
   const [type, setType] = useState('');
   const [serial, setSerial] = useState('');
-
-  const [clients, setClients] = useState<Client[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
+  
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
-  const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    async function loadInitialData() {
-        try {
-            const [clientsData, systemsData] = await Promise.all([
-                getClients(),
-                getSystems(),
-            ]);
-            setClients(clientsData);
-            setSystems(systemsData);
-        } catch (error) {
-            console.error("Failed to load data for new equipment page", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-    loadInitialData();
-  }, []);
 
   useEffect(() => {
     if (clientId) {
@@ -130,6 +111,7 @@ export default function NewEquipmentPage() {
         };
 
         await createEquipment(newEquipment);
+        await refreshData();
         alert('Equipo creado con éxito.');
         router.push('/dashboard/equipments');
     } catch (error) {
@@ -139,7 +121,7 @@ export default function NewEquipmentPage() {
     }
   };
   
-  if (loading) {
+  if (dataLoading) {
     return (
         <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
              <div className="flex items-center gap-4">

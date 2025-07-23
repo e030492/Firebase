@@ -17,10 +17,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
-    ACTIVE_USER_STORAGE_KEY,
-    mockUsers,
+    ACTIVE_USER_STORAGE_KEY
 } from '@/lib/mock-data';
-import { User, seedDatabase } from '@/lib/services';
+import { User, getUsers, seedDatabase } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 
@@ -31,24 +30,38 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // Start with mockUsers directly
-  const [users, setUsers] = useState<User[]>(mockUsers as User[]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loginError, setLoginError] = useState('');
 
   // Debug states
-  const [systemStatus, setSystemStatus] = useState<Status>("success");
-  const [statusMessage, setStatusMessage] = useState('Datos de demostración precargados. Listo para iniciar sesión.');
-  const [userCount, setUserCount] = useState(mockUsers.length);
+  const [systemStatus, setSystemStatus] = useState<Status>("loading");
+  const [statusMessage, setStatusMessage] = useState('Obteniendo usuarios desde la base de datos...');
   const [isSeeding, setIsSeeding] = useState(false);
+
+  const loadInitialData = async () => {
+    setSystemStatus("loading");
+    setStatusMessage('Obteniendo usuarios desde la base de datos...');
+    try {
+      const fetchedUsers = await getUsers();
+      setUsers(fetchedUsers);
+      if (fetchedUsers.length === 0) {
+        setSystemStatus("error");
+        setStatusMessage("Error: la colección de usuarios está vacía. La base de datos puede no estar inicializada.");
+      } else {
+        setSystemStatus("success");
+        setStatusMessage(`${fetchedUsers.length} usuarios encontrados. Listo para iniciar sesión.`);
+      }
+    } catch (error) {
+        console.error("Failed to load users:", error);
+        const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+        setSystemStatus("error");
+        setStatusMessage(`Error de conexión: ${errorMessage}`);
+    }
+  };
 
   useEffect(() => {
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-    // On mount, we can ensure the database is seeded without blocking the UI
-    seedDatabase().catch(err => {
-        console.error("Initial seeding failed:", err);
-        setSystemStatus("error");
-        setStatusMessage("Error al conectar con la base de datos en segundo plano.");
-    });
+    loadInitialData();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -69,7 +82,23 @@ export default function LoginPage() {
     }
   };
 
-  const isLoading = isSeeding;
+  const handleSeedDatabase = async () => {
+    setIsSeeding(true);
+    setStatusMessage("Sembrando datos en la base de datos. Esto puede tardar un momento...");
+    try {
+        await seedDatabase();
+        setStatusMessage("¡Base de datos sembrada con éxito! Recargando datos...");
+        await loadInitialData();
+    } catch(e) {
+        const errorMessage = e instanceof Error ? e.message : "Error desconocido";
+        setStatusMessage(`Error durante la siembra: ${errorMessage}`);
+        setSystemStatus('error');
+    } finally {
+        setIsSeeding(false);
+    }
+  }
+
+  const isLoading = systemStatus === "loading" || isSeeding;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -109,7 +138,7 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span>Cargando...</span>
+                    <span>{isSeeding ? 'Sembrando...' : 'Cargando...'}</span>
                   </>
                 ) : 'Acceder'}
               </Button>
@@ -140,9 +169,15 @@ export default function LoginPage() {
                 </div>
                 <Separator />
                 <div className="flex justify-between items-center">
-                    <p className="font-semibold">Usuarios precargados:</p>
-                    <p className="font-mono text-lg">{userCount}</p>
+                    <p className="font-semibold">Usuarios encontrados:</p>
+                    <p className="font-mono text-lg">{users.length}</p>
                 </div>
+                {users.length === 0 && systemStatus === 'error' && (
+                    <Button onClick={handleSeedDatabase} disabled={isSeeding} className="w-full mt-2">
+                        {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                        Inicializar Base de Datos (Primera vez)
+                    </Button>
+                )}
             </CardContent>
         </Card>
 

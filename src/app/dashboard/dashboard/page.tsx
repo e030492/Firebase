@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Card,
@@ -11,46 +10,16 @@ import {
 } from '@/components/ui/card';
 import { Activity, Building, HardHat, Server, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getClients, getEquipments, getCedulas } from '@/lib/services';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useData } from '@/hooks/use-data-provider';
 
 export default function DashboardPage() {
-  const [counts, setCounts] = useState({ clients: 0, equipments: 0, cedulas: 0, pendingCedulas: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    const { cedulas, clients, equipments, loading, error } = useData();
 
-  useEffect(() => {
-    async function loadDashboardData() {
-        setLoading(true);
-        setError(null);
-        try {
-            const [clientsData, equipmentsData, cedulasData] = await Promise.all([
-                getClients(),
-                getEquipments(),
-                getCedulas(),
-            ]);
+    const pendingCedulasCount = cedulas.filter(c => c.status === 'Pendiente' || c.status === 'En Progreso').length;
 
-            const pendingCount = cedulasData.filter((c: any) => c.status === 'Pendiente' || c.status === 'En Progreso').length;
-            
-            setCounts({
-                clients: clientsData.length,
-                equipments: equipmentsData.length,
-                cedulas: cedulasData.length,
-                pendingCedulas: pendingCount
-            });
-        } catch (err) {
-            console.error("Failed to load dashboard data:", err);
-            const errorMessage = err instanceof Error ? err.message : "Error desconocido";
-            setError(`No se pudieron cargar los datos del dashboard. ${errorMessage}`);
-        } finally {
-            setLoading(false);
-        }
-    }
-    loadDashboardData();
-  }, []);
-
-  if (loading) {
+    if (loading) {
       return (
         <div className="grid auto-rows-max items-start gap-4 md:gap-8">
             <div className="grid gap-2">
@@ -74,7 +43,7 @@ export default function DashboardPage() {
             </Card>
         </div>
       )
-  }
+    }
 
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
@@ -92,7 +61,7 @@ export default function DashboardPage() {
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{counts.clients}</div>
+              <div className="text-2xl font-bold">{clients.length}</div>
               <p className="text-xs text-muted-foreground">
                 Total de clientes registrados en el sistema.
               </p>
@@ -106,7 +75,7 @@ export default function DashboardPage() {
                 <HardHat className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{counts.equipments}</div>
+                <div className="text-2xl font-bold">{equipments.length}</div>
                 <p className="text-xs text-muted-foreground">Total de equipos registrados</p>
             </CardContent>
             </Card>
@@ -118,7 +87,7 @@ export default function DashboardPage() {
                 <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{counts.pendingCedulas}</div>
+                <div className="text-2xl font-bold">{pendingCedulasCount}</div>
                 <p className="text-xs text-muted-foreground">Cédulas en progreso o pendientes</p>
             </CardContent>
             </Card>
@@ -136,22 +105,22 @@ export default function DashboardPage() {
                     {error ? <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" /> : <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />}
                     <div>
                         <p className="font-semibold">Mensaje:</p>
-                        <p className="text-muted-foreground break-words">{error || 'Todos los sistemas están operativos. Los datos del dashboard se han cargado correctamente.'}</p>
+                        <p className="text-muted-foreground break-words">{error ? `Error: ${error}` : 'Todos los sistemas están operativos. Los datos del dashboard se han cargado correctamente.'}</p>
                     </div>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex justify-between items-center">
                       <p className="font-semibold">Clientes:</p>
-                      <p className="font-mono text-lg">{counts.clients}</p>
+                      <p className="font-mono text-lg">{clients.length}</p>
                   </div>
                    <div className="flex justify-between items-center">
                       <p className="font-semibold">Equipos:</p>
-                      <p className="font-mono text-lg">{counts.equipments}</p>
+                      <p className="font-mono text-lg">{equipments.length}</p>
                   </div>
                    <div className="flex justify-between items-center">
                       <p className="font-semibold">Cédulas:</p>
-                      <p className="font-mono text-lg">{counts.cedulas}</p>
+                      <p className="font-mono text-lg">{cedulas.length}</p>
                   </div>
                 </div>
             </CardContent>
