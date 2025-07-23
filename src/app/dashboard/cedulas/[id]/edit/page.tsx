@@ -35,6 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getCedula, updateCedula, getClients, getSystems, getEquipments, getUsers, getProtocols, Cedula, Client, Equipment, User, System, Protocol, ProtocolStep } from '@/lib/services';
+import { CardDescription } from '@/components/ui/card';
 
 
 export default function EditCedulaPage() {
@@ -174,6 +175,7 @@ export default function EditCedulaPage() {
     } else {
         setFilteredEquipments([]);
     }
+    // No reseteamos equipmentId aquí para no perder el valor pre-cargado
   }, [clientId, systemId, allEquipments, clients, systems]);
   
   const handleClientChange = (newClientId: string) => {
@@ -248,6 +250,7 @@ export default function EditCedulaPage() {
           completion: Number(step.completion) || 0,
           imageUrl: step.imageUrl || '',
           notes: step.notes || '',
+          percentage: step.percentage || 0,
         })),
     };
       

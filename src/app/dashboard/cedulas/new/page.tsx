@@ -34,6 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { getClients, getSystems, getEquipments, getProtocols, getUsers, createCedula, Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CardDescription } from '@/components/ui/card';
 
 
 export default function NewCedulaPage() {
@@ -132,37 +133,31 @@ export default function NewCedulaPage() {
   useEffect(() => {
     setSerialNumber(''); // Reset serial number when equipment changes
     if (equipmentId) {
-        const equipmentProtocol = protocols.find(p => p.equipmentId === equipmentId);
-        
         const selectedEquipment = allEquipments.find(eq => eq.id === equipmentId);
         if (selectedEquipment) {
             setSerialNumber(selectedEquipment.serial);
-        }
-
-        if (equipmentProtocol) {
-            setProtocolSteps(equipmentProtocol.steps);
-            const initialPercentages = equipmentProtocol.steps.reduce((acc, step) => {
-                acc[step.step] = '0';
-                return acc;
-            }, {} as { [step: string]: string });
-            const initialNotes = equipmentProtocol.steps.reduce((acc, step) => {
-                acc[step.step] = '';
-                return acc;
-            }, {} as { [step: string]: string });
-            setCompletionPercentages(initialPercentages);
-            setImageUrls({});
-            setNotes(initialNotes);
+            const equipmentProtocol = protocols.find(p => p.equipmentId === equipmentId);
+            if (equipmentProtocol) {
+                setProtocolSteps(equipmentProtocol.steps);
+                const initialPercentages = equipmentProtocol.steps.reduce((acc, step) => {
+                    acc[step.step] = '0';
+                    return acc;
+                }, {} as { [step: string]: string });
+                const initialNotes = equipmentProtocol.steps.reduce((acc, step) => {
+                    acc[step.step] = '';
+                    return acc;
+                }, {} as { [step: string]: string });
+                setCompletionPercentages(initialPercentages);
+                setImageUrls({});
+                setNotes(initialNotes);
+            } else {
+                setProtocolSteps([]);
+            }
         } else {
             setProtocolSteps([]);
-            setCompletionPercentages({});
-            setImageUrls({});
-            setNotes({});
         }
     } else {
         setProtocolSteps([]);
-        setCompletionPercentages({});
-        setImageUrls({});
-        setNotes({});
     }
   }, [equipmentId, allEquipments, protocols]);
 
@@ -220,6 +215,7 @@ export default function NewCedulaPage() {
         completion: Number(completionPercentages[step.step]) || 0,
         imageUrl: imageUrls[step.step] || '',
         notes: notes[step.step] || '',
+        percentage: step.percentage || 0,
       })),
     };
 
@@ -230,6 +226,7 @@ export default function NewCedulaPage() {
     } catch (error) {
         console.error("Failed to create cedula:", error);
         alert("Error al crear la cédula.");
+    } finally {
         setIsSaving(false);
     }
   };

@@ -45,6 +45,7 @@ import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getCedulas, getClients, getEquipments, getSystems, deleteCedula, Cedula, Client, Equipment, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CardDescription } from '@/components/ui/card';
 
 type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo' | 'system';
 type AugmentedCedula = Cedula & { system: string; serial: string; systemColor?: string; };

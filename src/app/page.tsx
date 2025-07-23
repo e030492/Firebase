@@ -45,8 +45,15 @@ export default function LoginPage() {
         if (users.length === 0 && email.toLowerCase() === 'admin@escuadra.com' && password === 'admin') {
             setError("Base de datos no inicializada. Sembrando datos...");
             await checkAndSeedDatabase();
-            setError("Base de datos inicializada. Por favor, inicie sesión de nuevo.");
-            setLoading(false);
+            // Refetch users after seeding
+            const seededUsers = await getUsers();
+            const user = seededUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+            if (user) {
+                localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
+                router.push('/dashboard');
+            } else {
+                 setError("Error al iniciar sesión después de sembrar datos. Inténtelo de nuevo.");
+            }
             return;
         }
 

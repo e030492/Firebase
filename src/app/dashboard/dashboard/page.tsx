@@ -12,6 +12,7 @@ import {
 import { Activity, Building, HardHat } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getClients, getEquipments, getCedulas } from '@/lib/services';
+import type { Equipment } from '@/lib/services';
 
 export default function DashboardPage() {
   const [clientCount, setClientCount] = useState(0);
@@ -38,15 +39,16 @@ export default function DashboardPage() {
             setPendingCedulasCount(pendingCount);
 
             const nextDates = equipments
-              .map((e: any) => {
+              .map((e: Equipment) => {
                 if (!e.maintenanceStartDate || !e.maintenancePeriodicity) {
                     return null;
                 }
 
-                const start = new Date(e.maintenanceStartDate + 'T00:00:00');
+                // Ensure the date is parsed correctly, even without timezone info
+                const start = new Date(e.maintenanceStartDate.includes('T') ? e.maintenanceStartDate : e.maintenanceStartDate + 'T00:00:00');
                 if (isNaN(start.getTime())) return null;
 
-                const periods = {
+                const periods: { [key: string]: number } = {
                     'Mensual': 1,
                     'Trimestral': 3,
                     'Semestral': 6,
@@ -64,8 +66,8 @@ export default function DashboardPage() {
                 }
                 return nextDate;
               })
-              .filter((d: any): d is Date => d !== null && !isNaN(d.getTime()))
-              .sort((a: Date, b: Date) => a.getTime() - b.getTime());
+              .filter((d): d is Date => d !== null && !isNaN(d.getTime()))
+              .sort((a, b) => a.getTime() - b.getTime());
 
             if (nextDates.length > 0) {
               setNextMaintenanceDate(nextDates[0].toLocaleDateString('es-ES', {

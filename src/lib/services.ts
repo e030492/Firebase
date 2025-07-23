@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
 import { 
     mockUsers, 
     mockClients, 
@@ -12,18 +12,54 @@ import {
 
 // Interfaces based on mock-data structure
 export type Almacen = { nombre: string; direccion: string };
-export type Client = typeof mockClients[0];
-export type Equipment = typeof mockEquipments[0];
-export type System = typeof mockSystems[0];
-export type User = typeof mockUsers[0];
-export type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; completion: number; imageUrl?: string, notes?: string };
-export type Protocol = { equipmentId: string; steps: ProtocolStep[] };
-export type Cedula = typeof mockCedulas[0];
+export type Client = typeof mockClients[0] & { id: string };
+export type Equipment = typeof mockEquipments[0] & { id: string };
+export type System = typeof mockSystems[0] & { id: string };
+export type User = typeof mockUsers[0] & { id: string };
+export type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; completion: number; imageUrl?: string, notes?: string, percentage?: number };
+export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] };
+export type Cedula = typeof mockCedulas[0] & { id: string };
 
-// Generic function to fetch all documents from a collection
-async function getCollection<T>(collectionName: string): Promise<T[]> {
-  const querySnapshot = await getDocs(collection(db, collectionName));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+
+// --- Caching Singleton ---
+// This simple cache will hold our data in memory after the first fetch
+// to avoid repeated database calls during the user's session.
+class DataCache {
+    private static instance: DataCache;
+    clients: Client[] | null = null;
+    equipments: Equipment[] | null = null;
+    systems: System[] | null = null;
+    users: User[] | null = null;
+    protocols: Protocol[] | null = null;
+    cedulas: Cedula[] | null = null;
+
+    private constructor() {}
+
+    public static getInstance(): DataCache {
+        if (!DataCache.instance) {
+            DataCache.instance = new DataCache();
+        }
+        return DataCache.instance;
+    }
+
+    public invalidate(collectionName: keyof DataCache) {
+        this[collectionName] = null;
+    }
+}
+
+const cache = DataCache.getInstance();
+// --- End Caching Singleton ---
+
+
+// Generic function to fetch all documents from a collection, with caching
+async function getCollection<T extends {id: string}>(collectionName: keyof DataCache): Promise<T[]> {
+  if (cache[collectionName]) {
+    return cache[collectionName] as T[];
+  }
+  const querySnapshot = await getDocs(collection(db, collectionName as string));
+  const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+  (cache as any)[collectionName] = data;
+  return data;
 }
 
 // Generic function to fetch a single document from a collection
@@ -34,48 +70,123 @@ async function getDocument<T>(collectionName: string, id: string): Promise<T | n
 }
 
 // Service functions for each collection
-export const getClients = () => getCollection<Client>('clients');
+export async function getClients(): Promise<Client[]> { return getCollection<Client>('clients'); }
 export const getClient = (id: string) => getDocument<Client>('clients', id);
-export const createClient = (data: Omit<Client, 'id'>) => addDoc(collection(db, 'clients'), data);
-export const updateClient = (id: string, data: Partial<Client>) => updateDoc(doc(db, 'clients', id), data);
-export const deleteClient = (id: string) => deleteDoc(doc(db, 'clients', id));
+export async function createClient(data: Omit<Client, 'id'>) {
+    const res = await addDoc(collection(db, 'clients'), data);
+    cache.invalidate('clients');
+    return res;
+}
+export async function updateClient(id: string, data: Partial<Client>) {
+    const res = await updateDoc(doc(db, 'clients', id), data);
+    cache.invalidate('clients');
+    return res;
+}
+export async function deleteClient(id: string) {
+    const res = await deleteDoc(doc(db, 'clients', id));
+    cache.invalidate('clients');
+    return res;
+}
 
-export const getEquipments = () => getCollection<Equipment>('equipments');
+export async function getEquipments(): Promise<Equipment[]> { return getCollection<Equipment>('equipments'); }
 export const getEquipment = (id: string) => getDocument<Equipment>('equipments', id);
-export const createEquipment = (data: Omit<Equipment, 'id'>) => addDoc(collection(db, 'equipments'), data);
-export const updateEquipment = (id: string, data: Partial<Equipment>) => updateDoc(doc(db, 'equipments', id), data);
-export const deleteEquipment = (id: string) => deleteDoc(doc(db, 'equipments', id));
+export async function createEquipment(data: Omit<Equipment, 'id'>) {
+    const res = await addDoc(collection(db, 'equipments'), data);
+    cache.invalidate('equipments');
+    return res;
+}
+export async function updateEquipment(id: string, data: Partial<Equipment>) {
+    const res = await updateDoc(doc(db, 'equipments', id), data);
+    cache.invalidate('equipments');
+    return res;
+}
+export async function deleteEquipment(id: string) {
+    const res = await deleteDoc(doc(db, 'equipments', id));
+    cache.invalidate('equipments');
+    return res;
+}
 
-export const getSystems = () => getCollection<System>('systems');
+export async function getSystems(): Promise<System[]> { return getCollection<System>('systems'); }
 export const getSystem = (id: string) => getDocument<System>('systems', id);
-export const createSystem = (data: Omit<System, 'id'>) => addDoc(collection(db, 'systems'), data);
-export const updateSystem = (id: string, data: Partial<System>) => updateDoc(doc(db, 'systems', id), data);
-export const deleteSystem = (id: string) => deleteDoc(doc(db, 'systems', id));
+export async function createSystem(data: Omit<System, 'id'>) {
+    const res = await addDoc(collection(db, 'systems'), data);
+    cache.invalidate('systems');
+    return res;
+}
+export async function updateSystem(id: string, data: Partial<System>) {
+    const res = await updateDoc(doc(db, 'systems', id), data);
+    cache.invalidate('systems');
+    return res;
+}
+export async function deleteSystem(id: string) {
+    const res = await deleteDoc(doc(db, 'systems', id));
+    cache.invalidate('systems');
+    return res;
+}
 
-export const getUsers = () => getCollection<User>('users');
+export async function getUsers(): Promise<User[]> { return getCollection<User>('users'); }
 export const getUser = (id: string) => getDocument<User>('users', id);
-export const createUser = (data: Omit<User, 'id'>) => addDoc(collection(db, 'users'), data);
-export const updateUser = (id: string, data: Partial<User>) => updateDoc(doc(db, 'users', id), data);
-export const deleteUser = (id: string) => deleteDoc(doc(db, 'users', id));
+export async function createUser(data: Omit<User, 'id'>) {
+    const res = await addDoc(collection(db, 'users'), data);
+    cache.invalidate('users');
+    return res;
+}
+export async function updateUser(id: string, data: Partial<User>) {
+    const res = await updateDoc(doc(db, 'users', id), data);
+    cache.invalidate('users');
+    return res;
+}
+export async function deleteUser(id: string) {
+    const res = await deleteDoc(doc(db, 'users', id));
+    cache.invalidate('users');
+    return res;
+}
 
-export const getProtocols = () => getCollection<Protocol>('protocols');
+
+export async function getProtocols(): Promise<Protocol[]> { return getCollection<Protocol>('protocols'); }
 export const getProtocol = (id: string) => getDocument<Protocol>('protocols', id);
-export const createProtocol = (data: Omit<Protocol, 'id'>) => addDoc(collection(db, 'protocols'), data);
-export const updateProtocol = (id: string, data: Partial<Protocol>) => updateDoc(doc(db, 'protocols', id), data);
-export const deleteProtocol = (id: string) => deleteDoc(doc(db, 'protocols', id));
+export async function createProtocol(data: Omit<Protocol, 'id'>) {
+    const res = await addDoc(collection(db, 'protocols'), data);
+    cache.invalidate('protocols');
+    return res;
+}
+export async function updateProtocol(id: string, data: Partial<Protocol>) {
+    const res = await updateDoc(doc(db, 'protocols', id), data);
+    cache.invalidate('protocols');
+    return res;
+}
+export async function deleteProtocol(id: string) {
+    const res = await deleteDoc(doc(db, 'protocols', id));
+    cache.invalidate('protocols');
+    return res;
+}
 export const deleteProtocolByEquipmentId = async (equipmentId: string) => {
-    const protocols = await getProtocols();
-    const protocolToDelete = protocols.find(p => p.equipmentId === equipmentId);
-    if(protocolToDelete) {
+    const protocolsQuery = query(collection(db, "protocols"), where("equipmentId", "==", equipmentId));
+    const querySnapshot = await getDocs(protocolsQuery);
+    if (!querySnapshot.empty) {
+        const protocolToDelete = querySnapshot.docs[0];
         await deleteDoc(doc(db, 'protocols', protocolToDelete.id));
+        cache.invalidate('protocols');
     }
 };
 
-export const getCedulas = () => getCollection<Cedula>('cedulas');
+export async function getCedulas(): Promise<Cedula[]> { return getCollection<Cedula>('cedulas'); }
 export const getCedula = (id: string) => getDocument<Cedula>('cedulas', id);
-export const createCedula = (data: Omit<Cedula, 'id'>) => addDoc(collection(db, 'cedulas'), data);
-export const updateCedula = (id: string, data: Partial<Cedula>) => updateDoc(doc(db, 'cedulas', id), data);
-export const deleteCedula = (id: string) => deleteDoc(doc(db, 'cedulas', id));
+export async function createCedula(data: Omit<Cedula, 'id'>) {
+    const res = await addDoc(collection(db, 'cedulas'), data);
+    cache.invalidate('cedulas');
+    return res;
+}
+export async function updateCedula(id: string, data: Partial<Cedula>) {
+    const res = await updateDoc(doc(db, 'cedulas', id), data);
+    cache.invalidate('cedulas');
+    return res;
+}
+export async function deleteCedula(id: string) {
+    const res = await deleteDoc(doc(db, 'cedulas', id));
+    cache.invalidate('cedulas');
+    return res;
+}
 
 
 // Database Seeding Function
@@ -89,18 +200,28 @@ export async function checkAndSeedDatabase() {
         cedulas: mockCedulas
     };
 
-    for (const [collectionName, mockData] of Object.entries(collections)) {
-        const snapshot = await getDocs(collection(db, collectionName));
-        if (snapshot.empty) {
-            console.log(`Seeding ${collectionName}...`);
-            const batch = writeBatch(db);
-            mockData.forEach(item => {
-                const { id, ...data } = item; // Exclude mock ID
-                const docRef = doc(collection(db, collectionName)); // Firestore generates ID
-                batch.set(docRef, data);
-            });
-            await batch.commit();
-            console.log(`${collectionName} seeded successfully.`);
-        }
+    // We only need to check one collection. If users exist, we assume DB is seeded.
+    const usersCollection = collection(db, 'users');
+    const userSnapshot = await getDocs(usersCollection);
+    if (!userSnapshot.empty) {
+        return; // Database is already seeded
     }
+
+    console.log("Database is empty. Seeding with initial data...");
+    
+    for (const [collectionName, mockData] of Object.entries(collections)) {
+        console.log(`Seeding ${collectionName}...`);
+        const batch = writeBatch(db);
+        mockData.forEach(item => {
+            const { id, ...data } = item; // Exclude mock ID from mock data
+            // Let Firestore generate the ID by creating a new doc reference
+            const docRef = doc(collection(db, collectionName));
+            batch.set(docRef, data);
+        });
+        await batch.commit();
+        console.log(`${collectionName} seeded successfully.`);
+    }
+
+    // Invalidate all caches after seeding
+    Object.keys(collections).forEach(key => cache.invalidate(key as keyof DataCache));
 }

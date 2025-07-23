@@ -61,7 +61,6 @@ import { getEquipments, getProtocols, getClients, getSystems, updateProtocol, de
 import { Skeleton } from '@/components/ui/skeleton';
 
 type EditingStepInfo = {
-  equipmentId: string;
   protocolId: string;
   originalStepText: string;
   currentData: ProtocolStep;
@@ -246,6 +245,7 @@ export default function ProtocolsPage() {
         };
         
         const newProtocolDoc = await createProtocol(newProtocolData);
+        // We need the ID from the created doc to add to our local state
         const newProtocol = { id: newProtocolDoc.id, ...newProtocolData };
 
         setProtocols(prevProtocols => [...prevProtocols, newProtocol]);
