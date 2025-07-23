@@ -15,10 +15,22 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { mockUsers } from '@/lib/mock-data';
+import { 
+    mockUsers, 
+    mockClients, 
+    mockSystems, 
+    mockEquipments, 
+    mockProtocols, 
+    mockCedulas,
+    USERS_STORAGE_KEY,
+    CLIENTS_STORAGE_KEY,
+    SYSTEMS_STORAGE_KEY,
+    EQUIPMENTS_STORAGE_KEY,
+    PROTOCOLS_STORAGE_KEY,
+    CEDULAS_STORAGE_KEY,
+    ACTIVE_USER_STORAGE_KEY
+} from '@/lib/mock-data';
 
-const USERS_STORAGE_KEY = 'guardian_shield_users';
-const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
 type User = typeof mockUsers[0];
 
 
@@ -29,10 +41,22 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Ensure mock users are in localStorage on first load
-    if (!localStorage.getItem(USERS_STORAGE_KEY)) {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(mockUsers));
-    }
+    // This effect runs on the client and ensures that all necessary
+    // data stores are initialized in localStorage if they don't exist.
+    // This prevents data loss when a new session is started.
+    const initializeDataStore = (key: string, data: any) => {
+        if (!localStorage.getItem(key)) {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+    };
+
+    initializeDataStore(USERS_STORAGE_KEY, mockUsers);
+    initializeDataStore(CLIENTS_STORAGE_KEY, mockClients);
+    initializeDataStore(SYSTEMS_STORAGE_KEY, mockSystems);
+    initializeDataStore(EQUIPMENTS_STORAGE_KEY, mockEquipments);
+    initializeDataStore(PROTOCOLS_STORAGE_KEY, mockProtocols);
+    initializeDataStore(CEDULAS_STORAGE_KEY, mockCedulas);
+
     // Clear any previous active user on login page load
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
   }, []);

@@ -5,6 +5,7 @@ export const EQUIPMENTS_STORAGE_KEY = 'guardian_shield_equipments';
 export const USERS_STORAGE_KEY = 'guardian_shield_users';
 export const SYSTEMS_STORAGE_KEY = 'guardian_shield_systems';
 export const PROTOCOLS_STORAGE_KEY = 'guardian_shield_protocols';
+export const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
 
 export const mockUsers = [
   {

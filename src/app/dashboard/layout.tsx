@@ -25,8 +25,8 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import type { mockUsers } from '@/lib/mock-data';
+import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 
-const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
 type User = (typeof mockUsers)[0];
 
 
