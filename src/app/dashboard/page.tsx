@@ -11,81 +11,73 @@ import {
 } from '@/components/ui/card';
 import { Activity, Building, HardHat } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getClients, getEquipments, getCedulas } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
+import type { Equipment } from '@/lib/services';
 
 export default function DashboardPage() {
+  const { clients, allEquipments, cedulas, loading } = useData();
+
   const [clientCount, setClientCount] = useState(0);
   const [equipmentCount, setEquipmentCount] = useState(0);
   const [pendingCedulasCount, setPendingCedulasCount] = useState(0);
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadDashboardData() {
-        try {
-            // Load all the data for the dashboard cards.
-            const [clients, equipments, cedulas] = await Promise.all([
-                getClients(),
-                getEquipments(),
-                getCedulas(),
-            ]);
+    if (loading) return;
 
-            setClientCount(clients.length);
-            setEquipmentCount(equipments.length);
-            
-            const pendingCount = cedulas.filter((c: any) => c.status === 'Pendiente' || c.status === 'En Progreso').length;
-            setPendingCedulasCount(pendingCount);
+    try {
+        setClientCount(clients.length);
+        setEquipmentCount(allEquipments.length);
+        
+        const pendingCount = cedulas.filter((c: any) => c.status === 'Pendiente' || c.status === 'En Progreso').length;
+        setPendingCedulasCount(pendingCount);
 
-            const nextDates = equipments
-              .map((e: any) => {
-                if (!e.maintenanceStartDate || !e.maintenancePeriodicity) {
-                    return null;
-                }
-
-                const start = new Date(e.maintenanceStartDate + 'T00:00:00');
-                if (isNaN(start.getTime())) return null;
-
-                const periods = {
-                    'Mensual': 1,
-                    'Trimestral': 3,
-                    'Semestral': 6,
-                    'Anual': 12
-                };
-
-                const monthsToAdd = periods[e.maintenancePeriodicity as keyof typeof periods];
-                if (!monthsToAdd) return null;
-
-                let nextDate = new Date(start);
-                const now = new Date();
-                
-                while (nextDate <= now) {
-                    nextDate.setMonth(nextDate.getMonth() + monthsToAdd);
-                }
-                return nextDate;
-              })
-              .filter((d: any): d is Date => d !== null && !isNaN(d.getTime()))
-              .sort((a: Date, b: Date) => a.getTime() - b.getTime());
-
-            if (nextDates.length > 0) {
-              setNextMaintenanceDate(nextDates[0].toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              }));
-            } else {
-                setNextMaintenanceDate('Sin mantenimientos programados');
+        const nextDates = allEquipments
+          .map((e: Equipment) => {
+            if (!e.maintenanceStartDate || !e.maintenancePeriodicity) {
+                return null;
             }
 
-        } catch (error) {
-            console.error("Failed to load dashboard data:", error);
-            setError("No se pudieron cargar los datos del dashboard. Es posible que haya un problema de conexión o de permisos con la base de datos.");
-        } finally {
-            setLoading(false);
+            const start = new Date(e.maintenanceStartDate + 'T00:00:00');
+            if (isNaN(start.getTime())) return null;
+
+            const periods = {
+                'Mensual': 1,
+                'Trimestral': 3,
+                'Semestral': 6,
+                'Anual': 12
+            };
+
+            const monthsToAdd = periods[e.maintenancePeriodicity as keyof typeof periods];
+            if (!monthsToAdd) return null;
+
+            let nextDate = new Date(start);
+            const now = new Date();
+            
+            while (nextDate <= now) {
+                nextDate.setMonth(nextDate.getMonth() + monthsToAdd);
+            }
+            return nextDate;
+          })
+          .filter((d: any): d is Date => d !== null && !isNaN(d.getTime()))
+          .sort((a: Date, b: Date) => a.getTime() - b.getTime());
+
+        if (nextDates.length > 0) {
+          setNextMaintenanceDate(nextDates[0].toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }));
+        } else {
+            setNextMaintenanceDate('Sin mantenimientos programados');
         }
+
+    } catch (error) {
+        console.error("Failed to process dashboard data:", error);
+        setError("No se pudieron cargar los datos del dashboard.");
     }
-    loadDashboardData();
-  }, []);
+  }, [loading, clients, allEquipments, cedulas]);
 
   if (loading) {
       return (

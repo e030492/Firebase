@@ -20,13 +20,15 @@ import {
     ACTIVE_USER_STORAGE_KEY
 } from '@/lib/mock-data';
 import { getUsers, checkAndSeedDatabase } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { loading: dataLoading, users, seedDatabase } = useData();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     // Clear any previous active user from local storage on login page load
@@ -36,24 +38,16 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setIsLoggingIn(true);
 
     try {
-        const users = await getUsers();
-        
-        // Handle database seeding on first admin login
+        // If the database is empty (checked by the provider), and the user is admin, seed the database.
         if (users.length === 0 && email.toLowerCase() === 'admin@escuadra.com' && password === 'admin') {
             setError("Base de datos no inicializada. Sembrando datos...");
-            await checkAndSeedDatabase();
-            // Refetch users after seeding
-            const seededUsers = await getUsers();
-            const user = seededUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-            if (user) {
-                localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-                router.push('/dashboard');
-            } else {
-                 setError("Error al iniciar sesión después de sembrar datos. Inténtelo de nuevo.");
-            }
+            await seedDatabase(); // This now comes from the context
+            setError("Base de datos sembrada. Por favor, inicie sesión de nuevo.");
+            setIsLoggingIn(false);
+            // We don't log in immediately to ensure the user sees the message and the data is re-fetched.
             return;
         }
 
@@ -69,10 +63,11 @@ export default function LoginPage() {
         console.error("Login error:", err);
         setError("No se pudo verificar el usuario. Verifique su conexión e inténtelo de nuevo.");
     } finally {
-        setLoading(false);
+        setIsLoggingIn(false);
     }
   };
 
+  const isLoading = dataLoading || isLoggingIn;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -90,26 +85,30 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <CardHeader>
               <CardTitle>Iniciar Sesión</CardTitle>
-              <CardDescription>Ingrese sus credenciales para acceder al sistema.</CardDescription>
+              <CardDescription>
+                {dataLoading 
+                    ? "Conectando a la base de datos..." 
+                    : "Ingrese sus credenciales para acceder al sistema."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading} />
+                <Input id="email" type="email" placeholder="usuario@ejemplo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={loading}/>
+                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading}/>
               </div>
               {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
             </CardContent>
             <CardFooter className="flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Verificando...' : 'Acceder'}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Verificando...' : 'Acceder'}
               </Button>
                <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
                 ¿Olvidó su contraseña?
-              </Link>
+               </Link>
             </CardFooter>
           </form>
         </Card>
