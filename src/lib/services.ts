@@ -7,7 +7,13 @@ import {
     mockSystems, 
     mockEquipments, 
     mockProtocols, 
-    mockCedulas 
+    mockCedulas,
+    USERS_STORAGE_KEY,
+    CLIENTS_STORAGE_KEY,
+    SYSTEMS_STORAGE_KEY,
+    EQUIPMENTS_STORAGE_KEY,
+    PROTOCOLS_STORAGE_KEY,
+    CEDULAS_STORAGE_KEY
 } from './mock-data';
 
 // Interfaces based on mock-data structure
@@ -21,27 +27,27 @@ export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] 
 export type Cedula = typeof mockCedulas[0] & { id: string };
 
 const collectionsToSeed = {
-    users: mockUsers,
-    clients: mockClients,
-    systems: mockSystems,
-    equipments: mockEquipments,
-    protocols: mockProtocols,
-    cedulas: mockCedulas
+    users: { data: mockUsers, key: USERS_STORAGE_KEY },
+    clients: { data: mockClients, key: CLIENTS_STORAGE_KEY },
+    systems: { data: mockSystems, key: SYSTEMS_STORAGE_KEY },
+    equipments: { data: mockEquipments, key: EQUIPMENTS_STORAGE_KEY },
+    protocols: { data: mockProtocols, key: PROTOCOLS_STORAGE_KEY },
+    cedulas: { data: mockCedulas, key: CEDULAS_STORAGE_KEY }
 };
 
 export const seedDatabase = async () => {
   console.log("Seeding database...");
   const batch = writeBatch(db);
-  for (const [collectionName, mockData] of Object.entries(collectionsToSeed)) {
+  for (const [collectionName, { data, key }] of Object.entries(collectionsToSeed)) {
       const collectionRef = collection(db, collectionName);
       // Check if collection is empty before seeding
       const snapshot = await getDocs(query(collectionRef));
       if (snapshot.empty) {
         console.log(`Seeding collection: ${collectionName}`);
-        mockData.forEach(item => {
-            const { id, ...data } = item; // Exclude mock ID from data
-            const docRef = doc(collectionRef); // Let Firestore generate the ID
-            batch.set(docRef, data);
+        data.forEach(item => {
+            const { id, ...dataToSave } = item;
+            const docRef = doc(collectionRef);
+            batch.set(docRef, dataToSave);
         });
       } else {
         console.log(`Collection ${collectionName} already has data. Skipping.`);
@@ -51,11 +57,26 @@ export const seedDatabase = async () => {
   console.log("Database seeding process completed.");
 };
 
-
 // Generic function to fetch all documents from a collection
-async function getCollection<T extends {id: string}>(collectionName: string): Promise<T[]> {
-  const querySnapshot = await getDocs(collection(db, collectionName));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+async function getCollection<T extends {id: string}>(collectionName: string, mockData: T[], storageKey: string): Promise<T[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, collectionName));
+    if (querySnapshot.empty) {
+      console.log(`Collection ${collectionName} is empty. Seeding...`);
+      await seedDatabase();
+      const seededSnapshot = await getDocs(collection(db, collectionName));
+      return seededSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    }
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+  } catch (error) {
+    console.warn(`Could not connect to Firestore to get ${collectionName}. Falling back to local mock data. Error:`, error);
+    const localData = localStorage.getItem(storageKey);
+    if (localData) {
+      return JSON.parse(localData);
+    }
+    localStorage.setItem(storageKey, JSON.stringify(mockData));
+    return mockData;
+  }
 }
 
 // Generic function to fetch a single document from a collection
@@ -66,7 +87,7 @@ async function getDocument<T>(collectionName: string, id: string): Promise<T | n
 }
 
 // Service functions for each collection
-export async function getClients(): Promise<Client[]> { return getCollection<Client>('clients'); }
+export async function getClients(): Promise<Client[]> { return getCollection<Client>('clients', mockClients as any, CLIENTS_STORAGE_KEY); }
 export const getClient = (id: string) => getDocument<Client>('clients', id);
 export async function createClient(data: Omit<Client, 'id'>) {
     return await addDoc(collection(db, 'clients'), data);
@@ -78,7 +99,7 @@ export async function deleteClient(id: string) {
     return await deleteDoc(doc(db, 'clients', id));
 }
 
-export async function getEquipments(): Promise<Equipment[]> { return getCollection<Equipment>('equipments'); }
+export async function getEquipments(): Promise<Equipment[]> { return getCollection<Equipment>('equipments', mockEquipments as any, EQUIPMENTS_STORAGE_KEY); }
 export const getEquipment = (id: string) => getDocument<Equipment>('equipments', id);
 export async function createEquipment(data: Omit<Equipment, 'id'>) {
     return await addDoc(collection(db, 'equipments'), data);
@@ -90,7 +111,7 @@ export async function deleteEquipment(id: string) {
     return await deleteDoc(doc(db, 'equipments', id));
 }
 
-export async function getSystems(): Promise<System[]> { return getCollection<System>('systems'); }
+export async function getSystems(): Promise<System[]> { return getCollection<System>('systems', mockSystems as any, SYSTEMS_STORAGE_KEY); }
 export const getSystem = (id: string) => getDocument<System>('systems', id);
 export async function createSystem(data: Omit<System, 'id'>) {
     return await addDoc(collection(db, 'systems'), data);
@@ -102,7 +123,9 @@ export async function deleteSystem(id: string) {
     return await deleteDoc(doc(db, 'systems', id));
 }
 
-export async function getUsers(): Promise<User[]> { return getCollection<User>('users'); }
+export async function getUsers(): Promise<User[]> { 
+    return getCollection<User>('users', mockUsers as any, USERS_STORAGE_KEY);
+}
 export const getUser = (id: string) => getDocument<User>('users', id);
 export async function createUser(data: Omit<User, 'id'>) {
     return await addDoc(collection(db, 'users'), data);
@@ -114,7 +137,7 @@ export async function deleteUser(id: string) {
     return await deleteDoc(doc(db, 'users', id));
 }
 
-export async function getProtocols(): Promise<Protocol[]> { return getCollection<Protocol>('protocols'); }
+export async function getProtocols(): Promise<Protocol[]> { return getCollection<Protocol>('protocols', mockProtocols as any, PROTOCOLS_STORAGE_KEY); }
 export const getProtocol = (id: string) => getDocument<Protocol>('protocols', id);
 export async function createProtocol(data: Omit<Protocol, 'id'>) {
     return await addDoc(collection(db, 'protocols'), data);
@@ -134,7 +157,7 @@ export const deleteProtocolByEquipmentId = async (equipmentId: string) => {
     }
 };
 
-export async function getCedulas(): Promise<Cedula[]> { return getCollection<Cedula>('cedulas'); }
+export async function getCedulas(): Promise<Cedula[]> { return getCollection<Cedula>('cedulas', mockCedulas as any, CEDULAS_STORAGE_KEY); }
 export const getCedula = (id: string) => getDocument<Cedula>('cedulas', id);
 export async function createCedula(data: Omit<Cedula, 'id'>) {
     return await addDoc(collection(db, 'cedulas'), data);
