@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
@@ -16,9 +17,9 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockClients } from '@/lib/mock-data';
+import { useLocalStorageSync } from '@/hooks/use-local-storage-sync';
+import { mockClients, CLIENTS_STORAGE_KEY } from '@/lib/mock-data';
 
-const CLIENTS_STORAGE_KEY = 'guardian_shield_clients';
 type Client = typeof mockClients[0];
 type Almacen = Client['almacenes'][0];
 
@@ -26,6 +27,8 @@ export default function EditClientPage() {
   const params = useParams();
   const router = useRouter();
   const clientId = params.id as string;
+
+  const [clients, setClients] = useLocalStorageSync<Client[]>(CLIENTS_STORAGE_KEY, mockClients);
 
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
@@ -35,9 +38,7 @@ export default function EditClientPage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (clientId) {
-      const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-      const clients: Client[] = storedClients ? JSON.parse(storedClients) : [];
+    if (clientId && clients.length > 0) {
       const foundClient = clients.find(c => c.id === clientId);
 
       if (foundClient) {
@@ -58,7 +59,7 @@ export default function EditClientPage() {
       }
       setLoading(false);
     }
-  }, [clientId]);
+  }, [clientId, clients]);
 
   const handleAlmacenChange = (index: number, field: keyof Almacen, value: string) => {
     const newAlmacenes = [...almacenes];
@@ -68,26 +69,24 @@ export default function EditClientPage() {
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    let clients: Client[] = storedClients ? JSON.parse(storedClients) : [];
-
+    
     // Filter out empty warehouses before saving
-    const almacenesToSave = almacenes.filter(a => a.nombre.trim() !== '' && a.direccion.trim() !== '');
+    const almacenesToSave = almacenes.filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '');
 
-    const updatedClients = clients.map(c => {
-      if (c.id === clientId) {
-        return {
-          ...c,
-          name,
-          responsable,
-          direccion,
-          almacenes: almacenesToSave,
-        };
-      }
-      return c;
-    });
-
-    localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(updatedClients));
+    setClients(prevClients => 
+      prevClients.map(c => {
+        if (c.id === clientId) {
+          return {
+            ...c,
+            name,
+            responsable,
+            direccion,
+            almacenes: almacenesToSave,
+          };
+        }
+        return c;
+      })
+    );
     alert('Cliente actualizado con éxito.');
     router.push('/dashboard/clients');
   }

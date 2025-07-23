@@ -205,20 +205,20 @@ export const mockProtocols = [
   {
     equipmentId: '1', // Cámara Domo PTZ
     steps: [
-      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, percentage: 10, imageUrl: 'https://placehold.co/400x300.png' },
-      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, percentage: 25, imageUrl: '' },
-      { step: 'Comprobar la nitidez de la imagen y el enfoque automático.', priority: 'media' as const, percentage: 20, imageUrl: '' },
-      { step: 'Asegurar que la conexión de red y alimentación esté firme.', priority: 'baja' as const, percentage: 15, imageUrl: '' },
-      { step: 'Actualizar firmware si hay una nueva versión disponible.', priority: 'media' as const, percentage: 30, imageUrl: 'https://placehold.co/400x300.png' },
+      { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, percentage: 10 },
+      { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, percentage: 25 },
+      { step: 'Comprobar la nitidez de la imagen y el enfoque automático.', priority: 'media' as const, percentage: 20 },
+      { step: 'Asegurar que la conexión de red y alimentación esté firme.', priority: 'baja' as const, percentage: 15 },
+      { step: 'Actualizar firmware si hay una nueva versión disponible.', priority: 'media' as const, percentage: 30 },
     ]
   },
   {
     equipmentId: '2', // Lector de Tarjetas RFID
     steps: [
-        { step: 'Limpiar la superficie del lector con un paño suave.', priority: 'baja' as const, percentage: 20, imageUrl: '' },
-        { step: 'Probar la lectura con varias tarjetas de prueba.', priority: 'alta' as const, percentage: 40, imageUrl: '' },
-        { step: 'Verificar que los LEDs indicadores (acceso concedido/denegado) funcionen.', priority: 'media' as const, percentage: 30, imageUrl: '' },
-        { step: 'Inspeccionar el cableado por posibles daños.', priority: 'baja' as const, percentage: 10, imageUrl: '' },
+        { step: 'Limpiar la superficie del lector con un paño suave.', priority: 'baja' as const, percentage: 20 },
+        { step: 'Probar la lectura con varias tarjetas de prueba.', priority: 'alta' as const, percentage: 40 },
+        { step: 'Verificar que los LEDs indicadores (acceso concedido/denegado) funcionen.', priority: 'media' as const, percentage: 30 },
+        { step: 'Inspeccionar el cableado por posibles daños.', priority: 'baja' as const, percentage: 10 },
     ]
   }
 ];
@@ -253,7 +253,13 @@ export const mockCedulas = [
     creationDate: '2024-07-18T14:00:00',
     status: 'Completada' as const,
     description: 'Cambio de batería y limpieza de lector.',
-    protocolSteps: [],
+    protocolSteps: (mockProtocols.find(p => p.equipmentId === '2')?.steps || []).map(step => ({
+        step: step.step,
+        priority: step.priority,
+        completion: 100,
+        imageUrl: 'https://placehold.co/400x300.png',
+        notes: 'Protocolo completado sin incidencias.',
+    })),
     semaforo: 'Verde' as const,
   },
   {
