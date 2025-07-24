@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 export default function DashboardRedirectPage() {
     const router = useRouter();
     useEffect(() => {
-        router.replace('/dashboard/users');
+        router.replace('/dashboard/dashboard');
     }, [router]);
 
     return (

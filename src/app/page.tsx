@@ -36,7 +36,7 @@ export default function LoginPage() {
       const user = await loginUser(email, password);
 
       if (user) {
-        router.push('/dashboard/users');
+        router.push('/dashboard/dashboard');
       } else {
         setError('Usuario o contraseña incorrectos.');
       }
