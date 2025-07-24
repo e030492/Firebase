@@ -44,6 +44,7 @@ import { Terminal, Loader2, Save, ArrowLeft } from 'lucide-react';
 import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
+import { Separator } from '@/components/ui/separator';
 
 
 type State = {
@@ -103,6 +104,10 @@ function ProtocolGenerator() {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentDescription, setEquipmentDescription] = useState('');
+  const [equipmentAlias, setEquipmentAlias] = useState('');
+  const [equipmentModel, setEquipmentModel] = useState('');
+  const [equipmentSerial, setEquipmentSerial] = useState('');
+
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   const [isModificationMode, setIsModificationMode] = useState(false);
   
@@ -123,6 +128,9 @@ function ProtocolGenerator() {
             setSelectedEquipmentId(equipment.id);
             setEquipmentName(equipment.name);
             setEquipmentDescription(equipment.description);
+            setEquipmentAlias(equipment.alias || '');
+            setEquipmentModel(equipment.model);
+            setEquipmentSerial(equipment.serial);
         }
     }
   }, [searchParams, allEquipments, clients, systems, loading]);
@@ -171,9 +179,15 @@ function ProtocolGenerator() {
     if (selected) {
       setEquipmentName(selected.name);
       setEquipmentDescription(selected.description);
+      setEquipmentAlias(selected.alias || '');
+      setEquipmentModel(selected.model);
+      setEquipmentSerial(selected.serial);
     } else {
       setEquipmentName('');
       setEquipmentDescription('');
+      setEquipmentAlias('');
+      setEquipmentModel('');
+      setEquipmentSerial('');
     }
   };
 
@@ -334,6 +348,25 @@ function ProtocolGenerator() {
                  </Select>
                </div>
             </div>
+            {isModificationMode && (
+                <>
+                <Separator/>
+                <div className="grid md:grid-cols-3 gap-4">
+                     <div className="grid gap-3">
+                         <Label>Alias</Label>
+                         <Input value={equipmentAlias} readOnly />
+                     </div>
+                     <div className="grid gap-3">
+                         <Label>Modelo</Label>
+                         <Input value={equipmentModel} readOnly />
+                     </div>
+                     <div className="grid gap-3">
+                         <Label>No. Serie</Label>
+                         <Input value={equipmentSerial} readOnly />
+                     </div>
+                </div>
+                </>
+            )}
             {/* Manual input */}
             <div className="grid gap-3">
               <Label htmlFor="equipmentName">Nombre del Equipo</Label>
@@ -344,7 +377,7 @@ function ProtocolGenerator() {
                 onChange={e => setEquipmentName(e.target.value)}
                 placeholder="Ej. Cámara IP Domo PTZ"
                 required
-                readOnly={isModificationMode}
+                readOnly={isModificationMode || !!selectedEquipmentId}
               />
             </div>
             <div className="grid gap-3">
@@ -357,7 +390,7 @@ function ProtocolGenerator() {
                 placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
                 required
                 className="min-h-32"
-                readOnly={isModificationMode}
+                readOnly={isModificationMode || !!selectedEquipmentId}
               />
             </div>
           </CardContent>
