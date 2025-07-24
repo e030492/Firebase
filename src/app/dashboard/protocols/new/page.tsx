@@ -41,11 +41,21 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Copy } from 'lucide-react';
 import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 type State = {
@@ -113,6 +123,8 @@ function ProtocolGenerator() {
 
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   const [isModificationMode, setIsModificationMode] = useState(false);
+  
+  const [protocolToCopy, setProtocolToCopy] = useState<Protocol | null>(null);
   
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
@@ -183,22 +195,39 @@ function ProtocolGenerator() {
   };
 
   const handleEquipmentChange = (equipmentId: string) => {
-    setSelectedEquipmentId(equipmentId);
     const selected = allEquipments.find(e => e.id === equipmentId);
-    if (selected) {
-      setEquipmentName(selected.name);
-      setEquipmentDescription(selected.description);
-      setEquipmentAlias(selected.alias || '');
-      setEquipmentModel(selected.model);
-      setEquipmentSerial(selected.serial);
-      setEquipmentImageUrl(selected.imageUrl || '');
-    } else {
+    if (!selected) {
       setEquipmentName('');
       setEquipmentDescription('');
       setEquipmentAlias('');
       setEquipmentModel('');
       setEquipmentSerial('');
       setEquipmentImageUrl('');
+      setSelectedEquipmentId('');
+      return;
+    }
+    
+    setSelectedEquipmentId(equipmentId);
+    setEquipmentName(selected.name);
+    setEquipmentDescription(selected.description);
+    setEquipmentAlias(selected.alias || '');
+    setEquipmentModel(selected.model);
+    setEquipmentSerial(selected.serial);
+    setEquipmentImageUrl(selected.imageUrl || '');
+    
+    // Check if an identical equipment already has a protocol
+    const existingProtocol = protocols.find(p => p.equipmentId === equipmentId);
+    if (existingProtocol) return; // Don't offer to copy if it already has one
+
+    const similarEquipment = allEquipments.find(
+      eq => eq.id !== selected.id && eq.name === selected.name && eq.type === selected.type
+    );
+    
+    if (similarEquipment) {
+        const protocolOfSimilar = protocols.find(p => p.equipmentId === similarEquipment.id);
+        if (protocolOfSimilar) {
+            setProtocolToCopy(protocolOfSimilar);
+        }
     }
   };
 
@@ -273,6 +302,25 @@ function ProtocolGenerator() {
     router.push('/dashboard/protocols');
   };
   
+  const handleCopyProtocol = async () => {
+    if (!protocolToCopy || !selectedEquipmentId) return;
+
+    const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
+        equipmentId: selectedEquipmentId,
+        steps: protocolToCopy.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
+    };
+    
+    try {
+        await createProtocol(newProtocolForCurrentEquipment);
+        alert('Protocolo copiado y guardado con éxito.');
+        setProtocolToCopy(null); // Close the dialog
+        router.push('/dashboard/protocols');
+    } catch (error) {
+        console.error("Failed to copy protocol:", error);
+        alert("Error al copiar el protocolo.");
+    }
+  };
+
   // Badge variant for priority
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
@@ -291,6 +339,7 @@ function ProtocolGenerator() {
 
   // JSX
   return (
+    <>
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
       {/* Page Header */}
       <div className="flex items-center gap-4">
@@ -491,6 +540,28 @@ function ProtocolGenerator() {
         </Card>
       )}
     </div>
+
+    <AlertDialog open={!!protocolToCopy} onOpenChange={() => setProtocolToCopy(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <div className="flex items-center gap-2">
+                    <Copy className="h-6 w-6 text-primary" />
+                    <AlertDialogTitle>Protocolo Encontrado</AlertDialogTitle>
+                </div>
+                <AlertDialogDescription>
+                    Hemos encontrado un protocolo existente para un equipo con el mismo nombre y tipo.
+                    ¿Desea copiar este protocolo al equipo actual? Esto le ahorrará tiempo.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setProtocolToCopy(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleCopyProtocol}>
+                    Sí, Copiar Protocolo
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
@@ -535,3 +606,5 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
+
+    
