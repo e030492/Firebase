@@ -41,8 +41,9 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Terminal, Loader2, Save, ArrowLeft } from 'lucide-react';
-import { getEquipments, getClients, getSystems, getProtocols, createProtocol, updateProtocol, Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
+import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useData } from '@/hooks/use-data-provider';
 
 
 type State = {
@@ -90,16 +91,12 @@ function SubmitButton() {
 function ProtocolGenerator() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { clients, systems, equipments: allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
 
   // Data states
-  const [clients, setClients] = useState<Client[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
-  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
-  const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
-  const [loading, setLoading] = useState(true);
-
+  
   // Selection states
   const [clientId, setClientId] = useState('');
   const [systemId, setSystemId] = useState('');
@@ -109,29 +106,6 @@ function ProtocolGenerator() {
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   const [isModificationMode, setIsModificationMode] = useState(false);
   
-  // Load initial data from Firebase
-  useEffect(() => {
-    async function loadData() {
-        try {
-            const [clientsData, systemsData, equipmentsData, protocolsData] = await Promise.all([
-                getClients(),
-                getSystems(),
-                getEquipments(),
-                getProtocols()
-            ]);
-            setClients(clientsData);
-            setSystems(systemsData);
-            setAllEquipments(equipmentsData);
-            setProtocols(protocolsData);
-        } catch (error) {
-            console.error("Failed to load data for protocol generator:", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-    loadData();
-  }, []);
-
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
     if (loading) return; // Wait for data to load

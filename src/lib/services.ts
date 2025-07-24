@@ -1,8 +1,8 @@
 
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, writeBatch, getDoc, query, where } from 'firebase/firestore';
+import { db } from './firebase';
 import { 
-    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
-    USERS_STORAGE_KEY, CLIENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY,
-    EQUIPMENTS_STORAGE_KEY, PROTOCOLS_STORAGE_KEY, CEDULAS_STORAGE_KEY
+    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas
 } from './mock-data';
 
 // Interfaces based on mock-data structure
@@ -15,129 +15,137 @@ export type ProtocolStep = typeof mockProtocols[0]['steps'][0];
 export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] };
 export type Cedula = typeof mockCedulas[0] & { id: string };
 
-const collectionsToSeed = {
-    [USERS_STORAGE_KEY]: mockUsers,
-    [CLIENTS_STORAGE_KEY]: mockClients,
-    [SYSTEMS_STORAGE_KEY]: mockSystems,
-    [EQUIPMENTS_STORAGE_KEY]: mockEquipments,
-    [PROTOCOLS_STORAGE_KEY]: mockProtocols,
-    [CEDULAS_STORAGE_KEY]: mockCedulas,
+const collections = {
+    users: 'users',
+    clients: 'clients',
+    systems: 'systems',
+    equipments: 'equipments',
+    protocols: 'protocols',
+    cedulas: 'cedulas',
 };
 
-// --- LocalStorage Seeding ---
-export const seedDatabase = (updateMessage: (message: string) => void) => {
-  return new Promise<void>((resolve) => {
-    updateMessage("Starting local database seed process...");
-    for (const [key, data] of Object.entries(collectionsToSeed)) {
-        updateMessage(`Seeding local collection: ${key}...`);
-        localStorage.setItem(key, JSON.stringify(data));
-        updateMessage(`Successfully seeded ${key}.`);
-    }
-    updateMessage("Local database seeding process fully completed.");
-    resolve();
-  });
+const mockDataMap = {
+    [collections.users]: mockUsers,
+    [collections.clients]: mockClients,
+    [collections.systems]: mockSystems,
+    [collections.equipments]: mockEquipments,
+    [collections.protocols]: mockProtocols,
+    [collections.cedulas]: mockCedulas,
 };
 
-// --- Generic LocalStorage Service Functions ---
 
-function getCollection<T>(collectionKey: string): T[] {
-    if (typeof window === 'undefined') return [];
-    try {
-        const data = localStorage.getItem(collectionKey);
-        return data ? JSON.parse(data) : [];
-    } catch (error) {
-        console.error(`Error getting collection ${collectionKey} from localStorage:`, error);
-        return [];
+// --- Firebase Seeding ---
+export const seedDatabase = async (updateMessage: (message: string) => void) => {
+    updateMessage("Checking Firestore database status...");
+    const usersCollectionRef = collection(db, collections.users);
+    const snapshot = await getDocs(usersCollectionRef);
+
+    if (snapshot.empty) {
+        updateMessage("Firestore is empty. Seeding database...");
+        const batch = writeBatch(db);
+
+        for (const [collectionName, data] of Object.entries(mockDataMap)) {
+            updateMessage(`Preparing to seed collection: ${collectionName}...`);
+            data.forEach((item) => {
+                const docRef = doc(db, collectionName, item.id);
+                batch.set(docRef, item);
+            });
+            updateMessage(`Collection ${collectionName} added to batch.`);
+        }
+        
+        await batch.commit();
+        updateMessage("Firestore database seeding process fully completed.");
+    } else {
+        updateMessage("Firestore database already contains data.");
     }
+};
+
+// --- Generic Firestore Service Functions ---
+async function getCollection<T>(collectionName: string): Promise<T[]> {
+    const collectionRef = collection(db, collectionName);
+    const snapshot = await getDocs(collectionRef);
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as T));
 }
 
-function getDocumentById<T extends {id: string}>(collectionKey: string, id: string): T | null {
-    const collection = getCollection<T>(collectionKey);
-    return collection.find(item => item.id === id) || null;
+async function getDocumentById<T extends {id: string}>(collectionName: string, id: string): Promise<T | null> {
+    const docRef = doc(db, collectionName, id);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? ({ ...docSnap.data(), id: docSnap.id } as T) : null;
 }
 
-function createDocument<T>(collectionKey: string, data: Omit<T, 'id'>): T {
-    const collection = getCollection<T>(collectionKey);
-    const newId = String(Date.now() + Math.random());
-    const newItem = { ...data, id: newId } as T;
-    localStorage.setItem(collectionKey, JSON.stringify([...collection, newItem]));
-    return newItem;
+async function createDocument<T>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
+    const docRef = await addDoc(collection(db, collectionName), data);
+    return { ...data, id: docRef.id } as T;
 }
 
-function updateDocument<T extends {id: string}>(collectionKey: string, id: string, data: Partial<Omit<T, 'id'>>): T | null {
-    const collection = getCollection<T>(collectionKey);
-    const index = collection.findIndex(item => item.id === id);
-    if (index > -1) {
-        const updatedItem = { ...collection[index], ...data };
-        collection[index] = updatedItem;
-        localStorage.setItem(collectionKey, JSON.stringify(collection));
-        return updatedItem;
-    }
-    return null;
+async function updateDocument<T extends {id: string}>(collectionName: string, id: string, data: Partial<Omit<T, 'id'>>): Promise<T | null> {
+    const docRef = doc(db, collectionName, id);
+    await setDoc(docRef, data, { merge: true });
+    return getDocumentById<T>(collectionName, id);
 }
 
-function deleteDocument(collectionKey: string, id: string): boolean {
-    let collection = getCollection<{id: string}>(collectionKey);
-    const initialLength = collection.length;
-    collection = collection.filter(item => item.id !== id);
-    if (collection.length < initialLength) {
-        localStorage.setItem(collectionKey, JSON.stringify(collection));
-        return true;
-    }
-    return false;
+async function deleteDocument(collectionName: string, id: string): Promise<boolean> {
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
+    return true;
 }
 
 // --- Specific Service Functions ---
 
 // USERS
-export const getUsers = (): User[] => getCollection<User>(USERS_STORAGE_KEY);
-export const getUser = (id: string): User | null => getDocumentById<User>(USERS_STORAGE_KEY, id);
-export const createUser = (data: Omit<User, 'id'>): User => createDocument<User>(USERS_STORAGE_KEY, data);
-export const updateUser = (id: string, data: Partial<User>): User | null => updateDocument<User>(USERS_STORAGE_KEY, id, data);
-export const deleteUser = (id: string): boolean => deleteDocument(USERS_STORAGE_KEY, id);
+export const getUsers = (): Promise<User[]> => getCollection<User>(collections.users);
+export const getUser = (id: string): Promise<User | null> => getDocumentById<User>(collections.users, id);
+export const createUser = (data: Omit<User, 'id'>): Promise<User> => createDocument<User>(collections.users, data);
+export const updateUser = (id: string, data: Partial<User>): Promise<User | null> => updateDocument<User>(collections.users, id, data);
+export const deleteUser = (id: string): Promise<boolean> => deleteDocument(collections.users, id);
 
 // CLIENTS
-export const getClients = (): Client[] => getCollection<Client>(CLIENTS_STORAGE_KEY);
-export const getClient = (id: string): Client | null => getDocumentById<Client>(CLIENTS_STORAGE_KEY, id);
-export const createClient = (data: Omit<Client, 'id'>): Client => createDocument<Client>(CLIENTS_STORAGE_KEY, data);
-export const updateClient = (id: string, data: Partial<Client>): Client | null => updateDocument<Client>(CLIENTS_STORAGE_KEY, id, data);
-export const deleteClient = (id: string): boolean => deleteDocument(CLIENTS_STORAGE_KEY, id);
+export const getClients = (): Promise<Client[]> => getCollection<Client>(collections.clients);
+export const getClient = (id: string): Promise<Client | null> => getDocumentById<Client>(collections.clients, id);
+export const createClient = (data: Omit<Client, 'id'>): Promise<Client> => createDocument<Client>(collections.clients, data);
+export const updateClient = (id: string, data: Partial<Client>): Promise<Client | null> => updateDocument<Client>(collections.clients, id, data);
+export const deleteClient = (id: string): Promise<boolean> => deleteDocument(collections.clients, id);
 
 // EQUIPMENTS
-export const getEquipments = (): Equipment[] => getCollection<Equipment>(EQUIPMENTS_STORAGE_KEY);
-export const getEquipment = (id: string): Equipment | null => getDocumentById<Equipment>(EQUIPMENTS_STORAGE_KEY, id);
-export const createEquipment = (data: Omit<Equipment, 'id'>): Equipment => createDocument<Equipment>(EQUIPMENTS_STORAGE_KEY, data);
-export const updateEquipment = (id: string, data: Partial<Equipment>): Equipment | null => updateDocument<Equipment>(EQUIPMENTS_STORAGE_KEY, id, data);
-export const deleteEquipment = (id: string): boolean => deleteDocument(EQUIPMENTS_STORAGE_KEY, id);
+export const getEquipments = (): Promise<Equipment[]> => getCollection<Equipment>(collections.equipments);
+export const getEquipment = (id: string): Promise<Equipment | null> => getDocumentById<Equipment>(collections.equipments, id);
+export const createEquipment = (data: Omit<Equipment, 'id'>): Promise<Equipment> => createDocument<Equipment>(collections.equipments, data);
+export const updateEquipment = (id: string, data: Partial<Equipment>): Promise<Equipment | null> => updateDocument<Equipment>(collections.equipments, id, data);
+export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
 // SYSTEMS
-export const getSystems = (): System[] => getCollection<System>(SYSTEMS_STORAGE_KEY);
-export const getSystem = (id: string): System | null => getDocumentById<System>(SYSTEMS_STORAGE_KEY, id);
-export const createSystem = (data: Omit<System, 'id'>): System => createDocument<System>(SYSTEMS_STORAGE_KEY, data);
-export const updateSystem = (id: string, data: Partial<System>): System | null => updateDocument<System>(SYSTEMS_STORAGE_KEY, id, data);
-export const deleteSystem = (id: string): boolean => deleteDocument(SYSTEMS_STORAGE_KEY, id);
+export const getSystems = (): Promise<System[]> => getCollection<System>(collections.systems);
+export const getSystem = (id: string): Promise<System | null> => getDocumentById<System>(collections.systems, id);
+export const createSystem = (data: Omit<System, 'id'>): Promise<System> => createDocument<System>(collections.systems, data);
+export const updateSystem = (id: string, data: Partial<System>): Promise<System | null> => updateDocument<System>(collections.systems, id, data);
+export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(collections.systems, id);
 
 // PROTOCOLS
-export const getProtocols = (): Protocol[] => getCollection<Protocol>(PROTOCOLS_STORAGE_KEY);
-export const getProtocol = (id: string): Protocol | null => getDocumentById<Protocol>(PROTOCOLS_STORAGE_KEY, id);
-export const createProtocol = (data: Omit<Protocol, 'id'>): Protocol => createDocument<Protocol>(PROTOCOLS_STORAGE_KEY, data);
-export const updateProtocol = (id: string, data: Partial<Protocol>): Protocol | null => updateDocument<Protocol>(PROTOCOLS_STORAGE_KEY, id, data);
-export const deleteProtocol = (id: string): boolean => deleteDocument(PROTOCOLS_STORAGE_KEY, id);
+export const getProtocols = (): Promise<Protocol[]> => getCollection<Protocol>(collections.protocols);
+export const getProtocol = (id: string): Promise<Protocol | null> => getDocumentById<Protocol>(collections.protocols, id);
+export const createProtocol = (data: Omit<Protocol, 'id'>): Promise<Protocol> => createDocument<Protocol>(collections.protocols, data);
+export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol | null> => updateDocument<Protocol>(collections.protocols, id, data);
+export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
 
-export function deleteProtocolByEquipmentId(equipmentId: string): boolean {
-    let protocols = getCollection<Protocol>(PROTOCOLS_STORAGE_KEY);
-    const initialLength = protocols.length;
-    protocols = protocols.filter(p => p.equipmentId !== equipmentId);
-    if (protocols.length < initialLength) {
-        localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(protocols));
-        return true;
+export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<boolean> {
+    const q = query(collection(db, collections.protocols), where("equipmentId", "==", equipmentId));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+        return false;
     }
-    return false;
+    
+    const batch = writeBatch(db);
+    querySnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+    return true;
 }
 
 // CEDULAS
-export const getCedulas = (): Cedula[] => getCollection<Cedula>(CEDULAS_STORAGE_KEY);
-export const getCedula = (id: string): Cedula | null => getDocumentById<Cedula>(CEDULAS_STORAGE_KEY, id);
-export const createCedula = (data: Omit<Cedula, 'id'>): Cedula => createDocument<Cedula>(CEDULAS_STORAGE_KEY, data);
-export const updateCedula = (id: string, data: Partial<Cedula>): Cedula | null => updateDocument<Cedula>(CEDULAS_STORAGE_KEY, id, data);
-export const deleteCedula = (id: string): boolean => deleteDocument(CEDULAS_STORAGE_KEY, id);
+export const getCedulas = (): Promise<Cedula[]> => getCollection<Cedula>(collections.cedulas);
+export const getCedula = (id: string): Promise<Cedula | null> => getDocumentById<Cedula>(collections.cedulas, id);
+export const createCedula = (data: Omit<Cedula, 'id'>): Promise<Cedula> => createDocument<Cedula>(collections.cedulas, data);
+export const updateCedula = (id: string, data: Partial<Cedula>): Promise<Cedula | null> => updateDocument<Cedula>(collections.cedulas, id, data);
+export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

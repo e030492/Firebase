@@ -29,13 +29,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const { isDebugWindowVisible } = useData();
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      const allUsers = getUsers();
+      const allUsers = await getUsers();
       const user = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
 
       if (user) {

@@ -34,7 +34,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
-import { getUser, updateUser, User } from '@/lib/services';
+import { User } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -102,6 +103,7 @@ export default function EditUserPage() {
   const router = useRouter();
   const userId = params.id as string;
   const { can } = usePermissions();
+  const { users, updateUser, loading: dataLoading } = useData();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -115,28 +117,20 @@ export default function EditUserPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (userId) {
-        const fetchUser = async () => {
-            try {
-                const foundUser = await getUser(userId);
-                if (foundUser) {
-                    setName(foundUser.name);
-                    setEmail(foundUser.email);
-                    setRole(roleToValueMap[foundUser.role] || '');
-                    setPermissions(foundUser.permissions || initialPermissions);
-                } else {
-                    setNotFound(true);
-                }
-            } catch (error) {
-                console.error("Failed to fetch user:", error);
-                setNotFound(true);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchUser();
+    if (!dataLoading && userId) {
+        const foundUser = users.find(u => u.id === userId);
+        if (foundUser) {
+            setName(foundUser.name);
+            setEmail(foundUser.email);
+            setRole(roleToValueMap[foundUser.role] || '');
+            setPermissions(foundUser.permissions || initialPermissions);
+            setLoading(false);
+        } else {
+            setNotFound(true);
+            setLoading(false);
+        }
     }
-  }, [userId]);
+  }, [userId, users, dataLoading]);
 
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
     setPermissions(prev => ({
@@ -187,7 +181,7 @@ export default function EditUserPage() {
 
   const canUpdateUsers = can('update', 'users');
 
-  if (loading) {
+  if (loading || dataLoading) {
     return (
        <div className="mx-auto grid max-w-4xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">

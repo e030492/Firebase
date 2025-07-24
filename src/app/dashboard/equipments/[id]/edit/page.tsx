@@ -33,7 +33,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getEquipment, getClients, getSystems, updateEquipment, Equipment, Client, System } from '@/lib/services';
+import { Equipment, Client, System } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 
 export default function EditEquipmentPage() {
@@ -41,6 +42,7 @@ export default function EditEquipmentPage() {
   const router = useRouter();
   const equipmentId = params.id as string;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { clients, systems, equipments, updateEquipment, loading: dataLoading } = useData();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -57,8 +59,6 @@ export default function EditEquipmentPage() {
   const [type, setType] = useState('');
   const [serial, setSerial] = useState('');
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
   
   const [loading, setLoading] = useState(true);
@@ -66,56 +66,42 @@ export default function EditEquipmentPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    async function loadData() {
-        if (!equipmentId) return;
-        try {
-            const [equipmentData, clientsData, systemsData] = await Promise.all([
-                getEquipment(equipmentId),
-                getClients(),
-                getSystems(),
-            ]);
-
-            setClients(clientsData);
-            setSystems(systemsData);
+    if (!dataLoading && equipmentId) {
+        const equipmentData = equipments.find(e => e.id === equipmentId);
+        
+        if (equipmentData) {
+            setName(equipmentData.name);
+            setDescription(equipmentData.description);
+            setBrand(equipmentData.brand || '');
+            setModel(equipmentData.model || '');
+            setType(equipmentData.type || '');
+            setSerial(equipmentData.serial || '');
+            setLocation(equipmentData.location);
+            setStatus(equipmentData.status);
+            setImageUrl(equipmentData.imageUrl || null);
             
-            if (equipmentData) {
-                setName(equipmentData.name);
-                setDescription(equipmentData.description);
-                setBrand(equipmentData.brand || '');
-                setModel(equipmentData.model || '');
-                setType(equipmentData.type || '');
-                setSerial(equipmentData.serial || '');
-                setLocation(equipmentData.location);
-                setStatus(equipmentData.status);
-                setImageUrl(equipmentData.imageUrl || null);
-                
-                if (equipmentData.maintenanceStartDate) {
-                    setMaintenanceStartDate(new Date(equipmentData.maintenanceStartDate + 'T00:00:00'));
-                }
-                setMaintenancePeriodicity(equipmentData.maintenancePeriodicity || '');
-                
-                const foundClient = clientsData.find(c => c.name === equipmentData.client);
-                if (foundClient) {
-                    setClientId(foundClient.id);
-                    setClientWarehouses(foundClient.almacenes || []);
-                }
-
-                const foundSystem = systemsData.find(s => s.name === equipmentData.system);
-                if (foundSystem) {
-                    setSystemId(foundSystem.id);
-                }
-            } else {
-                setNotFound(true);
+            if (equipmentData.maintenanceStartDate) {
+                setMaintenanceStartDate(new Date(equipmentData.maintenanceStartDate + 'T00:00:00'));
             }
-        } catch (error) {
-            console.error("Failed to load data for equipment editing:", error);
+            setMaintenancePeriodicity(equipmentData.maintenancePeriodicity || '');
+            
+            const foundClient = clients.find(c => c.name === equipmentData.client);
+            if (foundClient) {
+                setClientId(foundClient.id);
+                setClientWarehouses(foundClient.almacenes || []);
+            }
+
+            const foundSystem = systems.find(s => s.name === equipmentData.system);
+            if (foundSystem) {
+                setSystemId(foundSystem.id);
+            }
+            setLoading(false);
+        } else {
             setNotFound(true);
-        } finally {
             setLoading(false);
         }
     }
-    loadData();
-  }, [equipmentId]);
+  }, [equipmentId, equipments, clients, systems, dataLoading]);
   
   const handleClientChange = (newClientId: string) => {
     setClientId(newClientId);
@@ -170,7 +156,7 @@ export default function EditEquipmentPage() {
     }
   }
 
-  if (loading) {
+  if (loading || dataLoading) {
     return (
        <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
