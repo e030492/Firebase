@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useActionState, useState, useEffect, Suspense } from 'react';
+import { useActionState, useState, useEffect, Suspense, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -95,6 +95,7 @@ function ProtocolGenerator() {
   const searchParams = useSearchParams();
   const { clients, systems, equipments: allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
+  const dataLoadedRef = useRef(false);
 
   // Data states
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
@@ -116,7 +117,7 @@ function ProtocolGenerator() {
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
     const equipmentIdParam = searchParams.get('equipmentId');
-    if (equipmentIdParam && !loading) {
+    if (equipmentIdParam && !loading && !dataLoadedRef.current && allEquipments.length > 0 && clients.length > 0 && systems.length > 0) {
         const equipment = allEquipments.find(e => e.id === equipmentIdParam);
         if (equipment) {
             const client = clients.find(c => c.name === equipment.client);
@@ -138,6 +139,7 @@ function ProtocolGenerator() {
             setEquipmentImageUrl(equipment.imageUrl || '');
             
             setIsModificationMode(true);
+            dataLoadedRef.current = true;
         }
     }
   }, [searchParams, allEquipments, clients, systems, loading]);
