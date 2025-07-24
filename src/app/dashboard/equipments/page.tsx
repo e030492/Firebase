@@ -64,7 +64,7 @@ export default function EquipmentsPage() {
         if (valA < valB) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
-        if (valA > valB) {
+        if (valA > b[sortConfig.key]) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
@@ -170,7 +170,7 @@ export default function EquipmentsPage() {
                   <TableHead className="hidden sm:table-cell">Imagen</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
-                      Nombre
+                      Nombre / Serie
                       {getSortIcon('name')}
                     </Button>
                   </TableHead>
@@ -218,6 +218,7 @@ export default function EquipmentsPage() {
                           {equipment.alias && (
                             <span className="block text-xs text-muted-foreground">{equipment.alias}</span>
                           )}
+                           <span className="block text-xs text-muted-foreground">N/S: {equipment.serial}</span>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
                         <TableCell className="hidden lg:table-cell">{equipment.system}</TableCell>
