@@ -2,7 +2,8 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -30,7 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Camera } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -104,6 +105,7 @@ export default function EditUserPage() {
   const userId = params.id as string;
   const { can } = usePermissions();
   const { users, updateUser, loading: dataLoading } = useData();
+  const signatureInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -111,6 +113,7 @@ export default function EditUserPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [permissions, setPermissions] = useState<Permissions>(initialPermissions);
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -124,6 +127,7 @@ export default function EditUserPage() {
             setEmail(foundUser.email);
             setRole(roleToValueMap[foundUser.role] || '');
             setPermissions(foundUser.permissions || initialPermissions);
+            setSignatureUrl(foundUser.signatureUrl || null);
             setLoading(false);
         } else {
             setNotFound(true);
@@ -147,6 +151,17 @@ export default function EditUserPage() {
     const newPermissions = defaultPermissionsByRole[newRoleValue] || initialPermissions;
     setPermissions(newPermissions);
   };
+  
+  const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSignatureUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,6 +178,7 @@ export default function EditUserPage() {
             email,
             role: valueToRoleMap[role],
             permissions,
+            signatureUrl: signatureUrl || '',
         };
         if (password) {
             updatedData.password = password;
@@ -291,6 +307,30 @@ export default function EditUserPage() {
               <div className="grid gap-3">
                 <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
                 <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={!canUpdateUsers || isSaving} />
+              </div>
+              <Separator />
+              <div className="grid gap-3">
+                <Label>Firma del Usuario</Label>
+                <div className="w-full aspect-[2/1] bg-muted rounded-md flex items-center justify-center p-2 border">
+                    {signatureUrl ? (
+                        <Image src={signatureUrl} alt="Firma del usuario" width={300} height={150} data-ai-hint="user signature" className="object-contain" />
+                    ) : (
+                        <p className="text-sm text-muted-foreground">Sin firma</p>
+                    )}
+                </div>
+                <Input
+                    id="signature-upload"
+                    type="file"
+                    accept="image/*"
+                    ref={signatureInputRef}
+                    onChange={handleSignatureChange}
+                    className="hidden"
+                    disabled={!canUpdateUsers || isSaving}
+                />
+                <Button type="button" variant="outline" onClick={() => signatureInputRef.current?.click()} disabled={!canUpdateUsers || isSaving}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    {signatureUrl ? 'Cambiar Firma' : 'Subir Firma'}
+                </Button>
               </div>
             </div>
           </CardContent>

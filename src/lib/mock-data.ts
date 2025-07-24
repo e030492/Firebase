@@ -8,6 +8,7 @@ export const mockUsers = [
     email: 'admin@escuadra.com',
     role: 'Administrador',
     password: 'admin',
+    signatureUrl: '',
     permissions: {
         clients: { create: true, update: true, delete: true },
         equipments: { create: true, update: true, delete: true },
@@ -23,6 +24,7 @@ export const mockUsers = [
     email: 'root@escuadra.com',
     role: 'Administrador',
     password: 'admin',
+    signatureUrl: '',
     permissions: {
         clients: { create: true, update: true, delete: true },
         equipments: { create: true, update: true, delete: true },
@@ -38,6 +40,7 @@ export const mockUsers = [
     email: 'super@escuadra.com',
     role: 'Administrador',
     password: 'admin',
+    signatureUrl: '',
     permissions: {
         clients: { create: true, update: true, delete: true },
         equipments: { create: true, update: true, delete: true },
@@ -53,6 +56,7 @@ export const mockUsers = [
     email: 'blanca@escuadra.com',
     role: 'Técnico',
     password: 'tech',
+    signatureUrl: '',
     permissions: {
         clients: { create: false, update: false, delete: false },
         equipments: { create: false, update: true, delete: false },
@@ -68,6 +72,7 @@ export const mockUsers = [
     email: 'carlos@escuadra.com',
     role: 'Técnico',
     password: 'tech',
+    signatureUrl: '',
     permissions: {
         clients: { create: false, update: false, delete: false },
         equipments: { create: false, update: true, delete: false },
@@ -83,6 +88,7 @@ export const mockUsers = [
     email: 'supervisor@escuadra.com',
     role: 'Supervisor',
     password: 'super',
+    signatureUrl: '',
     permissions: {
         clients: { create: true, update: true, delete: false },
         equipments: { create: true, update: true, delete: false },

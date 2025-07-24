@@ -1,8 +1,9 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -30,9 +31,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Camera } from 'lucide-react';
 import { User } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
+import { Separator } from '@/components/ui/separator';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -92,12 +94,14 @@ const modules: { key: ModuleKey; label: string }[] = [
 export default function NewUserPage() {
   const router = useRouter();
   const { createUser } = useData();
+  const signatureInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [permissions, setPermissions] = useState<Permissions>(initialPermissions);
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
@@ -115,6 +119,18 @@ export default function NewUserPage() {
     const newPermissions = defaultPermissionsByRole[newRoleValue] || initialPermissions;
     setPermissions(newPermissions);
   };
+  
+  const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSignatureUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +153,7 @@ export default function NewUserPage() {
             role: valueToRoleMap[role],
             password,
             permissions,
+            signatureUrl: signatureUrl || '',
         };
 
         await createUser(newUser);
@@ -198,6 +215,30 @@ export default function NewUserPage() {
                <div className="grid gap-3">
                 <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
                 <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required disabled={loading} />
+              </div>
+              <Separator/>
+              <div className="grid gap-3">
+                <Label>Firma del Usuario</Label>
+                <div className="w-full aspect-[2/1] bg-muted rounded-md flex items-center justify-center p-2 border">
+                    {signatureUrl ? (
+                        <Image src={signatureUrl} alt="Firma del usuario" width={300} height={150} data-ai-hint="user signature" className="object-contain" />
+                    ) : (
+                        <p className="text-sm text-muted-foreground">Vista previa de la firma</p>
+                    )}
+                </div>
+                <Input
+                    id="signature-upload"
+                    type="file"
+                    accept="image/*"
+                    ref={signatureInputRef}
+                    onChange={handleSignatureChange}
+                    className="hidden"
+                    disabled={loading}
+                />
+                <Button type="button" variant="outline" onClick={() => signatureInputRef.current?.click()} disabled={loading}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    {signatureUrl ? 'Cambiar Firma' : 'Subir Firma'}
+                </Button>
               </div>
             </div>
           </CardContent>
