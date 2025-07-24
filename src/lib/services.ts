@@ -32,26 +32,30 @@ const collectionsToSeed = {
     cedulas: mockCedulas,
 };
 
-export const seedDatabase = async () => {
-  console.log("Seeding database with all collections...");
-  const batch = writeBatch(db);
+export const seedDatabase = async (updateMessage: (message: string) => void) => {
+  updateMessage("Starting database seed process...");
   
   for (const [collectionName, data] of Object.entries(collectionsToSeed)) {
-      for (const item of data) {
-          const { id, ...dataToSave } = item as any;
-          // For mocks with numeric IDs, we'll let Firestore generate one
-          const docRef = doc(collection(db, collectionName));
-          batch.set(docRef, dataToSave);
+      try {
+          updateMessage(`Seeding collection: ${collectionName}...`);
+          const batch = writeBatch(db);
+          data.forEach(item => {
+              // We let firestore generate the ID to avoid conflicts
+              const docRef = doc(collection(db, collectionName));
+              batch.set(docRef, item);
+          });
+          await batch.commit();
+          updateMessage(`Successfully seeded ${collectionName}.`);
+      } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`Error seeding collection ${collectionName}:`, error);
+          updateMessage(`ERROR seeding ${collectionName}: ${errorMessage}`);
+          // Re-throw the error to be caught by the calling function in DataProvider
+          throw error;
       }
   }
   
-  try {
-      await batch.commit();
-      console.log("Database seeding process completed.");
-  } catch (error) {
-      console.error("Error seeding database:", error);
-      throw error;
-  }
+  updateMessage("Database seeding process fully completed.");
 };
 
 
@@ -205,5 +209,3 @@ export async function updateCedula(id: string, data: Partial<Cedula>) {
 export async function deleteCedula(id: string) {
     return await deleteDocument('cedulas', id);
 }
-
-    

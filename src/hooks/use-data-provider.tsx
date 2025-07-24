@@ -6,7 +6,8 @@ import {
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as createUserService,
     deleteUser as deleteUserService,
-    User, Client, System, Equipment, Protocol, Cedula, seedDatabase
+    seedDatabase,
+    User, Client, System, Equipment, Protocol, Cedula
 } from '@/lib/services';
 
 type DataContextType = {
@@ -35,20 +36,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [debugMessage, setDebugMessage] = useState('Initializing...');
+  const [debugMessage, setDebugMessage] = useState('Initializing DataProvider...');
 
   const loadAllData = useCallback(async () => {
     setLoading(true);
-    setDebugMessage('Syncing database...');
+    setDebugMessage('Checking database status...');
     setError(null);
     try {
-        setDebugMessage('Checking for existing data...');
         const initialUsers = await getUsers();
         
         if (initialUsers.length === 0) {
-            setDebugMessage('No users found. Seeding database...');
-            await seedDatabase();
-            setDebugMessage('Seeding complete. Refetching all data...');
+            setDebugMessage('Database is empty. Seeding all collections...');
+            // The seedDatabase function now returns a promise that resolves when all batches are done.
+            // We await it here to ensure the data exists before we try to fetch it.
+            await seedDatabase((message) => setDebugMessage(message));
+            setDebugMessage('Seeding complete. Fetching all collections...');
         } else {
             setDebugMessage('Database has data. Fetching all collections...');
         }
@@ -81,7 +83,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
       setError(errorMessage);
-      setDebugMessage(`Error: ${errorMessage}`);
+      setDebugMessage(`FATAL ERROR: ${errorMessage}`);
       console.error("Failed to load data:", e);
     } finally {
       setLoading(false);
