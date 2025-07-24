@@ -1,30 +1,19 @@
 
 import { 
-    mockUsers,
-    mockClients,
-    mockSystems,
-    mockEquipments,
-    mockProtocols,
-    mockCedulas,
-    USERS_STORAGE_KEY,
-    CLIENTS_STORAGE_KEY,
-    SYSTEMS_STORAGE_KEY,
-    EQUIPMENTS_STORAGE_KEY,
-    PROTOCOLS_STORAGE_KEY,
-    CEDULAS_STORAGE_KEY
+    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
+    USERS_STORAGE_KEY, CLIENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY,
+    EQUIPMENTS_STORAGE_KEY, PROTOCOLS_STORAGE_KEY, CEDULAS_STORAGE_KEY
 } from './mock-data';
 
 // Interfaces based on mock-data structure
 export type Almacen = { nombre: string; direccion: string };
-export type Client = { id: string, name: string, responsable: string, direccion: string, almacenes: Almacen[] };
-export type Equipment = { id: string, name: string, description: string, brand: string, model: string, type: string, serial: string, client: string, system: string, location: string, status: 'Activo' | 'Inactivo' | 'En Mantenimiento', maintenanceStartDate: string, maintenancePeriodicity: string, imageUrl: string };
-export type System = { id: string, name: string, description: string, color: string };
+export type Client = typeof mockClients[0] & { id: string };
+export type Equipment = typeof mockEquipments[0] & { id: string };
+export type System = typeof mockSystems[0] & { id: string };
 export type User = typeof mockUsers[0] & { id: string };
-export type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; completion: number; imageUrl?: string, notes?: string, percentage?: number };
+export type ProtocolStep = typeof mockProtocols[0]['steps'][0];
 export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] };
-export type Cedula = { id: string, folio: string, client: string, equipment: string, technician: string, supervisor: string, creationDate: string, status: 'Pendiente' | 'En Progreso' | 'Completada', description: string, protocolSteps: any[], semaforo: 'Verde' | 'Naranja' | 'Rojo' | '' };
-
-export const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
+export type Cedula = typeof mockCedulas[0] & { id: string };
 
 const collectionsToSeed = {
     [USERS_STORAGE_KEY]: mockUsers,
@@ -37,13 +26,16 @@ const collectionsToSeed = {
 
 // --- LocalStorage Seeding ---
 export const seedDatabase = (updateMessage: (message: string) => void) => {
-  updateMessage("Starting local database seed process...");
-  for (const [key, data] of Object.entries(collectionsToSeed)) {
-      updateMessage(`Seeding local collection: ${key}...`);
-      localStorage.setItem(key, JSON.stringify(data));
-      updateMessage(`Successfully seeded ${key}.`);
-  }
-  updateMessage("Local database seeding process fully completed.");
+  return new Promise<void>((resolve) => {
+    updateMessage("Starting local database seed process...");
+    for (const [key, data] of Object.entries(collectionsToSeed)) {
+        updateMessage(`Seeding local collection: ${key}...`);
+        localStorage.setItem(key, JSON.stringify(data));
+        updateMessage(`Successfully seeded ${key}.`);
+    }
+    updateMessage("Local database seeding process fully completed.");
+    resolve();
+  });
 };
 
 // --- Generic LocalStorage Service Functions ---
@@ -68,8 +60,7 @@ function createDocument<T>(collectionKey: string, data: Omit<T, 'id'>): T {
     const collection = getCollection<T>(collectionKey);
     const newId = String(Date.now() + Math.random());
     const newItem = { ...data, id: newId } as T;
-    collection.push(newItem);
-    localStorage.setItem(collectionKey, JSON.stringify(collection));
+    localStorage.setItem(collectionKey, JSON.stringify([...collection, newItem]));
     return newItem;
 }
 

@@ -90,6 +90,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setDebugMessage('Checking local storage status...');
     setError(null);
     try {
+        // This check is now robust and simple.
         const initialUsers = localStorage.getItem(USERS_STORAGE_KEY);
         
         if (!initialUsers) {

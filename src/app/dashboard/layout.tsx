@@ -26,7 +26,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import type { User } from '@/lib/services';
-import { ACTIVE_USER_STORAGE_KEY } from '@/lib/services';
+import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { PermissionsProvider } from '@/hooks/use-permissions';
 import { useData } from '@/hooks/use-data-provider';
 import { DebugWindow } from '@/components/debug-window';

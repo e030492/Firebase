@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ACTIVE_USER_STORAGE_KEY, getUsers } from '@/lib/services';
+import { getUsers } from '@/lib/services';
+import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { DebugWindow } from '@/components/debug-window';
 import { useData } from '@/hooks/use-data-provider';
 
