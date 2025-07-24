@@ -37,6 +37,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CardDescription } from '@/components/ui/card';
 import { useData } from '@/hooks/use-data-provider';
 
+type EquipmentWithProtocolStatus = Equipment & { hasProtocol: boolean };
 
 export default function NewCedulaPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function NewCedulaPage() {
   const [semaforo, setSemaforo] = useState('');
 
   const [filteredSystems, setFilteredSystems] = useState<System[]>([]);
-  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<EquipmentWithProtocolStatus[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
   
@@ -92,48 +93,56 @@ export default function NewCedulaPage() {
 
   useEffect(() => {
     if (clientId && systemId) {
-      const clientName = clients.find(c => c.id === clientId)?.name;
-      const systemName = allSystems.find(s => s.id === systemId)?.name;
-      if (clientName && systemName) {
-        const filtered = allEquipments.filter(eq => eq.client === clientName && eq.system === systemName);
-        setFilteredEquipments(filtered);
-      } else {
-        setFilteredEquipments([]);
-      }
+        const clientName = clients.find(c => c.id === clientId)?.name;
+        const systemName = allSystems.find(s => s.id === systemId)?.name;
+        if (clientName && systemName) {
+            const filtered = allEquipments
+                .filter(eq => eq.client === clientName && eq.system === systemName)
+                .map(eq => ({
+                    ...eq,
+                    hasProtocol: protocols.some(p => p.equipmentId === eq.id && p.steps.length > 0)
+                }));
+            setFilteredEquipments(filtered);
+        } else {
+            setFilteredEquipments([]);
+        }
     } else {
-      setFilteredEquipments([]);
+        setFilteredEquipments([]);
     }
     setEquipmentId('');
-  }, [clientId, systemId, clients, allSystems, allEquipments]);
+  }, [clientId, systemId, clients, allSystems, allEquipments, protocols]);
   
-  useEffect(() => {
-    if (equipmentId) {
-        const selectedEquipment = allEquipments.find(eq => eq.id === equipmentId);
-        if (selectedEquipment) {
-            const equipmentProtocol = protocols.find(p => p.equipmentId === equipmentId);
-            if (equipmentProtocol) {
-                setProtocolSteps(equipmentProtocol.steps);
-                const initialPercentages = equipmentProtocol.steps.reduce((acc, step) => {
-                    acc[step.step] = '0';
-                    return acc;
-                }, {} as { [step: string]: string });
-                const initialNotes = equipmentProtocol.steps.reduce((acc, step) => {
-                    acc[step.step] = '';
-                    return acc;
-                }, {} as { [step: string]: string });
-                setCompletionPercentages(initialPercentages);
-                setImageUrls({});
-                setNotes(initialNotes);
-            } else {
-                setProtocolSteps([]);
-            }
-        } else {
-            setProtocolSteps([]);
-        }
+  const handleEquipmentChange = (newEquipmentId: string) => {
+    const selectedEquipment = filteredEquipments.find(eq => eq.id === newEquipmentId);
+    if (!selectedEquipment) return;
+
+    if (!selectedEquipment.hasProtocol) {
+        alert("Este equipo no tiene un protocolo de mantenimiento definido. Por favor, cree uno antes de generar una cédula.");
+        setEquipmentId('');
+        setProtocolSteps([]);
+        return;
+    }
+
+    setEquipmentId(newEquipmentId);
+
+    const equipmentProtocol = protocols.find(p => p.equipmentId === newEquipmentId);
+    if (equipmentProtocol) {
+        setProtocolSteps(equipmentProtocol.steps);
+        const initialPercentages = equipmentProtocol.steps.reduce((acc, step) => {
+            acc[step.step] = '0';
+            return acc;
+        }, {} as { [step: string]: string });
+        const initialNotes = equipmentProtocol.steps.reduce((acc, step) => {
+            acc[step.step] = '';
+            return acc;
+        }, {} as { [step: string]: string });
+        setCompletionPercentages(initialPercentages);
+        setImageUrls({});
+        setNotes(initialNotes);
     } else {
         setProtocolSteps([]);
     }
-  }, [equipmentId, allEquipments, protocols]);
+  };
 
 
   const handlePercentageChange = (step: string, value: string) => {
@@ -321,13 +330,13 @@ export default function NewCedulaPage() {
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="equipment">Equipo</Label>
-                    <Select value={equipmentId} onValueChange={setEquipmentId} required disabled={!systemId || isSaving}>
+                    <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || isSaving}>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione un equipo" />
                         </SelectTrigger>
                         <SelectContent>
                         {filteredEquipments.map(eq => (
-                            <SelectItem key={eq.id} value={eq.id}>
+                            <SelectItem key={eq.id} value={eq.id} className={!eq.hasProtocol ? 'text-destructive' : ''}>
                                 {eq.name}
                                 {eq.alias && ` (${eq.alias})`}
                                 {` - Modelo: ${eq.model}, N/S: ${eq.serial}`}
@@ -500,3 +509,5 @@ export default function NewCedulaPage() {
     </form>
   );
 }
+
+    
