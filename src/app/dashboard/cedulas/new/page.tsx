@@ -175,7 +175,11 @@ export default function NewCedulaPage() {
   };
   
   const handleImageDelete = (step: string) => {
-    setImageUrls(prev => ({ ...prev, [step]: '' }));
+    setImageUrls(prev => {
+        const newImageUrls = { ...prev };
+        delete newImageUrls[step];
+        return newImageUrls;
+    });
   };
 
   const handleNotesChange = (step: string, value: string) => {
@@ -452,8 +456,8 @@ export default function NewCedulaPage() {
                 <CardContent className="grid gap-6">
                     {protocolSteps.map((step, index) => (
                        <div key={index}>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4 border rounded-lg">
-                           <div className="md:col-span-2 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg">
+                           <div className="space-y-4">
                                 <div className="space-y-1">
                                     <Label className="text-base font-semibold">Paso del Protocolo</Label>
                                     <p className="text-muted-foreground">{step.step}</p>
