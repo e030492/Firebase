@@ -9,6 +9,7 @@ import {
     seedDatabase,
     User, Client, System, Equipment, Protocol, Cedula
 } from '@/lib/services';
+import { USERS_STORAGE_KEY } from '@/lib/mock-data';
 
 type DataContextType = {
   users: User[];
@@ -20,7 +21,7 @@ type DataContextType = {
   loading: boolean;
   error: string | null;
   debugMessage: string;
-  refreshData: () => Promise<void>;
+  refreshData: () => void;
   createUser: (userData: Omit<User, 'id'>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
 };
@@ -40,51 +41,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const loadAllData = useCallback(async () => {
     setLoading(true);
-    setDebugMessage('Checking database status...');
+    setDebugMessage('Checking local storage status...');
     setError(null);
     try {
-        const initialUsers = await getUsers();
+        const initialUsers = localStorage.getItem(USERS_STORAGE_KEY);
         
-        if (initialUsers.length === 0) {
-            setDebugMessage('Database is empty. Seeding all collections...');
-            // The seedDatabase function now returns a promise that resolves when all batches are done.
-            // We await it here to ensure the data exists before we try to fetch it.
+        if (!initialUsers) {
+            setDebugMessage('LocalStorage is empty. Seeding all local collections...');
             await seedDatabase((message) => setDebugMessage(message));
-            setDebugMessage('Seeding complete. Fetching all collections...');
+            setDebugMessage('Seeding complete. Fetching all collections from LocalStorage...');
         } else {
-            setDebugMessage('Database has data. Fetching all collections...');
+            setDebugMessage('LocalStorage has data. Fetching all collections...');
         }
         
-        const [
-            usersData,
-            clientsData,
-            systemsData,
-            equipmentsData,
-            protocolsData,
-            cedulasData
-        ] = await Promise.all([
-            getUsers(),
-            getClients(),
-            getSystems(),
-            getEquipments(),
-            getProtocols(),
-            getCedulas()
-        ]);
-
-        setUsers(usersData);
-        setClients(clientsData);
-        setSystems(systemsData);
-        setEquipments(equipmentsData);
-        setProtocols(protocolsData);
-        setCedulas(cedulasData);
+        setUsers(getUsers());
+        setClients(getClients());
+        setSystems(getSystems());
+        setEquipments(getEquipments());
+        setProtocols(getProtocols());
+        setCedulas(getCedulas());
         
-        setDebugMessage('All data loaded successfully.');
+        setDebugMessage('All data loaded successfully from LocalStorage.');
 
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
       setError(errorMessage);
       setDebugMessage(`FATAL ERROR: ${errorMessage}`);
-      console.error("Failed to load data:", e);
+      console.error("Failed to load data from LocalStorage:", e);
     } finally {
       setLoading(false);
     }
@@ -96,15 +79,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const createUser = async (userData: Omit<User, 'id'>) => {
     setDebugMessage(`Creating user ${userData.name}...`);
-    await createUserService(userData);
-    await loadAllData();
+    createUserService(userData);
+    await loadAllData(); // Refresh all data from localStorage
     setDebugMessage(`User ${userData.name} created.`);
   };
 
   const deleteUser = async (userId: string) => {
     setDebugMessage(`Deleting user ${userId}...`);
-    await deleteUserService(userId);
-    await loadAllData();
+    deleteUserService(userId);
+    await loadAllData(); // Refresh all data from localStorage
     setDebugMessage(`User ${userId} deleted.`);
   };
 
