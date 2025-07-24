@@ -60,6 +60,9 @@ import { Separator } from '@/components/ui/separator';
 import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
+
 
 type EditingStepInfo = {
   protocolId: string;
@@ -97,6 +100,8 @@ export default function ProtocolsPage() {
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   
+  const [selectedEquipmentForModification, setSelectedEquipmentForModification] = useState<string>('');
+
    useEffect(() => {
     if (selectedClientId) {
         const client = clients.find(c => c.id === selectedClientId);
@@ -287,12 +292,12 @@ export default function ProtocolsPage() {
               Filtre y visualice los protocolos de mantenimiento por equipo.
             </p>
           </div>
-          <Link href="/dashboard/protocols/new">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Crear/Modificar Protocolo
-            </Button>
-          </Link>
+           <Link href={selectedEquipmentForModification ? `/dashboard/protocols/new?equipmentId=${selectedEquipmentForModification}` : "/dashboard/protocols/new"}>
+                <Button disabled={!!filteredEquipments.length && !selectedEquipmentForModification}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  {selectedEquipmentForModification ? 'Modificar Protocolo Seleccionado' : 'Crear/Modificar Protocolo'}
+                </Button>
+            </Link>
         </div>
         <Card>
           <CardContent className="pt-6">
@@ -346,140 +351,146 @@ export default function ProtocolsPage() {
             </div>
             <Separator className="mb-6"/>
             {generationError && <p className="text-destructive text-sm text-center mb-4">{generationError}</p>}
-            <Accordion type="single" collapsible className="w-full">
-              {filteredEquipments.length > 0 ? (
-                filteredEquipments.map(equipment => {
-                  const equipmentProtocol = getProtocolForEquipment(equipment.id);
-                  const equipmentProtocolSteps = equipmentProtocol?.steps || [];
+            
+            <RadioGroup value={selectedEquipmentForModification} onValueChange={setSelectedEquipmentForModification}>
+                <Accordion type="single" collapsible className="w-full">
+                {filteredEquipments.length > 0 ? (
+                    filteredEquipments.map(equipment => {
+                    const equipmentProtocol = getProtocolForEquipment(equipment.id);
+                    const equipmentProtocolSteps = equipmentProtocol?.steps || [];
+                    const isSelected = selectedEquipmentForModification === equipment.id;
 
-                  return (
-                    <AccordionItem value={equipment.id} key={equipment.id}>
-                        <div className="flex items-center w-full">
-                           <AccordionTrigger className="flex-1 text-lg font-medium hover:no-underline py-4">
-                              <div className="flex flex-col items-start text-left">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold">{equipment.name}</span>
-                                  <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span>
-                                </div>
-                                <div className="text-xs text-muted-foreground font-normal flex items-center gap-x-2">
-                                  {equipment.alias && <span>Alias: {equipment.alias}</span>}
-                                  {equipment.alias && <span>&bull;</span>}
-                                  <span>Modelo: {equipment.model}</span>
-                                  <span>&bull;</span>
-                                  <span>N/S: {equipment.serial}</span>
-                                </div>
-                              </div>
-                           </AccordionTrigger>
-                           <div className="px-4 flex items-center gap-2">
-                             <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                                        <MoreVertical className="h-4 w-4" />
-                                        <span className="sr-only">Más acciones</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    {equipmentProtocol ? (
-                                        <>
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
-                                                    <Wand2 className="mr-2 h-4 w-4" />
-                                                    <span>Modificar con IA</span>
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                                className="text-destructive focus:text-destructive"
-                                                onSelect={() => setProtocolToDelete(equipmentProtocol)}
+                    return (
+                        <AccordionItem value={equipment.id} key={equipment.id} className={cn(isSelected && "bg-primary/5 border-primary/20 rounded-md")}>
+                            <div className="flex items-center w-full px-4">
+                                <RadioGroupItem value={equipment.id} id={`radio-${equipment.id}`} className="mr-4" />
+                               <AccordionTrigger className="flex-1 text-lg font-medium hover:no-underline py-4">
+                                  <div className="flex flex-col items-start text-left">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold">{equipment.name}</span>
+                                      <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground font-normal flex items-center gap-x-2">
+                                      {equipment.alias && <span>Alias: {equipment.alias}</span>}
+                                      {equipment.alias && <span>&bull;</span>}
+                                      <span>Modelo: {equipment.model}</span>
+                                      <span>&bull;</span>
+                                      <span>N/S: {equipment.serial}</span>
+                                    </div>
+                                  </div>
+                               </AccordionTrigger>
+                               <div className="px-4 flex items-center gap-2">
+                                 <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                            <MoreVertical className="h-4 w-4" />
+                                            <span className="sr-only">Más acciones</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        {equipmentProtocol ? (
+                                            <>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                                        <Wand2 className="mr-2 h-4 w-4" />
+                                                        <span>Modificar con IA</span>
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    className="text-destructive focus:text-destructive"
+                                                    onSelect={() => setProtocolToDelete(equipmentProtocol)}
+                                                >
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    <span>Eliminar protocolo</span>
+                                                </DropdownMenuItem>
+                                            </>
+                                        ) : (
+                                            <DropdownMenuItem 
+                                                onSelect={() => handleGenerateProtocol(equipment)} 
+                                                disabled={!!isGenerating}
                                             >
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                <span>Eliminar protocolo</span>
+                                                {isGenerating === equipment.id ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Wand2 className="mr-2 h-4 w-4" />
+                                                )}
+                                                <span>{isGenerating === equipment.id ? 'Generando...' : 'Generar con IA'}</span>
                                             </DropdownMenuItem>
-                                        </>
-                                    ) : (
-                                        <DropdownMenuItem 
-                                            onSelect={() => handleGenerateProtocol(equipment)} 
-                                            disabled={!!isGenerating}
-                                        >
-                                            {isGenerating === equipment.id ? (
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Wand2 className="mr-2 h-4 w-4" />
-                                            )}
-                                            <span>{isGenerating === equipment.id ? 'Generando...' : 'Generar con IA'}</span>
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                           </div>
-                        </div>
-                      <AccordionContent>
-                        {equipmentProtocolSteps.length > 0 ? (
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-16 hidden sm:table-cell">Imagen</TableHead>
-                                <TableHead className="w-[50%]">Paso del Protocolo</TableHead>
-                                <TableHead>Prioridad</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {equipmentProtocolSteps.map((protocolStep, index) => (
-                                <TableRow key={index}>
-                                  <TableCell className="hidden sm:table-cell">
-                                    {protocolStep.imageUrl ? (
-                                        <Image src={protocolStep.imageUrl} alt={protocolStep.step} width={48} height={48} data-ai-hint="protocol step photo" className="rounded-md object-cover aspect-square" />
-                                    ) : (
-                                        <div className="h-12 w-12 bg-muted rounded-md flex items-center justify-center">
-                                            <Camera className="h-6 w-6 text-muted-foreground" />
-                                        </div>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>{protocolStep.step}</TableCell>
-                                  <TableCell>
-                                    <Badge variant={getPriorityBadgeVariant(protocolStep.priority)} className="capitalize">
-                                      {protocolStep.priority}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button size="icon" variant="ghost">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onSelect={() => setEditingStep({ protocolId: equipmentProtocol!.id, originalStepText: protocolStep.step, currentData: { ...protocolStep }})}>
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                <span>Editar</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeletingStep({ protocolId: equipmentProtocol!.id, stepToDelete: protocolStep })}>
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                <span>Eliminar</span>
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        ) : (
-                          <div className="text-muted-foreground px-4 py-8 flex flex-col items-center justify-center text-center gap-2">
-                            <p>No hay un protocolo de mantenimiento definido para este equipo.</p>
-                            <p className="text-sm">Usa el menú de acciones para generar uno con IA.</p>
-                          </div>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  )
-                })
-              ) : (
-                 <p className="text-center text-muted-foreground py-4">No se encontraron equipos que coincidan con los filtros seleccionados.</p>
-              )}
-            </Accordion>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                               </div>
+                            </div>
+                          <AccordionContent>
+                            {equipmentProtocolSteps.length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-16 hidden sm:table-cell">Imagen</TableHead>
+                                    <TableHead className="w-[50%]">Paso del Protocolo</TableHead>
+                                    <TableHead>Prioridad</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {equipmentProtocolSteps.map((protocolStep, index) => (
+                                    <TableRow key={index}>
+                                      <TableCell className="hidden sm:table-cell">
+                                        {protocolStep.imageUrl ? (
+                                            <Image src={protocolStep.imageUrl} alt={protocolStep.step} width={48} height={48} data-ai-hint="protocol step photo" className="rounded-md object-cover aspect-square" />
+                                        ) : (
+                                            <div className="h-12 w-12 bg-muted rounded-md flex items-center justify-center">
+                                                <Camera className="h-6 w-6 text-muted-foreground" />
+                                            </div>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>{protocolStep.step}</TableCell>
+                                      <TableCell>
+                                        <Badge variant={getPriorityBadgeVariant(protocolStep.priority)} className="capitalize">
+                                          {protocolStep.priority}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button size="icon" variant="ghost">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onSelect={() => setEditingStep({ protocolId: equipmentProtocol!.id, originalStepText: protocolStep.step, currentData: { ...protocolStep }})}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    <span>Editar</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeletingStep({ protocolId: equipmentProtocol!.id, stepToDelete: protocolStep })}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    <span>Eliminar</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <div className="text-muted-foreground px-4 py-8 flex flex-col items-center justify-center text-center gap-2">
+                                <p>No hay un protocolo de mantenimiento definido para este equipo.</p>
+                                <p className="text-sm">Usa el menú de acciones para generar uno con IA.</p>
+                              </div>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                    )
+                    })
+                ) : (
+                    <p className="text-center text-muted-foreground py-4">No se encontraron equipos que coincidan con los filtros seleccionados.</p>
+                )}
+                </Accordion>
+            </RadioGroup>
+
           </CardContent>
         </Card>
       </div>
@@ -578,5 +589,3 @@ export default function ProtocolsPage() {
     </>
   );
 }
-
-    
