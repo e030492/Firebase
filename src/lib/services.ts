@@ -1,8 +1,8 @@
 
+import { collection, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db, app } from './firebase';
 import { 
-    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
-    USERS_STORAGE_KEY, CLIENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY, EQUIPMENTS_STORAGE_KEY,
-    PROTOCOLS_STORAGE_KEY, CEDULAS_STORAGE_KEY
+    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas
 } from './mock-data';
 
 // Interfaces based on mock-data structure
@@ -16,12 +16,12 @@ export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] 
 export type Cedula = typeof mockCedulas[0] & { id: string };
 
 const collections = {
-    users: USERS_STORAGE_KEY,
-    clients: CLIENTS_STORAGE_KEY,
-    systems: SYSTEMS_STORAGE_KEY,
-    equipments: EQUIPMENTS_STORAGE_KEY,
-    protocols: PROTOCOLS_STORAGE_KEY,
-    cedulas: CEDULAS_STORAGE_KEY,
+    users: 'users',
+    clients: 'clients',
+    systems: 'systems',
+    equipments: 'equipments',
+    protocols: 'protocols',
+    cedulas: 'cedulas',
 };
 
 const mockDataMap = {
@@ -33,68 +33,87 @@ const mockDataMap = {
     [collections.cedulas]: mockCedulas,
 };
 
-
-// --- LocalStorage Seeding ---
-export const seedDatabase = (updateMessage: (message: string) => void) => {
-    updateMessage("Checking localStorage database status...");
-    const usersExist = localStorage.getItem(USERS_STORAGE_KEY);
-
-    if (!usersExist) {
-        updateMessage("localStorage is empty. Seeding database...");
-
-        for (const [collectionName, data] of Object.entries(mockDataMap)) {
-            localStorage.setItem(collectionName, JSON.stringify(data));
-            updateMessage(`Collection ${collectionName} seeded in localStorage.`);
-        }
+// --- Firestore Seeding ---
+export async function verifyFirestoreConnection(updateMessage: (message: string) => void) {
+    updateMessage("Initializing Firebase...");
+    try {
+        // The 'app' import ensures Firebase is initialized.
+        updateMessage(`Firebase app initialized for project: ${app.options.projectId}`);
+        updateMessage("Getting Firestore instance...");
+        // The 'db' import ensures Firestore is initialized.
+        updateMessage("Firestore instance acquired. Testing connection...");
         
-        updateMessage("localStorage database seeding process fully completed.");
-    } else {
-        updateMessage("localStorage database already contains data.");
+        // Attempt to read a non-existent document. This tests security rules.
+        const testDocRef = doc(db, "health_check", "test");
+        await getDoc(testDocRef);
+        
+        updateMessage("Connection and security rules test successful.");
+    } catch (error: any) {
+        console.error("Firebase connection test failed:", error);
+        let errorMessage = `Firestore connection test failed. This often means your security rules are too restrictive. Please ensure they allow read/write access for authenticated users. Original error: ${error.message}`;
+        if (error.code === 'permission-denied') {
+            errorMessage = "Firestore permission denied. Please check your security rules in the Firebase console to allow read/write operations.";
+        }
+        updateMessage(errorMessage);
+        throw new Error(errorMessage);
+    }
+}
+
+
+export const seedDatabase = async (updateMessage: (message: string) => void) => {
+    updateMessage("Starting database seed process...");
+    const batch = writeBatch(db);
+
+    for (const [collectionName, data] of Object.entries(mockDataMap)) {
+        updateMessage(`Preparing to seed collection: ${collectionName}...`);
+        for (const item of data) {
+            const docRef = doc(db, collectionName, item.id);
+            batch.set(docRef, item);
+        }
+        updateMessage(`Collection ${collectionName} added to batch.`);
+    }
+
+    try {
+        await batch.commit();
+        updateMessage("Database seeding process fully completed.");
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        updateMessage(`Error committing batch: ${errorMessage}`);
+        console.error("Error seeding database:", error);
+        throw error;
     }
 };
 
-// --- Generic LocalStorage Service Functions ---
+// --- Generic Firestore Service Functions ---
 async function getCollection<T>(collectionName: string): Promise<T[]> {
-    const data = localStorage.getItem(collectionName);
-    return data ? JSON.parse(data) : [];
+    const querySnapshot = await getDocs(collection(db, collectionName));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 }
 
 async function getDocumentById<T extends {id: string}>(collectionName: string, id: string): Promise<T> {
-    const data = await getCollection<T>(collectionName);
-    const item = data.find(item => item.id === id);
-    if (!item) throw new Error(`Document with id ${id} not found in ${collectionName}`);
-    return item;
+    const docRef = doc(db, collectionName, id);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) throw new Error(`Document with id ${id} not found in ${collectionName}`);
+    return { id: docSnap.id, ...docSnap.data() } as T;
 }
 
 async function createDocument<T>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
-    const collectionData = await getCollection<T & {id: string}>(collectionName);
-    const newId = String(Date.now() + Math.random());
-    const newItem = { ...data, id: newId } as T & {id: string};
-    collectionData.push(newItem);
-    localStorage.setItem(collectionName, JSON.stringify(collectionData));
-    return newItem;
+    const newDocRef = doc(collection(db, collectionName));
+    const newItem = { ...data, id: newDocRef.id };
+    await setDoc(newDocRef, data);
+    return newItem as T;
 }
 
 async function updateDocument<T extends {id: string}>(collectionName: string, id: string, data: Partial<Omit<T, 'id'>>): Promise<T> {
-    const collectionData = await getCollection<T>(collectionName);
-    const itemIndex = collectionData.findIndex(item => item.id === id);
-    if (itemIndex === -1) throw new Error(`Document with id ${id} not found for update in ${collectionName}`);
-    
-    const updatedItem = { ...collectionData[itemIndex], ...data };
-    collectionData[itemIndex] = updatedItem;
-    localStorage.setItem(collectionName, JSON.stringify(collectionData));
-    return updatedItem;
+    const docRef = doc(db, collectionName, id);
+    await updateDoc(docRef, data);
+    const updatedDoc = await getDoc(docRef);
+    return { id: updatedDoc.id, ...updatedDoc.data() } as T;
 }
 
 async function deleteDocument(collectionName: string, id: string): Promise<boolean> {
-    let collectionData = await getCollection<{id: string}>(collectionName);
-    const initialLength = collectionData.length;
-    collectionData = collectionData.filter(item => item.id !== id);
-    if(collectionData.length === initialLength) {
-        console.warn(`Document with id ${id} not found for deletion in ${collectionName}`);
-        return false;
-    }
-    localStorage.setItem(collectionName, JSON.stringify(collectionData));
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
     return true;
 }
 
@@ -136,11 +155,13 @@ export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Pro
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
 
 export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<boolean> {
-    let protocols = await getProtocols();
-    const filteredProtocols = protocols.filter(p => p.equipmentId !== equipmentId);
-    if(protocols.length === filteredProtocols.length) return false;
-    localStorage.setItem(PROTOCOLS_STORAGE_KEY, JSON.stringify(filteredProtocols));
-    return true;
+    const protocols = await getProtocols();
+    const protocolToDelete = protocols.find(p => p.equipmentId === equipmentId);
+    if (protocolToDelete) {
+        await deleteProtocol(protocolToDelete.id);
+        return true;
+    }
+    return false;
 }
 
 // CEDULAS

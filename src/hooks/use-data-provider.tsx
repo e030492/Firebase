@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { 
-    seedDatabase,
+    seedDatabase, verifyFirestoreConnection,
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as createUserService,
     updateUser as updateUserService,
@@ -92,24 +92,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-        seedDatabase((message) => setDebugMessage(message));
+      await verifyFirestoreConnection(setDebugMessage);
+      
+      setDebugMessage('Checking for existing data in Firestore...');
+      const usersData = await getUsers();
+      
+      if (usersData.length === 0) {
+        setDebugMessage('No users found. Seeding database...');
+        await seedDatabase(setDebugMessage);
+      } else {
+        setDebugMessage('Database already contains data.');
+      }
         
-        setDebugMessage('Fetching all data from localStorage...');
-        const usersData = await getUsers();
-        const clientsData = await getClients();
-        const systemsData = await getSystems();
-        const equipmentsData = await getEquipments();
-        const protocolsData = await getProtocols();
-        const cedulasData = await getCedulas();
-        
-        setUsers(usersData);
-        setClients(clientsData);
-        setSystems(systemsData);
-        setEquipments(equipmentsData);
-        setProtocols(protocolsData);
-        setCedulas(cedulasData);
-        
-        setDebugMessage('All data loaded successfully from localStorage.');
+      setDebugMessage('Fetching all data from Firestore...');
+      const [clientsData, systemsData, equipmentsData, protocolsData, cedulasData] = await Promise.all([
+          getClients(),
+          getSystems(),
+          getEquipments(),
+          getProtocols(),
+          getCedulas(),
+      ]);
+      const freshUsersData = await getUsers(); // Re-fetch users after potential seeding
+      
+      setUsers(freshUsersData);
+      setClients(clientsData);
+      setSystems(systemsData);
+      setEquipments(equipmentsData);
+      setProtocols(protocolsData);
+      setCedulas(cedulasData);
+      
+      setDebugMessage('All data loaded successfully from Firestore.');
 
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';

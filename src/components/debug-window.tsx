@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useData } from "@/hooks/use-data-provider";
 import { Badge } from "./ui/badge";
 import { GripVertical } from 'lucide-react';
+import { firebaseConfig } from '@/lib/firebase';
 
 export function DebugWindow() {
     const { 
@@ -93,9 +94,10 @@ export function DebugWindow() {
                 </CardHeader>
                 <CardContent className="p-4 pt-2 text-sm">
                     <div className="bg-muted p-3 rounded-md h-64 overflow-y-auto text-xs font-mono space-y-2">
-                        <p className="font-bold border-b pb-1 mb-1 text-base">Status Message:</p>
+                        <p className="font-bold border-b pb-1 mb-1 text-base">Connection Status:</p>
                         <p className={error ? "text-destructive font-bold text-sm" : "text-sm"}>{debugMessage}</p>
-                        
+                        <p className="font-bold text-xs mt-2">Project ID: <span className="font-normal">{firebaseConfig.projectId}</span></p>
+
                         <p className="font-bold border-b pb-1 mt-4 text-base">Record Counts:</p>
                         <p>Users: <span className="font-bold">{users.length}</span></p>
                         <p>Clients: <span className="font-bold">{clients.length}</span></p>

@@ -5,7 +5,7 @@ import { getFirestore } from "firebase/firestore";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration - This is safe to be public
-const firebaseConfig = {
+export const firebaseConfig = {
   "projectId": "guardian-shield-k9g9l",
   "appId": "1:224891357938:web:399bcf1f064bdf7bdf9e6b",
   "storageBucket": "guardian-shield-k9g9l.firebasestorage.app",
@@ -19,4 +19,4 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
-export { db };
+export { db, app };
