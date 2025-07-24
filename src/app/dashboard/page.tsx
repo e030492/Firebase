@@ -9,14 +9,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Activity, Building, HardHat, Server, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Activity, Building, HardHat, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getClients, getEquipments, getCedulas } from '@/lib/services';
 
 export default function DashboardPage() {
     const [counts, setCounts] = useState({ clients: 0, equipments: 0, pendingCedulas: 0 });
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         async function loadDashboardData() {
@@ -37,7 +36,6 @@ export default function DashboardPage() {
                 });
             } catch (err) {
                 console.error("Failed to load dashboard data:", err);
-                setError("No se pudieron cargar los datos del dashboard. Verifique la conexión.");
             } finally {
                 setLoading(false);
             }
@@ -52,51 +50,20 @@ export default function DashboardPage() {
                 <Skeleton className="h-9 w-64" />
                 <Skeleton className="h-5 w-80" />
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Clientes Activos</CardTitle>
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-12 mb-2" />
-                        <Skeleton className="h-4 w-full" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Equipos Monitoreados</CardTitle>
-                        <HardHat className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-16 mb-2" />
-                        <Skeleton className="h-4 w-4/5" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Mantenimientos Pendientes</CardTitle>
-                        <Activity className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-10 mb-2" />
-                        <Skeleton className="h-4 w-3/4" />
-                    </CardContent>
-                </Card>
-            </div>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Estado del Sistema</CardTitle>
+                    <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-4 text-lg font-bold">
+                        <p>Cargando datos...</p>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
-      );
+      )
     }
-  
-  if (error) {
-    return (
-        <div className="flex flex-col items-center justify-center gap-4 text-center h-full mt-10">
-            <AlertTriangle className="h-12 w-12 text-destructive" />
-            <h1 className="text-2xl font-bold text-destructive">Error al Cargar</h1>
-            <p className="text-muted-foreground max-w-md">{error}</p>
-        </div>
-    );
-  }
 
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">

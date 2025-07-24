@@ -17,12 +17,9 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft } from 'lucide-react';
 import { createClient, Client } from '@/lib/services';
 import type { Almacen } from '@/lib/services';
-import { useData } from '@/hooks/use-data-provider';
-
 
 export default function NewClientPage() {
   const router = useRouter();
-  const { refreshData } = useData();
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');
@@ -54,7 +51,6 @@ export default function NewClientPage() {
         };
 
         await createClient(newClientData);
-        await refreshData();
         alert('Cliente creado con éxito.');
         router.push('/dashboard/clients');
     } catch (error) {

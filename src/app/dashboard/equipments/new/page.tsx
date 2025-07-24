@@ -32,15 +32,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { createEquipment, Equipment, Client, System } from '@/lib/services';
+import { createEquipment, getClients, getSystems, Equipment, Client, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useData } from '@/hooks/use-data-provider';
-
 
 export default function NewEquipmentPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { clients, systems, refreshData, loading: dataLoading } = useData();
+  
+  const [clients, setClients] = useState<Client[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -59,6 +60,17 @@ export default function NewEquipmentPage() {
   
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    async function loadInitialData() {
+        setDataLoading(true);
+        const [clientsData, systemsData] = await Promise.all([getClients(), getSystems()]);
+        setClients(clientsData);
+        setSystems(systemsData);
+        setDataLoading(false);
+    }
+    loadInitialData();
+  }, []);
 
   useEffect(() => {
     if (clientId) {
@@ -111,7 +123,6 @@ export default function NewEquipmentPage() {
         };
 
         await createEquipment(newEquipment);
-        await refreshData();
         alert('Equipo creado con éxito.');
         router.push('/dashboard/equipments');
     } catch (error) {

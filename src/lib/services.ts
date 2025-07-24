@@ -20,6 +20,8 @@ export type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; 
 export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] };
 export type Cedula = typeof mockCedulas[0] & { id: string };
 
+export const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
+
 const collectionsToSeed = {
     users: { data: mockUsers },
     clients: { data: mockClients },
@@ -30,29 +32,19 @@ const collectionsToSeed = {
 };
 
 export const seedDatabase = async () => {
-  console.log("Checking if database needs seeding...");
+  console.log("Seeding database...");
   const batch = writeBatch(db);
-  let hasSeeded = false;
   
-  // Specifically check the users collection to decide if we should seed.
-  const usersSnapshot = await getDocs(collection(db, "users"));
-  if (usersSnapshot.empty) {
-      console.log("Database is empty. Seeding all collections...");
-      hasSeeded = true;
-      for (const [collectionName, { data }] of Object.entries(collectionsToSeed)) {
-          console.log(`Seeding collection: ${collectionName}`);
-          data.forEach(item => {
-              const { id, ...dataToSave } = item as any; // Cast to any to handle different types
-              const docRef = doc(collection(db, collectionName)); // Let Firestore generate the ID
-              batch.set(docRef, dataToSave);
-          });
-      }
-      await batch.commit();
-      console.log("Database seeding process completed.");
-  } else {
-      console.log("Database already has data. Skipping seed.");
+  for (const [collectionName, { data }] of Object.entries(collectionsToSeed)) {
+      data.forEach(item => {
+          const { id, ...dataToSave } = item as any; 
+          const docRef = doc(collection(db, collectionName));
+          batch.set(docRef, dataToSave);
+      });
   }
-  return hasSeeded;
+  
+  await batch.commit();
+  console.log("Database seeding process completed.");
 };
 
 
@@ -63,7 +55,7 @@ async function getCollection<T extends {id: string}>(collectionName: string): Pr
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
   } catch (error) {
     console.error(`Could not connect to Firestore to get ${collectionName}. Error:`, error);
-    return [];
+    throw error;
   }
 }
 

@@ -32,7 +32,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
 import { createUser, User } from '@/lib/services';
-import { useData } from '@/hooks/use-data-provider';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -91,7 +90,6 @@ const modules: { key: ModuleKey; label: string }[] = [
 
 export default function NewUserPage() {
   const router = useRouter();
-  const { refreshData } = useData();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
@@ -140,7 +138,6 @@ export default function NewUserPage() {
         };
 
         await createUser(newUser);
-        await refreshData();
         alert('Usuario creado con éxito.');
         router.push('/dashboard/users');
     } catch (error) {
