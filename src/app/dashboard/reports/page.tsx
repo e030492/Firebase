@@ -95,7 +95,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
             </div>
 
             {mainSemaforoInfo && (
-                <div className={cn("report-footer-block print:flex hidden", mainSemaforoInfo.color)}>
+                <div className={cn("report-footer-block print:block hidden", mainSemaforoInfo.color)}>
                     {mainSemaforoInfo.text}
                 </div>
             )}
@@ -152,21 +152,21 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                     <div className="border rounded-md">
                                         {cedula.protocolSteps.map((step, index) => (
                                             <div key={index} className="p-4 break-inside-avoid border-b last:border-b-0">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div className={cn(step.imageUrl ? '' : 'col-span-2')}>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                                                    <div className="md:col-span-2">
                                                         <table className="w-full text-sm">
                                                             <tbody>
                                                                 <tr>
-                                                                    <td className="pr-4 py-2 font-semibold align-top w-1/5">Paso</td>
-                                                                    <td className="py-2">{step.step}</td>
+                                                                    <td className="pr-4 py-1 font-semibold align-top w-1/5">Paso</td>
+                                                                    <td className="py-1">{step.step}</td>
                                                                 </tr>
                                                                 <tr>
-                                                                    <td className="pr-4 py-2 font-semibold align-top">Notas</td>
-                                                                    <td className="py-2 text-muted-foreground">{step.notes || 'Sin notas.'}</td>
+                                                                    <td className="pr-4 py-1 font-semibold align-top">Notas</td>
+                                                                    <td className="py-1 text-muted-foreground">{step.notes || 'Sin notas.'}</td>
                                                                 </tr>
                                                                 <tr>
-                                                                    <td className="pr-4 py-2 font-semibold">Estado</td>
-                                                                    <td className="py-2">
+                                                                    <td className="pr-4 py-1 font-semibold">Estado</td>
+                                                                    <td className="py-1">
                                                                         <div className="flex items-center gap-4">
                                                                             <Badge variant="secondary">Progreso: {step.completion}%</Badge>
                                                                             <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">Prioridad: {step.priority}</Badge>
@@ -177,9 +177,9 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                                         </table>
                                                     </div>
                                                     {step.imageUrl && (
-                                                        <div>
+                                                        <div className="md:col-span-1">
                                                             <p className="font-semibold text-sm mb-2">Evidencia</p>
-                                                            <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover border w-full h-auto"/>
+                                                            <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={200} height={150} data-ai-hint="protocol evidence" className="rounded-md object-cover border w-full h-auto"/>
                                                         </div>
                                                     )}
                                                 </div>
