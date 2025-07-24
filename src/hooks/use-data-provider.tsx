@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { 
+    seedDatabase,
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as createUserService,
     updateUser as updateUserService,
@@ -23,9 +24,10 @@ import {
     createCedula as createCedulaService,
     updateCedula as updateCedulaService,
     deleteCedula as deleteCedulaService,
-    seedDatabase,
-    User, Client, System, Equipment, Protocol, Cedula
 } from '@/lib/services';
+import type { User, Client, System, Equipment, Protocol, Cedula } from '@/lib/services';
+import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
+
 
 type DataContextType = {
   users: User[];
@@ -88,20 +90,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const loadAllData = useCallback(async () => {
     setLoading(true);
-    setDebugMessage('Checking database status...');
     setError(null);
     try {
-        await seedDatabase((message) => setDebugMessage(message));
+        seedDatabase((message) => setDebugMessage(message));
         
-        setDebugMessage('Fetching all collections from Firestore...');
-        const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData] = await Promise.all([
-            getUsers(),
-            getClients(),
-            getSystems(),
-            getEquipments(),
-            getProtocols(),
-            getCedulas(),
-        ]);
+        setDebugMessage('Fetching all data from localStorage...');
+        const usersData = await getUsers();
+        const clientsData = await getClients();
+        const systemsData = await getSystems();
+        const equipmentsData = await getEquipments();
+        const protocolsData = await getProtocols();
+        const cedulasData = await getCedulas();
         
         setUsers(usersData);
         setClients(clientsData);
@@ -110,7 +109,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setProtocols(protocolsData);
         setCedulas(cedulasData);
         
-        setDebugMessage('All data loaded successfully from Firestore.');
+        setDebugMessage('All data loaded successfully from localStorage.');
 
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
@@ -130,6 +129,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
       const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       if (foundUser && foundUser.password === pass) {
+          localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(foundUser));
           setDebugMessage(`User "${foundUser.name}" logged in successfully.`);
           return foundUser;
       }
@@ -141,118 +141,106 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const createUser = async (userData: Omit<User, 'id'>) => {
     const newUser = await createUserService(userData);
     setUsers(prev => [...prev, newUser]);
-    setDebugMessage(`User "${newUser.name}" created in Firestore.`);
+    setDebugMessage(`User "${newUser.name}" created.`);
   };
   const updateUser = async (userId: string, userData: Partial<User>) => {
     const updatedUser = await updateUserService(userId, userData);
-    if(updatedUser) {
-        setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
-        setDebugMessage(`User "${updatedUser.name}" updated in Firestore.`);
-    }
+    setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    setDebugMessage(`User "${updatedUser.name}" updated.`);
   };
   const deleteUser = async (userId: string) => {
     await deleteUserService(userId);
     setUsers(prev => prev.filter(u => u.id !== userId));
-    setDebugMessage(`User with ID ${userId} deleted from Firestore.`);
+    setDebugMessage(`User with ID ${userId} deleted.`);
   };
   
   // --- CLIENT MUTATIONS ---
   const createClient = async (clientData: Omit<Client, 'id'>) => {
     const newClient = await createClientService(clientData);
     setClients(prev => [...prev, newClient]);
-    setDebugMessage(`Client "${newClient.name}" created in Firestore.`);
+    setDebugMessage(`Client "${newClient.name}" created.`);
   };
   const updateClient = async (clientId: string, clientData: Partial<Client>) => {
     const updatedClient = await updateClientService(clientId, clientData);
-    if (updatedClient) {
-        setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
-        setDebugMessage(`Client "${updatedClient.name}" updated in Firestore.`);
-    }
+    setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
+    setDebugMessage(`Client "${updatedClient.name}" updated.`);
   };
   const deleteClient = async (clientId: string) => {
     await deleteClientService(clientId);
     setClients(prev => prev.filter(c => c.id !== clientId));
-    setDebugMessage(`Client with ID ${clientId} deleted from Firestore.`);
+    setDebugMessage(`Client with ID ${clientId} deleted.`);
   };
 
   // --- SYSTEM MUTATIONS ---
   const createSystem = async (systemData: Omit<System, 'id'>) => {
     const newSystem = await createSystemService(systemData);
     setSystems(prev => [...prev, newSystem]);
-    setDebugMessage(`System "${newSystem.name}" created in Firestore.`);
+    setDebugMessage(`System "${newSystem.name}" created.`);
   };
   const updateSystem = async (systemId: string, systemData: Partial<System>) => {
     const updatedSystem = await updateSystemService(systemId, systemData);
-    if (updatedSystem) {
-        setSystems(prev => prev.map(s => s.id === systemId ? updatedSystem : s));
-        setDebugMessage(`System "${updatedSystem.name}" updated in Firestore.`);
-    }
+    setSystems(prev => prev.map(s => s.id === systemId ? updatedSystem : s));
+    setDebugMessage(`System "${updatedSystem.name}" updated.`);
   };
   const deleteSystem = async (systemId: string) => {
     await deleteSystemService(systemId);
     setSystems(prev => prev.filter(s => s.id !== systemId));
-    setDebugMessage(`System with ID ${systemId} deleted from Firestore.`);
+    setDebugMessage(`System with ID ${systemId} deleted.`);
   };
 
   // --- EQUIPMENT MUTATIONS ---
   const createEquipment = async (equipmentData: Omit<Equipment, 'id'>) => {
     const newEquipment = await createEquipmentService(equipmentData);
     setEquipments(prev => [...prev, newEquipment]);
-    setDebugMessage(`Equipment "${newEquipment.name}" created in Firestore.`);
+    setDebugMessage(`Equipment "${newEquipment.name}" created.`);
   };
   const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>) => {
     const updatedEquipment = await updateEquipmentService(equipmentId, equipmentData);
-    if (updatedEquipment) {
-        setEquipments(prev => prev.map(e => e.id === equipmentId ? updatedEquipment : e));
-        setDebugMessage(`Equipment "${updatedEquipment.name}" updated in Firestore.`);
-    }
+    setEquipments(prev => prev.map(e => e.id === equipmentId ? updatedEquipment : e));
+    setDebugMessage(`Equipment "${updatedEquipment.name}" updated.`);
   };
   const deleteEquipment = async (equipmentId: string) => {
     await deleteEquipmentService(equipmentId);
     await deleteProtocolByEquipmentIdService(equipmentId);
     setEquipments(prev => prev.filter(e => e.id !== equipmentId));
     setProtocols(prev => prev.filter(p => p.equipmentId !== equipmentId));
-    setDebugMessage(`Equipment with ID ${equipmentId} and its protocol deleted from Firestore.`);
+    setDebugMessage(`Equipment with ID ${equipmentId} and its protocol deleted.`);
   };
 
   // --- PROTOCOL MUTATIONS ---
     const createProtocol = async (protocolData: Omit<Protocol, 'id'>) => {
         const newProtocol = await createProtocolService(protocolData);
         setProtocols(prev => [...prev, newProtocol]);
-        setDebugMessage(`Protocol for equipment ID ${newProtocol.equipmentId} created in Firestore.`);
+        setDebugMessage(`Protocol for equipment ID ${newProtocol.equipmentId} created.`);
     };
 
     const updateProtocol = async (protocolId: string, protocolData: Partial<Protocol>) => {
         const updatedProtocol = await updateProtocolService(protocolId, protocolData);
-        if (updatedProtocol) {
-            setProtocols(prev => prev.map(p => p.id === protocolId ? updatedProtocol : p));
-            setDebugMessage(`Protocol with ID ${protocolId} updated in Firestore.`);
-        }
+        setProtocols(prev => prev.map(p => p.id === protocolId ? updatedProtocol : p));
+        setDebugMessage(`Protocol with ID ${protocolId} updated.`);
     };
 
     const deleteProtocol = async (protocolId: string) => {
         await deleteProtocolService(protocolId);
         setProtocols(prev => prev.filter(p => p.id !== protocolId));
-        setDebugMessage(`Protocol with ID ${protocolId} deleted from Firestore.`);
+        setDebugMessage(`Protocol with ID ${protocolId} deleted.`);
     };
     
   // --- CEDULA MUTATIONS ---
     const createCedula = async (cedulaData: Omit<Cedula, 'id'>) => {
         const newCedula = await createCedulaService(cedulaData);
         setCedulas(prev => [...prev, newCedula]);
-        setDebugMessage(`Cédula with folio ${newCedula.folio} created in Firestore.`);
+        setDebugMessage(`Cédula with folio ${newCedula.folio} created.`);
     };
     const updateCedula = async (cedulaId: string, cedulaData: Partial<Cedula>) => {
         const updatedCedula = await updateCedulaService(cedulaId, cedulaData);
-        if (updatedCedula) {
-            setCedulas(prev => prev.map(c => c.id === cedulaId ? updatedCedula : c));
-            setDebugMessage(`Cédula with folio ${updatedCedula.folio} updated in Firestore.`);
-        }
+        setCedulas(prev => prev.map(c => c.id === cedulaId ? updatedCedula : c));
+        setDebugMessage(`Cédula with folio ${updatedCedula.folio} updated.`);
     };
     const deleteCedula = async (cedulaId: string) => {
         await deleteCedulaService(cedulaId);
         setCedulas(prev => prev.filter(c => c.id !== cedulaId));
-        setDebugMessage(`Cédula with ID ${cedulaId} deleted from Firestore.`);
+        setDebugMessage(`Cédula with ID ${cedulaId} deleted.`);
     };
 
 

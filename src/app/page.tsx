@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { DebugWindow } from '@/components/debug-window';
 import { useData } from '@/hooks/use-data-provider';
 
@@ -37,16 +36,15 @@ export default function LoginPage() {
       const user = await loginUser(email, password);
 
       if (user) {
-        localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
         router.push('/dashboard/users');
       } else {
         setError('Usuario o contraseña incorrectos.');
-        setIsLoading(false);
       }
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Login failed:", err);
       setError(`Error crítico durante el login: ${errorMessage}`);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -88,10 +86,15 @@ export default function LoginPage() {
               </CardContent>
               <CardFooter className="flex-col gap-4">
                 <Button type="submit" className="w-full" disabled={isFormDisabled}>
-                  {isFormDisabled ? (
+                  {dataLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>{dataLoading ? 'Cargando datos...' : 'Accediendo...'}</span>
+                      <span>Cargando datos...</span>
+                    </>
+                  ) : isLoading ? (
+                     <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Accediendo...</span>
                     </>
                   ) : 'Acceder'}
                 </Button>
