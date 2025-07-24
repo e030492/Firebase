@@ -49,9 +49,14 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const usersData = await getUsers();
-    setUsers(usersData);
-    setLoading(false);
+    try {
+        const usersData = await getUsers();
+        setUsers(usersData);
+    } catch (error) {
+        console.error("Failed to fetch users:", error);
+    } finally {
+        setLoading(false);
+    }
   };
 
   useEffect(() => {

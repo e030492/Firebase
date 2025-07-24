@@ -135,7 +135,7 @@ export default function EquipmentsPage() {
   };
   
   const handleToggleDetails = (equipmentId: string) => {
-    setExpandedEquipmentId(prevId => prevId === equipmentId ? null : equipmentId);
+    setExpandedEquipmentId(prevId => prevId === equipmentId ? null : prevId);
   };
   
   if (loading) {

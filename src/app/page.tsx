@@ -18,49 +18,65 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getUsers, User, seedDatabase, ACTIVE_USER_STORAGE_KEY } from '@/lib/services';
 
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [debugMessages, setDebugMessages] = useState<string[]>([]);
+
+  const addDebugMessage = (message: string) => {
+    setDebugMessages(prev => [...prev, message]);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setDebugMessages([]);
     setIsLoading(true);
 
     try {
+      addDebugMessage("1. Iniciando proceso de login...");
+      addDebugMessage("2. Consultando base de datos para obtener usuarios...");
       let users = await getUsers();
       
-      // If no users exist, seed the database and try again.
       if (users.length === 0) {
-        alert("Base de datos no inicializada. Sembrando datos iniciales. Por favor, espere un momento y vuelva a intentarlo.");
+        addDebugMessage("WARN: La colección de usuarios está vacía. Sembrando datos iniciales...");
         await seedDatabase();
+        addDebugMessage("INFO: Base de datos sembrada. Volviendo a consultar usuarios...");
         users = await getUsers();
         if (users.length === 0) {
           throw new Error("No se pudieron cargar los usuarios después de la inicialización.");
         }
+        addDebugMessage(`INFO: ${users.length} usuarios encontrados después de sembrar.`);
       }
 
+      addDebugMessage(`3. ${users.length} usuarios encontrados. Verificando credenciales...`);
       const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
       if (user) {
+        addDebugMessage(`INFO: Usuario ${user.email} encontrado.`);
         if (user.password === password) {
+          addDebugMessage("4. Login exitoso. Redirigiendo...");
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-          router.push('/dashboard/dashboard');
+          router.push('/dashboard/users');
         } else {
+          addDebugMessage("ERROR: Contraseña incorrecta.");
           setError('Contraseña incorrecta.');
         }
       } else {
+        addDebugMessage("ERROR: Usuario no encontrado.");
         setError('Usuario no encontrado.');
       }
-    } catch (err) {
+    } catch (err: any) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      addDebugMessage(`FATAL: ${errorMessage}`);
       console.error("Login failed:", err);
-      setError("Error al conectar con la base de datos. Verifique la consola para más detalles.");
+      setError("Error al conectar con la base de datos. Verifique la consola.");
     } finally {
       setIsLoading(false);
+      addDebugMessage("5. Proceso de login finalizado.");
     }
   };
 
@@ -110,7 +126,23 @@ export default function LoginPage() {
             </CardFooter>
           </form>
         </Card>
+
+        {/* Ventana de Depuración */}
+        <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="text-base">Ventana de Depuración</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="bg-muted p-2 rounded-md h-40 overflow-y-auto text-xs font-mono">
+                    {debugMessages.map((msg, index) => (
+                        <p key={index} className={msg.startsWith('ERROR') || msg.startsWith('FATAL') ? 'text-destructive' : ''}>{msg}</p>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
       </div>
     </main>
   );
 }
+
+    

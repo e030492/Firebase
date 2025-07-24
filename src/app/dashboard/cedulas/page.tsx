@@ -215,7 +215,7 @@ export default function CedulasPage() {
   };
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => prevId === cedulaId ? null : cedulaId);
+    setExpandedCedulaId(prevId => prevId === cedulaId ? null : prevId);
   };
 
   const canCreateCedulas = can('create', 'cedulas');

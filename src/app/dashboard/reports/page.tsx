@@ -336,7 +336,7 @@ export default function ReportsPage() {
   const selectionState = isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false);
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : cedulaId));
+    setExpandedCedulaId(prevId => (prevId === cedulaId ? null : prevId));
   };
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
@@ -620,3 +620,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
