@@ -25,51 +25,33 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [debugMessages, setDebugMessages] = useState<string[]>([]);
-
-  const addDebugMessage = (message: string) => {
-    setDebugMessages(prev => [...prev, message]);
-  };
-
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setDebugMessages([]);
     setIsLoading(true);
-    addDebugMessage("1. Iniciando proceso de login...");
 
     try {
-      addDebugMessage("2. Verificando credenciales localmente...");
       const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
 
       if (user) {
-        addDebugMessage(`INFO: Usuario ${user.email} encontrado en datos locales.`);
         if (user.password === password) {
-          addDebugMessage("3. Login exitoso. Guardando usuario y redirigiendo...");
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-          
-          // The check and seed will happen on the dashboard side if needed
-          // to avoid blocking the login process.
           router.push('/dashboard/users');
-
         } else {
-          addDebugMessage("ERROR: Contraseña incorrecta.");
           setError('Contraseña incorrecta.');
           setIsLoading(false);
         }
       } else {
-        addDebugMessage("ERROR: Usuario no encontrado en datos locales.");
         setError('Usuario no encontrado.');
         setIsLoading(false);
       }
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      addDebugMessage(`FATAL: ${errorMessage}`);
       console.error("Login failed:", err);
       setError("Error crítico durante el login. Verifique la consola.");
       setIsLoading(false);
-    } 
-    // No "finally" block to set isLoading to false, because a successful login navigates away.
+    }
   };
 
   return (
@@ -117,20 +99,6 @@ export default function LoginPage() {
                </Link>
             </CardFooter>
           </form>
-        </Card>
-
-        {/* Ventana de Depuración */}
-        <Card className="shadow-lg">
-            <CardHeader>
-                <CardTitle className="text-base">Ventana de Depuración</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="bg-muted p-2 rounded-md h-40 overflow-y-auto text-xs font-mono">
-                    {debugMessages.map((msg, index) => (
-                        <p key={index} className={msg.startsWith('ERROR') || msg.startsWith('FATAL') ? 'text-destructive' : ''}>{msg}</p>
-                    ))}
-                </div>
-            </CardContent>
         </Card>
       </div>
     </main>

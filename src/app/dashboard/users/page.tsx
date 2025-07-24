@@ -35,40 +35,18 @@ import {
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/use-permissions';
-import { deleteUser, getUsers, User, seedDatabase } from '@/lib/services';
+import { User } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useData } from '@/hooks/use-data-provider';
 
 type SortableKey = 'name' | 'email' | 'role';
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { users, loading, deleteUser: deleteUserFromProvider } = useData();
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const { can } = usePermissions();
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-        let usersData = await getUsers();
-        // If the database is empty, seed it and refetch.
-        if (usersData.length === 0) {
-            console.log("No users found, seeding database...");
-            await seedDatabase();
-            usersData = await getUsers();
-        }
-        setUsers(usersData);
-    } catch (error) {
-        console.error("Failed to fetch users:", error);
-    } finally {
-        setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
+  
   const sortedUsers = useMemo(() => {
     let sortableItems = [...users];
     if (sortConfig !== null) {
@@ -106,8 +84,7 @@ export default function UsersPage() {
   const handleDeleteUser = async () => {
     if (userToDelete) {
       try {
-        await deleteUser(userToDelete.id);
-        await fetchUsers(); // Refetch users after deletion
+        await deleteUserFromProvider(userToDelete.id);
       } catch (error) {
         console.error("Failed to delete user:", error);
         alert("Error al eliminar el usuario.");

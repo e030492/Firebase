@@ -31,7 +31,8 @@ import {
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
-import { createUser, User } from '@/lib/services';
+import { User } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -90,6 +91,7 @@ const modules: { key: ModuleKey; label: string }[] = [
 
 export default function NewUserPage() {
   const router = useRouter();
+  const { createUser: createUserInProvider } = useData();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
@@ -137,12 +139,13 @@ export default function NewUserPage() {
             permissions,
         };
 
-        await createUser(newUser);
+        await createUserInProvider(newUser);
         alert('Usuario creado con éxito.');
         router.push('/dashboard/users');
     } catch (error) {
         console.error("Failed to create user:", error);
         alert("Error al crear el usuario.");
+    } finally {
         setLoading(false);
     }
   };
@@ -206,7 +209,7 @@ export default function NewUserPage() {
                 <CardDescription>
                     Seleccione las acciones que este usuario podrá realizar en cada módulo.
                 </CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent>
                 <Table>
                     <TableHeader>
