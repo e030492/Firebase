@@ -34,12 +34,22 @@ export default function DashboardPage() {
     
     if (loading) {
         return (
-          <div className="grid gap-4 auto-rows-max">
-            <Skeleton className="h-48 w-full" />
+          <div className="grid gap-4 auto-rows-max md:gap-8">
+            <Card className="w-full">
+                <CardHeader>
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="w-12 h-12 rounded-full"/>
+                        <div>
+                            <Skeleton className="h-8 w-64" />
+                            <Skeleton className="h-5 w-80 mt-2" />
+                        </div>
+                    </div>
+                </CardHeader>
+            </Card>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
-              <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
-              <Card><CardHeader><Skeleton className="h-24 w-full" /></CardHeader></Card>
+              <Card><CardHeader className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-8 w-16" /><Skeleton className="h-4 w-48" /></CardHeader></Card>
+              <Card><CardHeader className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-8 w-16" /><Skeleton className="h-4 w-48" /></CardHeader></Card>
+              <Card><CardHeader className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-8 w-16" /><Skeleton className="h-4 w-48" /></CardHeader></Card>
             </div>
             <Card className="col-span-1 lg:col-span-3">
               <CardHeader>
@@ -56,14 +66,16 @@ export default function DashboardPage() {
 
     return (
         <div className="grid auto-rows-max items-start gap-4 md:gap-8">
-            <Card className="w-full bg-gradient-to-r from-primary/10 to-transparent">
+            <Card className="w-full bg-gradient-to-r from-primary/10 to-transparent border-primary/20">
                 <CardHeader>
                     <div className="flex items-center gap-4">
-                        <ShieldCheck className="w-12 h-12 text-primary"/>
+                        <div className="p-3 bg-primary/20 rounded-full">
+                            <ShieldCheck className="w-8 h-8 text-primary"/>
+                        </div>
                         <div>
-                            <CardTitle className="text-3xl">Bienvenido, {user?.name || 'Usuario'}</CardTitle>
-                            <CardDescription className="text-base">
-                                Este es su panel de control central para gestionar la seguridad y el mantenimiento.
+                            <CardTitle className="text-3xl font-bold">Bienvenido, {user?.name || 'Usuario'}</CardTitle>
+                            <CardDescription className="text-base text-muted-foreground mt-1">
+                                Este es su panel de control para la gestión de seguridad y mantenimiento.
                             </CardDescription>
                         </div>
                     </div>
