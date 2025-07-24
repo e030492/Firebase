@@ -91,7 +91,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           </SidebarContent>
         </Sidebar>
         <SidebarInset>
-          <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
+          <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6 print:hidden">
             <SidebarTrigger />
 
             <div className="flex items-center gap-3">
@@ -133,7 +133,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             variant={isDebugWindowVisible ? "destructive" : "outline"}
             size="icon"
             className={cn(
-              "fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-2xl z-50 transition-all duration-300",
+              "fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-2xl z-50 transition-all duration-300 print:hidden",
               !isDebugWindowVisible && "bg-primary/80 text-primary-foreground hover:bg-primary"
             )}
           >
