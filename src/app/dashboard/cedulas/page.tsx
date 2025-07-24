@@ -186,7 +186,7 @@ export default function CedulasPage() {
   };
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => prevId === cedulaId ? null : prevId);
+    setExpandedCedulaId(prevId => prevId === cedulaId ? null : cedulaId);
   };
 
   const canCreateCedulas = can('create', 'cedulas');
@@ -366,7 +366,7 @@ export default function CedulasPage() {
               <TableBody>
                 {filteredAndSortedCedulas.map((cedula) => (
                   <Fragment key={cedula.id}>
-                    <TableRow onClick={() => handleToggleDetails(cedula.id)} className="cursor-pointer">
+                    <TableRow>
                       <TableCell className="font-medium">{cedula.folio}</TableCell>
                       <TableCell>{cedula.client}</TableCell>
                       <TableCell className="hidden md:table-cell">
@@ -400,7 +400,7 @@ export default function CedulasPage() {
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                      <TableCell>
                         {(canUpdateCedulas || canDeleteCedulas) && (
                             <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -428,7 +428,7 @@ export default function CedulasPage() {
                             </DropdownMenu>
                         )}
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                      <TableCell>
                           <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(cedula.id)}>
                             <ChevronDown className={cn("h-4 w-4 transition-transform", expandedCedulaId === cedula.id && "rotate-180")} />
                             <span className="sr-only">Ver detalles</span>
@@ -546,5 +546,3 @@ export default function CedulasPage() {
     </>
   );
 }
-
-    
