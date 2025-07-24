@@ -33,7 +33,6 @@ import {
 } from '@/lib/services';
 import type { User, Client, System, Equipment, Protocol, Cedula } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
-import { firebaseConfig } from '@/lib/firebase';
 
 
 type DataContextType = {
@@ -45,9 +44,6 @@ type DataContextType = {
   cedulas: Cedula[];
   loading: boolean;
   error: string | null;
-  debugLog: string[];
-  isDebugWindowVisible: boolean;
-  toggleDebugWindow: () => void;
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
   // User mutations
@@ -87,53 +83,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [debugLog, setDebugLog] = useState<string[]>([]);
-  const [isDebugWindowVisible, setIsDebugWindowVisible] = useState(false);
-
-  const toggleDebugWindow = () => setIsDebugWindowVisible(prev => !prev);
-  
-  const log = useCallback((message: string) => {
-    setDebugLog(prev => [...prev, message]);
-  }, []);
 
   useEffect(() => {
     const initializeApp = async () => {
       setLoading(true);
       setError(null);
-      setDebugLog(['DataProvider initialized. Starting connection process...']);
 
       try {
-        log("Attempting Firestore connection test...");
-        await connectionTest(log);
-        log("Firestore connection test successful.");
-
-        log("Checking if database needs seeding...");
-        await seedDatabase(log);
-        
-        log("Subscribing to real-time data collections...");
+        await connectionTest();
+        await seedDatabase();
         
         const unsubscribers = [
-          subscribeToUsers(setUsers, log),
-          subscribeToClients(setClients, log),
-          subscribeToSystems(setSystems, log),
-          subscribeToEquipments(setEquipments, log),
-          subscribeToProtocols(setProtocols, log),
-          subscribeToCedulas(setCedulas, log),
+          subscribeToUsers(setUsers),
+          subscribeToClients(setClients),
+          subscribeToSystems(setSystems),
+          subscribeToEquipments(setEquipments),
+          subscribeToProtocols(setProtocols),
+          subscribeToCedulas(setCedulas),
         ];
 
-        log('All subscriptions established. App is now in real-time sync.');
         setLoading(false);
 
         return () => {
-          log('Cleaning up subscriptions...');
           unsubscribers.forEach(unsubscribe => unsubscribe());
-          log('All subscriptions stopped.');
         };
 
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
         setError(`FATAL: ${errorMessage}`);
-        log(`FATAL ERROR: ${errorMessage}. The app may not function correctly.`);
         console.error("Failed to initialize data from Firestore:", e);
         setLoading(false);
       }
@@ -144,17 +121,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return () => {
       unsubscribePromise.then(cleanup => cleanup && cleanup());
     };
-  }, [log]);
+  }, []);
   
   // --- AUTH ---
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
       const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       if (foundUser && foundUser.password === pass) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(foundUser));
-          log(`User "${foundUser.name}" logged in successfully.`);
           return foundUser;
       }
-      log(`Login failed for email: ${email}. User not found or password incorrect.`);
       return null;
   };
 
@@ -167,9 +142,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     cedulas,
     loading,
     error,
-    debugLog,
-    isDebugWindowVisible,
-    toggleDebugWindow,
     // Auth
     loginUser,
     // Users

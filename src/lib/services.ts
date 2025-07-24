@@ -35,33 +35,28 @@ const mockDataMap: { [key: string]: any[] } = {
 
 
 // --- Firebase Connection Test ---
-export const connectionTest = async (log: (message: string) => void) => {
+export const connectionTest = async () => {
     try {
-        log(`Attempting to read doc '${collections._connectionTest}/test'`);
         const testDocRef = doc(db, collections._connectionTest, 'test');
         await getDoc(testDocRef);
-        log(`Read successful.`);
         return true;
     } catch (error: any) {
-        log(`Connection test failed. Original error: ${error.message}`);
         throw new Error(`Firestore connection test failed. This often means your security rules are too restrictive. Please ensure they allow read/write access. Original error: ${error.message}`);
     }
 }
 
 
 // --- Firebase Seeding ---
-export const seedDatabase = async (log: (message: string) => void) => {
+export const seedDatabase = async () => {
     try {
         const usersCollectionRef = collection(db, collections.users);
         const usersSnapshot = await getDocs(usersCollectionRef);
 
         if (usersSnapshot.empty) {
-            log("Users collection is empty, proceeding with seeding...");
             const batch = writeBatch(db);
             
             for (const [collectionName, data] of Object.entries(mockDataMap)) {
                 const collectionRef = collection(db, collectionName);
-                log(` - Seeding ${data.length} documents into '${collectionName}'...`);
                 data.forEach(item => {
                     const { id, ...rest } = item;
                     // For mock data that has a specific ID we want to preserve, use it
@@ -71,29 +66,23 @@ export const seedDatabase = async (log: (message: string) => void) => {
             }
             
             await batch.commit();
-            log("Batch commit successful. Database seeded.");
             return true;
         } else {
-            log("Users collection already contains data. No seeding needed.");
             return false;
         }
     } catch (error) {
-        log(`Error seeding database: ${error instanceof Error ? error.message : 'Unknown error'}`);
         console.error("Error seeding database:", error);
         throw error;
     }
 };
 
 // --- Generic Firestore Service Functions ---
-function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) => void, log: (message: string) => void) {
+function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) => void) {
     const collectionRef = collection(db, collectionName);
-    log(`Subscribing to real-time updates for '${collectionName}'.`);
     const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
         setData(data);
-        log(`'${collectionName}' snapshot received with ${data.length} documents.`);
     }, (error) => {
-        log(`ERROR subscribing to ${collectionName}: ${error.message}`);
         console.error(`Error listening to ${collectionName}:`, error);
         setData([]);
     });
@@ -122,31 +111,31 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 // --- Specific Service Functions ---
 
 // USERS
-export const subscribeToUsers = (setUsers: (users: User[]) => void, log: (message: string) => void) => subscribeToCollection<User>(collections.users, setUsers, log);
+export const subscribeToUsers = (setUsers: (users: User[]) => void) => subscribeToCollection<User>(collections.users, setUsers);
 export const createUser = (data: Omit<User, 'id'>): Promise<User> => createDocument<User>(collections.users, data);
 export const updateUser = (id: string, data: Partial<User>): Promise<User> => updateDocument<User>(collections.users, id, data);
 export const deleteUser = (id: string): Promise<boolean> => deleteDocument(collections.users, id);
 
 // CLIENTS
-export const subscribeToClients = (setClients: (clients: Client[]) => void, log: (message: string) => void) => subscribeToCollection<Client>(collections.clients, setClients, log);
+export const subscribeToClients = (setClients: (clients: Client[]) => void) => subscribeToCollection<Client>(collections.clients, setClients);
 export const createClient = (data: Omit<Client, 'id'>): Promise<Client> => createDocument<Client>(collections.clients, data);
 export const updateClient = (id: string, data: Partial<Client>): Promise<Client> => updateDocument<Client>(collections.clients, id, data);
 export const deleteClient = (id: string): Promise<boolean> => deleteDocument(collections.clients, id);
 
 // EQUIPMENTS
-export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void, log: (message: string) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments, log);
+export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
 export const createEquipment = (data: Omit<Equipment, 'id'>): Promise<Equipment> => createDocument<Equipment>(collections.equipments, data);
 export const updateEquipment = (id: string, data: Partial<Equipment>): Promise<Equipment> => updateDocument<Equipment>(collections.equipments, id, data);
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
 // SYSTEMS
-export const subscribeToSystems = (setSystems: (systems: System[]) => void, log: (message: string) => void) => subscribeToCollection<System>(collections.systems, setSystems, log);
+export const subscribeToSystems = (setSystems: (systems: System[]) => void) => subscribeToCollection<System>(collections.systems, setSystems);
 export const createSystem = (data: Omit<System, 'id'>): Promise<System> => createDocument<System>(collections.systems, data);
 export const updateSystem = (id: string, data: Partial<System>): Promise<System> => updateDocument<System>(collections.systems, id, data);
 export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(collections.systems, id);
 
 // PROTOCOLS
-export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void, log: (message: string) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols, log);
+export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 export const createProtocol = (data: Omit<Protocol, 'id'>): Promise<Protocol> => createDocument<Protocol>(collections.protocols, data);
 export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol> => updateDocument<Protocol>(collections.protocols, id, data);
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
@@ -169,7 +158,7 @@ export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<
 }
 
 // CEDULAS
-export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void, log: (message: string) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas, log);
+export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
 export const createCedula = (data: Omit<Cedula, 'id'>): Promise<Cedula> => createDocument<Cedula>(collections.cedulas, data);
 export const updateCedula = (id: string, data: Partial<Cedula>): Promise<Cedula> => updateDocument<Cedula>(collections.cedulas, id, data);
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

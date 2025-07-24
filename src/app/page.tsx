@@ -16,12 +16,11 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DebugWindow } from '@/components/debug-window';
 import { useData } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser, isDebugWindowVisible, loading: dataLoading } = useData();
+  const { loginUser, loading: dataLoading } = useData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +52,6 @@ export default function LoginPage() {
 
   return (
     <>
-      {isDebugWindowVisible && <DebugWindow />}
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
