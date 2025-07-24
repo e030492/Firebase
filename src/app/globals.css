@@ -149,6 +149,10 @@
     counter-increment: page;
     counter-reset: page 1;
     
+    @top-center {
+        content: element(reportHeader);
+    }
+    
     @bottom-left {
         content: "";
     }
@@ -169,4 +173,9 @@
   .break-after-page {
     counter-increment: pages;
   }
+  
+  .report-header {
+      position: running(reportHeader);
+  }
+
 }

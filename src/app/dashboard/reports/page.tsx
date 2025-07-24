@@ -30,7 +30,6 @@ type EnrichedCedula = Cedula & {
 type SortableKey = 'folio' | 'client' | 'warehouse' | 'system' | 'equipment' | 'creationDate';
 
 function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => void }) {
-    const reportDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
         switch (priority?.toLowerCase()) {
@@ -60,6 +59,8 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
     
     // Use the semaforo of the first cedula for the repeating footer
     const mainSemaforoInfo = data.length > 0 ? getSemaforoInfo(data[0].semaforo) : null;
+    const firstCedula = data[0];
+    const systemColor = firstCedula.systemDetails?.color || '#6b7280';
 
     return (
         <div className="report-container">
@@ -79,6 +80,19 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                     </Button>
                 </div>
             </header>
+            
+            <div className="report-header print:block hidden">
+                <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                        <ShieldCheck className="h-14 w-14" />
+                        <div>
+                            <h2 className="text-3xl font-bold">Reporte de Servicio</h2>
+                            <p className="text-sm opacity-90">{firstCedula.system}</p>
+                        </div>
+                    </div>
+                    <p className="text-sm opacity-90">Escuadra Tecnology</p>
+                </div>
+            </div>
 
             {mainSemaforoInfo && (
                 <div className={cn("report-footer-block print:flex hidden", mainSemaforoInfo.color)}>
@@ -89,10 +103,9 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
 
             <main className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none print:p-0">
                 {data.map((cedula, cedulaIndex) => {
-                    const systemColor = cedula.systemDetails?.color || '#6b7280';
                     return (
                         <div key={cedula.id} className={cn("break-after-page", { 'no-break-after': cedulaIndex === data.length - 1 })}>
-                            <header className="border-b-2 border-gray-900 overflow-hidden">
+                             <header className="border-b-2 border-gray-900 overflow-hidden print:hidden">
                                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                                     <div className="flex items-center gap-4">
                                         <ShieldCheck className="h-14 w-14" />
@@ -139,35 +152,37 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                     <div className="border rounded-md">
                                         {cedula.protocolSteps.map((step, index) => (
                                             <div key={index} className="p-4 break-inside-avoid border-b last:border-b-0">
-                                                <table className="w-full text-sm">
-                                                    <tbody>
-                                                        <tr>
-                                                            <td className="pr-4 py-2 font-semibold align-top w-1/5">Paso</td>
-                                                            <td className="py-2">{step.step}</td>
-                                                        </tr>
-                                                         <tr>
-                                                            <td className="pr-4 py-2 font-semibold align-top">Notas</td>
-                                                            <td className="py-2 text-muted-foreground">{step.notes || 'Sin notas.'}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td className="pr-4 py-2 font-semibold">Estado</td>
-                                                            <td className="py-2">
-                                                                <div className="flex items-center gap-4">
-                                                                    <Badge variant="secondary">Progreso: {step.completion}%</Badge>
-                                                                    <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">Prioridad: {step.priority}</Badge>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        {step.imageUrl && (
-                                                            <tr>
-                                                                <td className="pr-4 py-2 font-semibold align-top">Evidencia</td>
-                                                                <td className="py-2">
-                                                                    <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover border w-1/2 h-auto" style={{maxWidth: '50%', height: 'auto'}}/>
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className={cn(step.imageUrl ? '' : 'col-span-2')}>
+                                                        <table className="w-full text-sm">
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td className="pr-4 py-2 font-semibold align-top w-1/5">Paso</td>
+                                                                    <td className="py-2">{step.step}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td className="pr-4 py-2 font-semibold align-top">Notas</td>
+                                                                    <td className="py-2 text-muted-foreground">{step.notes || 'Sin notas.'}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td className="pr-4 py-2 font-semibold">Estado</td>
+                                                                    <td className="py-2">
+                                                                        <div className="flex items-center gap-4">
+                                                                            <Badge variant="secondary">Progreso: {step.completion}%</Badge>
+                                                                            <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">Prioridad: {step.priority}</Badge>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    {step.imageUrl && (
+                                                        <div>
+                                                            <p className="font-semibold text-sm mb-2">Evidencia</p>
+                                                            <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover border w-full h-auto"/>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
