@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, Camera, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +32,16 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardDescription } from '@/components/ui/card';
@@ -66,6 +76,9 @@ export default function NewCedulaPage() {
   const [notes, setNotes] = useState<{ [step: string]: string }>({});
   
   const [isSaving, setIsSaving] = useState(false);
+  
+  const [showProtocolAlert, setShowProtocolAlert] = useState(false);
+  const [equipmentForProtocol, setEquipmentForProtocol] = useState<string | null>(null);
 
   useEffect(() => {
     setTechnicians(users.filter(user => user.role === 'Técnico'));
@@ -117,7 +130,8 @@ export default function NewCedulaPage() {
     if (!selectedEquipment) return;
 
     if (!selectedEquipment.hasProtocol) {
-        alert("Este equipo no tiene un protocolo de mantenimiento definido. Por favor, cree uno antes de generar una cédula.");
+        setEquipmentForProtocol(newEquipmentId);
+        setShowProtocolAlert(true);
         setEquipmentId('');
         setProtocolSteps([]);
         return;
@@ -233,6 +247,7 @@ export default function NewCedulaPage() {
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">
@@ -507,7 +522,31 @@ export default function NewCedulaPage() {
         </div>
       </div>
     </form>
+    
+    <AlertDialog open={showProtocolAlert} onOpenChange={setShowProtocolAlert}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <div className='flex items-center gap-2'>
+                    <ShieldAlert className="h-6 w-6 text-destructive" />
+                    <AlertDialogTitle>Protocolo Requerido</AlertDialogTitle>
+                </div>
+                <AlertDialogDescription>
+                    Este equipo no tiene un protocolo de mantenimiento definido. Es necesario crear uno antes de poder generar una cédula.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setEquipmentForProtocol(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={() => {
+                    if (equipmentForProtocol) {
+                        router.push(`/dashboard/protocols/new?equipmentId=${equipmentForProtocol}`);
+                    }
+                }}>
+                    Crear Protocolo
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+    </>
   );
 }
-
-    
