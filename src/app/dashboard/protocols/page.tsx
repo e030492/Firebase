@@ -356,12 +356,22 @@ export default function ProtocolsPage() {
                     <AccordionItem value={equipment.id} key={equipment.id}>
                         <div className="flex items-center w-full">
                            <AccordionTrigger className="flex-1 text-lg font-medium hover:no-underline py-4">
-                              <div className="flex items-center gap-4 text-left">
-                                  <span>{equipment.name} <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span></span>
-                                  <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
+                              <div className="flex flex-col items-start text-left">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold">{equipment.name}</span>
+                                  <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground font-normal flex items-center gap-x-2">
+                                  {equipment.alias && <span>Alias: {equipment.alias}</span>}
+                                  {equipment.alias && <span>&bull;</span>}
+                                  <span>Modelo: {equipment.model}</span>
+                                  <span>&bull;</span>
+                                  <span>N/S: {equipment.serial}</span>
+                                </div>
                               </div>
                            </AccordionTrigger>
-                           <div className="px-4">
+                           <div className="px-4 flex items-center gap-2">
+                             <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">

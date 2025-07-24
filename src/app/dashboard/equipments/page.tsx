@@ -252,7 +252,7 @@ export default function EquipmentsPage() {
                   <TableHead className="hidden sm:table-cell">Imagen</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
-                      Nombre / Serie
+                      Equipo
                       {getSortIcon('name')}
                     </Button>
                   </TableHead>
@@ -296,10 +296,11 @@ export default function EquipmentsPage() {
                             )}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {equipment.name}
+                          <span className="font-bold">{equipment.name}</span>
                           {equipment.alias && (
-                            <span className="block text-xs text-muted-foreground">{equipment.alias}</span>
+                            <span className="block text-xs text-muted-foreground italic">Alias: {equipment.alias}</span>
                           )}
+                           <span className="block text-xs text-muted-foreground">Modelo: {equipment.model}</span>
                            <span className="block text-xs text-muted-foreground">N/S: {equipment.serial}</span>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
@@ -401,3 +402,4 @@ export default function EquipmentsPage() {
   );
 }
     
+
