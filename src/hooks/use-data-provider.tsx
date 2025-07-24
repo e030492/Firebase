@@ -4,7 +4,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { 
     seedDatabase,
-    getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
+    subscribeToUsers,
+    subscribeToClients,
+    subscribeToSystems,
+    subscribeToEquipments,
+    subscribeToProtocols,
+    subscribeToCedulas,
     createUser as createUserService,
     updateUser as updateUserService,
     deleteUser as deleteUserService,
@@ -28,6 +33,7 @@ import {
 } from '@/lib/services';
 import type { User, Client, System, Equipment, Protocol, Cedula } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
+import { firebaseConfig } from '@/lib/firebase';
 
 
 type DataContextType = {
@@ -42,7 +48,6 @@ type DataContextType = {
   debugLog: string[];
   isDebugWindowVisible: boolean;
   toggleDebugWindow: () => void;
-  refreshData: () => Promise<void>;
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
   // User mutations
@@ -82,64 +87,64 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [debugLog, setDebugLog] = useState<string[]>(['Initializing DataProvider...']);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
   const [isDebugWindowVisible, setIsDebugWindowVisible] = useState(true);
 
-  const toggleDebugWindow = () => {
-    setIsDebugWindowVisible(prev => !prev);
-  };
+  const toggleDebugWindow = () => setIsDebugWindowVisible(prev => !prev);
   
-  const log = (message: string) => {
+  const log = useCallback((message: string) => {
     setDebugLog(prev => [...prev, message]);
-  };
+  }, []);
 
-  const loadAllData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setDebugLog(['DataProvider initialized. Starting connection process...']);
+  useEffect(() => {
+    const initializeApp = async () => {
+      setLoading(true);
+      setError(null);
+      setDebugLog(['DataProvider initialized. Starting connection process...']);
 
-    try {
+      try {
         log("Attempting Firestore connection test...");
         await connectionTest(log);
         log("Firestore connection test successful.");
 
         log("Checking if database needs seeding...");
-        const wasSeeded = await seedDatabase(log);
-        log(wasSeeded ? 'Database was empty. Seeding complete.' : 'Database already has data.');
+        await seedDatabase(log);
         
-        log("Loading all collections from Firestore...");
-        const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData] = await Promise.all([
-            getUsers(),
-            getClients(),
-            getSystems(),
-            getEquipments(),
-            getProtocols(),
-            getCedulas(),
-        ]);
+        log("Subscribing to real-time data collections...");
         
-        setUsers(usersData);
-        setClients(clientsData);
-        setSystems(systemsData);
-        setEquipments(equipmentsData);
-        setProtocols(protocolsData);
-        setCedulas(cedulasData);
+        const unsubscribers = [
+          subscribeToUsers(setUsers, log),
+          subscribeToClients(setClients, log),
+          subscribeToSystems(setSystems, log),
+          subscribeToEquipments(setEquipments, log),
+          subscribeToProtocols(setProtocols, log),
+          subscribeToCedulas(setCedulas, log),
+        ];
 
-        log('All data loaded successfully from Firestore.');
+        log('All subscriptions established. App is now in real-time sync.');
+        setLoading(false);
 
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
-      setError(`Firestore connection failed: ${errorMessage}`);
-      log(`FATAL ERROR: ${errorMessage}. The app may not function correctly.`);
-      console.error("Failed to load or seed data from Firestore:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        return () => {
+          log('Cleaning up subscriptions...');
+          unsubscribers.forEach(unsubscribe => unsubscribe());
+          log('All subscriptions stopped.');
+        };
 
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
+        setError(`FATAL: ${errorMessage}`);
+        log(`FATAL ERROR: ${errorMessage}. The app may not function correctly.`);
+        console.error("Failed to initialize data from Firestore:", e);
+        setLoading(false);
+      }
+    };
 
-  useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+    const unsubscribePromise = initializeApp();
+
+    return () => {
+      unsubscribePromise.then(cleanup => cleanup && cleanup());
+    };
+  }, [log]);
   
   // --- AUTH ---
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
@@ -153,113 +158,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return null;
   };
 
-  // --- USER MUTATIONS ---
-  const createUser = async (userData: Omit<User, 'id'>) => {
-    const newUser = await createUserService(userData);
-    setUsers(prev => [...prev, newUser]);
-    log(`User "${newUser.name}" created.`);
-  };
-  const updateUser = async (userId: string, userData: Partial<User>) => {
-    const updatedUser = await updateUserService(userId, userData);
-    setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
-    log(`User "${updatedUser.name}" updated.`);
-  };
-  const deleteUser = async (userId: string) => {
-    await deleteUserService(userId);
-    setUsers(prev => prev.filter(u => u.id !== userId));
-    log(`User with ID ${userId} deleted.`);
-  };
-  
-  // --- CLIENT MUTATIONS ---
-  const createClient = async (clientData: Omit<Client, 'id'>) => {
-    const newClient = await createClientService(clientData);
-    setClients(prev => [...prev, newClient]);
-    log(`Client "${newClient.name}" created.`);
-  };
-  const updateClient = async (clientId: string, clientData: Partial<Client>) => {
-    const updatedClient = await updateClientService(clientId, clientData);
-    setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
-    log(`Client "${updatedClient.name}" updated.`);
-  };
-  const deleteClient = async (clientId: string) => {
-    await deleteClientService(clientId);
-    setClients(prev => prev.filter(c => c.id !== clientId));
-    log(`Client with ID ${clientId} deleted.`);
-  };
-
-  // --- SYSTEM MUTATIONS ---
-  const createSystem = async (systemData: Omit<System, 'id'>) => {
-    const newSystem = await createSystemService(systemData);
-    setSystems(prev => [...prev, newSystem]);
-    log(`System "${newSystem.name}" created.`);
-  };
-  const updateSystem = async (systemId: string, systemData: Partial<System>) => {
-    const updatedSystem = await updateSystemService(systemId, systemData);
-    setSystems(prev => prev.map(s => s.id === systemId ? updatedSystem : s));
-    log(`System "${updatedSystem.name}" updated.`);
-  };
-  const deleteSystem = async (systemId: string) => {
-    await deleteSystemService(systemId);
-    setSystems(prev => prev.filter(s => s.id !== systemId));
-    log(`System with ID ${systemId} deleted.`);
-  };
-
-  // --- EQUIPMENT MUTATIONS ---
-  const createEquipment = async (equipmentData: Omit<Equipment, 'id'>) => {
-    const newEquipment = await createEquipmentService(equipmentData);
-    setEquipments(prev => [...prev, newEquipment]);
-    log(`Equipment "${newEquipment.name}" created.`);
-  };
-  const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>) => {
-    const updatedEquipment = await updateEquipmentService(equipmentId, equipmentData);
-    setEquipments(prev => prev.map(e => e.id === equipmentId ? updatedEquipment : e));
-    log(`Equipment "${updatedEquipment.name}" updated.`);
-  };
-  const deleteEquipment = async (equipmentId: string) => {
-    await deleteEquipmentService(equipmentId);
-    await deleteProtocolByEquipmentIdService(equipmentId); // Also delete associated protocol
-    setEquipments(prev => prev.filter(e => e.id !== equipmentId));
-    setProtocols(prev => prev.filter(p => p.equipmentId !== equipmentId));
-    log(`Equipment with ID ${equipmentId} and its protocol deleted.`);
-  };
-
-  // --- PROTOCOL MUTATIONS ---
-    const createProtocol = async (protocolData: Omit<Protocol, 'id'>) => {
-        const newProtocol = await createProtocolService(protocolData);
-        setProtocols(prev => [...prev, newProtocol]);
-        log(`Protocol for equipment ID ${newProtocol.equipmentId} created.`);
-    };
-
-    const updateProtocol = async (protocolId: string, protocolData: Partial<Protocol>) => {
-        const updatedProtocol = await updateProtocolService(protocolId, protocolData);
-        setProtocols(prev => prev.map(p => p.id === protocolId ? updatedProtocol : p));
-        log(`Protocol with ID ${protocolId} updated.`);
-    };
-
-    const deleteProtocol = async (protocolId: string) => {
-        await deleteProtocolService(protocolId);
-        setProtocols(prev => prev.filter(p => p.id !== protocolId));
-        log(`Protocol with ID ${protocolId} deleted.`);
-    };
-    
-  // --- CEDULA MUTATIONS ---
-    const createCedula = async (cedulaData: Omit<Cedula, 'id'>) => {
-        const newCedula = await createCedulaService(cedulaData);
-        setCedulas(prev => [...prev, newCedula]);
-        log(`Cédula with folio ${newCedula.folio} created.`);
-    };
-    const updateCedula = async (cedulaId: string, cedulaData: Partial<Cedula>) => {
-        const updatedCedula = await updateCedulaService(cedulaId, cedulaData);
-        setCedulas(prev => prev.map(c => c.id === cedulaId ? updatedCedula : c));
-        log(`Cédula with folio ${updatedCedula.folio} updated.`);
-    };
-    const deleteCedula = async (cedulaId: string) => {
-        await deleteCedulaService(cedulaId);
-        setCedulas(prev => prev.filter(c => c.id !== cedulaId));
-        log(`Cédula with ID ${cedulaId} deleted.`);
-    };
-
-
   const value = {
     users,
     clients,
@@ -272,33 +170,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
     debugLog,
     isDebugWindowVisible,
     toggleDebugWindow,
-    refreshData: loadAllData,
     // Auth
     loginUser,
     // Users
-    createUser,
-    updateUser,
-    deleteUser,
+    createUser: createUserService,
+    updateUser: updateUserService,
+    deleteUser: deleteUserService,
     // Clients
-    createClient,
-    updateClient,
-    deleteClient,
+    createClient: createClientService,
+    updateClient: updateClientService,
+    deleteClient: deleteClientService,
     // Systems
-    createSystem,
-    updateSystem,
-    deleteSystem,
+    createSystem: createSystemService,
+    updateSystem: updateSystemService,
+    deleteSystem: deleteSystemService,
     // Equipments
-    createEquipment,
-    updateEquipment,
-    deleteEquipment,
+    createEquipment: createEquipmentService,
+    updateEquipment: updateEquipmentService,
+    deleteEquipment: deleteEquipmentService,
     // Protocols
-    createProtocol,
-    updateProtocol,
-    deleteProtocol,
+    createProtocol: createProtocolService,
+    updateProtocol: updateProtocolService,
+    deleteProtocol: deleteProtocolService,
     // Cedulas
-    createCedula,
-    updateCedula,
-    deleteCedula,
+    createCedula: createCedulaService,
+    updateCedula: updateCedulaService,
+    deleteCedula: deleteCedulaService,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
@@ -311,5 +208,3 @@ export function useData() {
   }
   return context;
 }
-
-    

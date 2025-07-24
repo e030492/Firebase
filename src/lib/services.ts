@@ -1,4 +1,4 @@
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { 
     mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
@@ -64,8 +64,9 @@ export const seedDatabase = async (log: (message: string) => void) => {
                 log(` - Seeding ${data.length} documents into '${collectionName}'...`);
                 data.forEach(item => {
                     const { id, ...rest } = item;
-                    const newDocRef = doc(collectionRef);
-                    batch.set(newDocRef, rest);
+                    // For mock data that has a specific ID we want to preserve, use it
+                    const docRef = id ? doc(collectionRef, id) : doc(collectionRef);
+                    batch.set(docRef, rest);
                 });
             }
             
@@ -84,17 +85,19 @@ export const seedDatabase = async (log: (message: string) => void) => {
 };
 
 // --- Generic Firestore Service Functions ---
-async function getCollection<T>(collectionName: string): Promise<T[]> {
+function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) => void, log: (message: string) => void) {
     const collectionRef = collection(db, collectionName);
-    const snapshot = await getDocs(collectionRef);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-}
-
-async function getDocumentById<T>(collectionName: string, id: string): Promise<T> {
-    const docRef = doc(db, collectionName, id);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) throw new Error(`Document with id ${id} not found in ${collectionName}`);
-    return { id: docSnap.id, ...docSnap.data() } as T;
+    log(`Subscribing to real-time updates for '${collectionName}'.`);
+    const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+        setData(data);
+        log(`'${collectionName}' snapshot received with ${data.length} documents.`);
+    }, (error) => {
+        log(`ERROR subscribing to ${collectionName}: ${error.message}`);
+        console.error(`Error listening to ${collectionName}:`, error);
+        setData([]);
+    });
+    return unsubscribe;
 }
 
 async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
@@ -102,7 +105,6 @@ async function createDocument<T extends { id: string }>(collectionName: string, 
     const docRef = await addDoc(collectionRef, data);
     return { ...data, id: docRef.id } as T;
 }
-
 
 async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
     const docRef = doc(db, collectionName, id);
@@ -120,36 +122,31 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 // --- Specific Service Functions ---
 
 // USERS
-export const getUsers = (): Promise<User[]> => getCollection<User>(collections.users);
-export const getUser = (id: string): Promise<User> => getDocumentById<User>(collections.users, id);
+export const subscribeToUsers = (setUsers: (users: User[]) => void, log: (message: string) => void) => subscribeToCollection<User>(collections.users, setUsers, log);
 export const createUser = (data: Omit<User, 'id'>): Promise<User> => createDocument<User>(collections.users, data);
 export const updateUser = (id: string, data: Partial<User>): Promise<User> => updateDocument<User>(collections.users, id, data);
 export const deleteUser = (id: string): Promise<boolean> => deleteDocument(collections.users, id);
 
 // CLIENTS
-export const getClients = (): Promise<Client[]> => getCollection<Client>(collections.clients);
-export const getClient = (id: string): Promise<Client> => getDocumentById<Client>(collections.clients, id);
+export const subscribeToClients = (setClients: (clients: Client[]) => void, log: (message: string) => void) => subscribeToCollection<Client>(collections.clients, setClients, log);
 export const createClient = (data: Omit<Client, 'id'>): Promise<Client> => createDocument<Client>(collections.clients, data);
 export const updateClient = (id: string, data: Partial<Client>): Promise<Client> => updateDocument<Client>(collections.clients, id, data);
 export const deleteClient = (id: string): Promise<boolean> => deleteDocument(collections.clients, id);
 
 // EQUIPMENTS
-export const getEquipments = (): Promise<Equipment[]> => getCollection<Equipment>(collections.equipments);
-export const getEquipment = (id: string): Promise<Equipment> => getDocumentById<Equipment>(collections.equipments, id);
+export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void, log: (message: string) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments, log);
 export const createEquipment = (data: Omit<Equipment, 'id'>): Promise<Equipment> => createDocument<Equipment>(collections.equipments, data);
 export const updateEquipment = (id: string, data: Partial<Equipment>): Promise<Equipment> => updateDocument<Equipment>(collections.equipments, id, data);
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
 // SYSTEMS
-export const getSystems = (): Promise<System[]> => getCollection<System>(collections.systems);
-export const getSystem = (id: string): Promise<System> => getDocumentById<System>(collections.systems, id);
+export const subscribeToSystems = (setSystems: (systems: System[]) => void, log: (message: string) => void) => subscribeToCollection<System>(collections.systems, setSystems, log);
 export const createSystem = (data: Omit<System, 'id'>): Promise<System> => createDocument<System>(collections.systems, data);
 export const updateSystem = (id: string, data: Partial<System>): Promise<System> => updateDocument<System>(collections.systems, id, data);
 export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(collections.systems, id);
 
 // PROTOCOLS
-export const getProtocols = (): Promise<Protocol[]> => getCollection<Protocol>(collections.protocols);
-export const getProtocol = (id: string): Promise<Protocol> => getDocumentById<Protocol>(collections.protocols, id);
+export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void, log: (message: string) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols, log);
 export const createProtocol = (data: Omit<Protocol, 'id'>): Promise<Protocol> => createDocument<Protocol>(collections.protocols, data);
 export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol> => updateDocument<Protocol>(collections.protocols, id, data);
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
@@ -172,10 +169,7 @@ export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<
 }
 
 // CEDULAS
-export const getCedulas = (): Promise<Cedula[]> => getCollection<Cedula>(collections.cedulas);
-export const getCedula = (id: string): Promise<Cedula> => getDocumentById<Cedula>(collections.cedulas, id);
+export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void, log: (message: string) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas, log);
 export const createCedula = (data: Omit<Cedula, 'id'>): Promise<Cedula> => createDocument<Cedula>(collections.cedulas, data);
 export const updateCedula = (id: string, data: Partial<Cedula>): Promise<Cedula> => updateDocument<Cedula>(collections.cedulas, id, data);
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
-
-    
