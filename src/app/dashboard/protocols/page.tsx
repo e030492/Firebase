@@ -91,10 +91,23 @@ export default function ProtocolsPage() {
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
+  const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
   
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   
+   useEffect(() => {
+    if (selectedClientId) {
+        const client = clients.find(c => c.id === selectedClientId);
+        setClientWarehouses(client?.almacenes.map(a => a.nombre) || []);
+        setSelectedWarehouse(''); // Reset warehouse selection
+    } else {
+        setClientWarehouses([]);
+        setSelectedWarehouse('');
+    }
+  }, [selectedClientId, clients]);
+
   const filteredEquipments = useMemo(() => {
     let equipments = [...allEquipments];
     
@@ -111,9 +124,13 @@ export default function ProtocolsPage() {
         equipments = equipments.filter(eq => eq.system === systemName);
       }
     }
+
+    if (selectedWarehouse && selectedWarehouse !== 'all') {
+        equipments = equipments.filter(eq => eq.location === selectedWarehouse);
+    }
     
     return equipments;
-  }, [selectedClientId, selectedSystemId, allEquipments, clients, systems]);
+  }, [selectedClientId, selectedSystemId, selectedWarehouse, allEquipments, clients, systems]);
 
 
   const getProtocolForEquipment = (equipmentId: string): Protocol | undefined => {
@@ -282,7 +299,7 @@ export default function ProtocolsPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
                  <div className="grid gap-2">
                    <Label htmlFor="client">Filtrar por Cliente</Label>
-                   <Select onValueChange={(value) => setSelectedClientId(value)} value={selectedClientId || 'all'}>
+                   <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? '' : value)} value={selectedClientId || 'all'}>
                      <SelectTrigger id="client">
                        <SelectValue placeholder="Todos los clientes" />
                      </SelectTrigger>
@@ -294,9 +311,27 @@ export default function ProtocolsPage() {
                      </SelectContent>
                    </Select>
                  </div>
+                  <div className="grid gap-2">
+                   <Label htmlFor="warehouse">Filtrar por Almacén</Label>
+                   <Select 
+                      onValueChange={(value) => setSelectedWarehouse(value === 'all' ? '' : value)} 
+                      value={selectedWarehouse || 'all'}
+                      disabled={!selectedClientId}
+                    >
+                     <SelectTrigger id="warehouse">
+                       <SelectValue placeholder="Todos los almacenes" />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="all">Todos los almacenes</SelectItem>
+                       {clientWarehouses.map(warehouse => (
+                         <SelectItem key={warehouse} value={warehouse}>{warehouse}</SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </div>
                  <div className="grid gap-2">
                    <Label htmlFor="system">Filtrar por Sistema</Label>
-                   <Select onValueChange={(value) => setSelectedSystemId(value)} value={selectedSystemId || 'all'}>
+                   <Select onValueChange={(value) => setSelectedSystemId(value === 'all' ? '' : value)} value={selectedSystemId || 'all'}>
                      <SelectTrigger id="system">
                        <SelectValue placeholder="Todos los sistemas" />
                      </SelectTrigger>
