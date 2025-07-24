@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { 
-    seedDatabase, verifyFirestoreConnection,
+    seedDatabase,
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as createUserService,
     updateUser as updateUserService,
@@ -91,37 +91,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setDebugMessage('Seeding local storage if necessary...');
     try {
-      await verifyFirestoreConnection(setDebugMessage);
+      await seedDatabase();
+      setDebugMessage('Local storage seeded. Loading all data...');
       
-      setDebugMessage('Checking for existing data in Firestore...');
-      const usersData = await getUsers();
-      
-      if (usersData.length === 0) {
-        setDebugMessage('No users found. Seeding database...');
-        await seedDatabase(setDebugMessage);
-      } else {
-        setDebugMessage('Database already contains data.');
-      }
-        
-      setDebugMessage('Fetching all data from Firestore...');
-      const [clientsData, systemsData, equipmentsData, protocolsData, cedulasData] = await Promise.all([
-          getClients(),
-          getSystems(),
-          getEquipments(),
-          getProtocols(),
-          getCedulas(),
+      const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData] = await Promise.all([
+        getUsers(),
+        getClients(),
+        getSystems(),
+        getEquipments(),
+        getProtocols(),
+        getCedulas(),
       ]);
-      const freshUsersData = await getUsers(); // Re-fetch users after potential seeding
       
-      setUsers(freshUsersData);
+      setUsers(usersData);
       setClients(clientsData);
       setSystems(systemsData);
       setEquipments(equipmentsData);
       setProtocols(protocolsData);
       setCedulas(cedulasData);
-      
-      setDebugMessage('All data loaded successfully from Firestore.');
+
+      setDebugMessage('All data loaded successfully from Local Storage.');
 
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
@@ -139,7 +130,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   
   // --- AUTH ---
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
-      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      const allUsers = await getUsers(); // Always get the latest from storage for login
+      const foundUser = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
       if (foundUser && foundUser.password === pass) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(foundUser));
           setDebugMessage(`User "${foundUser.name}" logged in successfully.`);

@@ -1,8 +1,7 @@
 
-import { collection, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db, app } from './firebase';
 import { 
-    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas
+    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
+    USERS_STORAGE_KEY, CLIENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY, EQUIPMENTS_STORAGE_KEY, PROTOCOLS_STORAGE_KEY, CEDULAS_STORAGE_KEY
 } from './mock-data';
 
 // Interfaces based on mock-data structure
@@ -16,12 +15,12 @@ export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] 
 export type Cedula = typeof mockCedulas[0] & { id: string };
 
 const collections = {
-    users: 'users',
-    clients: 'clients',
-    systems: 'systems',
-    equipments: 'equipments',
-    protocols: 'protocols',
-    cedulas: 'cedulas',
+    users: USERS_STORAGE_KEY,
+    clients: CLIENTS_STORAGE_KEY,
+    systems: SYSTEMS_STORAGE_KEY,
+    equipments: EQUIPMENTS_STORAGE_KEY,
+    protocols: PROTOCOLS_STORAGE_KEY,
+    cedulas: CEDULAS_STORAGE_KEY,
 };
 
 const mockDataMap = {
@@ -33,87 +32,53 @@ const mockDataMap = {
     [collections.cedulas]: mockCedulas,
 };
 
-// --- Firestore Seeding ---
-export async function verifyFirestoreConnection(updateMessage: (message: string) => void) {
-    updateMessage("Initializing Firebase...");
-    try {
-        // The 'app' import ensures Firebase is initialized.
-        updateMessage(`Firebase app initialized for project: ${app.options.projectId}`);
-        updateMessage("Getting Firestore instance...");
-        // The 'db' import ensures Firestore is initialized.
-        updateMessage("Firestore instance acquired. Testing connection...");
-        
-        // Attempt to read a non-existent document. This tests security rules.
-        const testDocRef = doc(db, "health_check", "test");
-        await getDoc(testDocRef);
-        
-        updateMessage("Connection and security rules test successful.");
-    } catch (error: any) {
-        console.error("Firebase connection test failed:", error);
-        let errorMessage = `Firestore connection test failed. This often means your security rules are too restrictive. Please ensure they allow read/write access for authenticated users. Original error: ${error.message}`;
-        if (error.code === 'permission-denied') {
-            errorMessage = "Firestore permission denied. Please check your security rules in the Firebase console to allow read/write operations.";
+
+// --- LocalStorage Seeding ---
+export const seedDatabase = async () => {
+    for (const [key, data] of Object.entries(mockDataMap)) {
+        if (!localStorage.getItem(key)) {
+            localStorage.setItem(key, JSON.stringify(data));
         }
-        updateMessage(errorMessage);
-        throw new Error(errorMessage);
-    }
-}
-
-
-export const seedDatabase = async (updateMessage: (message: string) => void) => {
-    updateMessage("Starting database seed process...");
-    const batch = writeBatch(db);
-
-    for (const [collectionName, data] of Object.entries(mockDataMap)) {
-        updateMessage(`Preparing to seed collection: ${collectionName}...`);
-        for (const item of data) {
-            const docRef = doc(db, collectionName, item.id);
-            batch.set(docRef, item);
-        }
-        updateMessage(`Collection ${collectionName} added to batch.`);
-    }
-
-    try {
-        await batch.commit();
-        updateMessage("Database seeding process fully completed.");
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        updateMessage(`Error committing batch: ${errorMessage}`);
-        console.error("Error seeding database:", error);
-        throw error;
     }
 };
 
-// --- Generic Firestore Service Functions ---
+// --- Generic LocalStorage Service Functions ---
 async function getCollection<T>(collectionName: string): Promise<T[]> {
-    const querySnapshot = await getDocs(collection(db, collectionName));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    const data = localStorage.getItem(collectionName);
+    return data ? JSON.parse(data) : [];
 }
 
 async function getDocumentById<T extends {id: string}>(collectionName: string, id: string): Promise<T> {
-    const docRef = doc(db, collectionName, id);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) throw new Error(`Document with id ${id} not found in ${collectionName}`);
-    return { id: docSnap.id, ...docSnap.data() } as T;
+    const items = await getCollection<T>(collectionName);
+    const item = items.find(i => i.id === id);
+    if (!item) throw new Error(`Document with id ${id} not found in ${collectionName}`);
+    return item;
 }
 
-async function createDocument<T>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
-    const newDocRef = doc(collection(db, collectionName));
-    const newItem = { ...data, id: newDocRef.id };
-    await setDoc(newDocRef, data);
-    return newItem as T;
+async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
+    const items = await getCollection<T>(collectionName);
+    const newId = String(Date.now() + Math.random());
+    const newItem = { ...data, id: newId } as T;
+    items.push(newItem);
+    localStorage.setItem(collectionName, JSON.stringify(items));
+    return newItem;
 }
+
 
 async function updateDocument<T extends {id: string}>(collectionName: string, id: string, data: Partial<Omit<T, 'id'>>): Promise<T> {
-    const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, data);
-    const updatedDoc = await getDoc(docRef);
-    return { id: updatedDoc.id, ...updatedDoc.data() } as T;
+    let items = await getCollection<T>(collectionName);
+    const itemIndex = items.findIndex(i => i.id === id);
+    if (itemIndex === -1) throw new Error(`Document with id ${id} not found in ${collectionName}`);
+    const updatedItem = { ...items[itemIndex], ...data };
+    items[itemIndex] = updatedItem;
+    localStorage.setItem(collectionName, JSON.stringify(items));
+    return updatedItem;
 }
 
 async function deleteDocument(collectionName: string, id: string): Promise<boolean> {
-    const docRef = doc(db, collectionName, id);
-    await deleteDoc(docRef);
+    let items = await getCollection<any>(collectionName);
+    const updatedItems = items.filter(i => i.id !== id);
+    localStorage.setItem(collectionName, JSON.stringify(updatedItems));
     return true;
 }
 
