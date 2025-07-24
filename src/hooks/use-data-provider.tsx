@@ -42,7 +42,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setDebugMessage('Syncing database...');
     setError(null);
     try {
-        let initialUsers = await getUsers();
+        setDebugMessage('Checking for existing data...');
+        const initialUsers = await getUsers();
+        
         if (initialUsers.length === 0) {
             setDebugMessage('No users found. Seeding database...');
             await seedDatabase();
