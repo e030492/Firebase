@@ -236,6 +236,20 @@ export default function EditCedulaPage() {
     }
   }
 
+  const getSemaforoInfo = (semaforo: string) => {
+    switch (semaforo) {
+        case 'Verde':
+            return { color: 'bg-green-500 text-white', text: 'Verde (Óptimo)' };
+        case 'Naranja':
+            return { color: 'bg-orange-500 text-white', text: 'Naranja (Con Observaciones)' };
+        case 'Rojo':
+            return { color: 'bg-red-500 text-white', text: 'Rojo (Crítico)' };
+        default:
+            return null;
+    }
+  }
+  const semaforoInfo = getSemaforoInfo(semaforo);
+
   const canUpdateCedulas = can('update', 'cedulas');
 
   if (pageLoading || loading) {
@@ -598,6 +612,12 @@ export default function EditCedulaPage() {
             </CardContent>
           </Card>
         )}
+        
+        {semaforoInfo && (
+            <div className={cn("p-4 text-center text-xl font-bold rounded-lg", semaforoInfo.color)}>
+                {semaforoInfo.text}
+            </div>
+        )}
 
         {canUpdateCedulas && (
             <div className="flex justify-start">
@@ -611,3 +631,5 @@ export default function EditCedulaPage() {
     </form>
   );
 }
+
+    

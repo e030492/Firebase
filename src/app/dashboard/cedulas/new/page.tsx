@@ -236,6 +236,21 @@ export default function NewCedulaPage() {
     }
   };
 
+  const getSemaforoInfo = (semaforo: string) => {
+    switch (semaforo) {
+        case 'Verde':
+            return { color: 'bg-green-500 text-white', text: 'Verde (Óptimo)' };
+        case 'Naranja':
+            return { color: 'bg-orange-500 text-white', text: 'Naranja (Con Observaciones)' };
+        case 'Rojo':
+            return { color: 'bg-red-500 text-white', text: 'Rojo (Crítico)' };
+        default:
+            return null;
+    }
+  }
+  const semaforoInfo = getSemaforoInfo(semaforo);
+
+
   if (loading) {
       return (
           <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
@@ -533,6 +548,12 @@ export default function NewCedulaPage() {
             </Card>
             )}
             
+            {semaforoInfo && (
+                <div className={cn("p-4 text-center text-xl font-bold rounded-lg", semaforoInfo.color)}>
+                    {semaforoInfo.text}
+                </div>
+            )}
+
             <div className="flex justify-start">
                 <Button type="submit" disabled={isSaving}>
                   {isSaving ? "Guardando..." : "Guardar Cédula"}
@@ -569,3 +590,5 @@ export default function NewCedulaPage() {
     </>
   );
 }
+
+    
