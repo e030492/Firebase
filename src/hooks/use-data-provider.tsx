@@ -88,7 +88,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [debugLog, setDebugLog] = useState<string[]>([]);
-  const [isDebugWindowVisible, setIsDebugWindowVisible] = useState(true);
+  const [isDebugWindowVisible, setIsDebugWindowVisible] = useState(false);
 
   const toggleDebugWindow = () => setIsDebugWindowVisible(prev => !prev);
   
