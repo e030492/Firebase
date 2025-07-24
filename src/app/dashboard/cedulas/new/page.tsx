@@ -59,10 +59,6 @@ export default function NewCedulaPage() {
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
   
-  const [serialNumber, setSerialNumber] = useState('');
-  const [alias, setAlias] = useState('');
-  const [model, setModel] = useState('');
-
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
   const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
   const [imageUrls, setImageUrls] = useState<{ [step: string]: string }>({});
@@ -111,15 +107,9 @@ export default function NewCedulaPage() {
   }, [clientId, systemId, clients, allSystems, allEquipments]);
   
   useEffect(() => {
-    setAlias('');
-    setModel('');
-    setSerialNumber(''); // Reset serial number when equipment changes
     if (equipmentId) {
         const selectedEquipment = allEquipments.find(eq => eq.id === equipmentId);
         if (selectedEquipment) {
-            setAlias(selectedEquipment.alias || 'N/A');
-            setModel(selectedEquipment.model);
-            setSerialNumber(selectedEquipment.serial);
             const equipmentProtocol = protocols.find(p => p.equipmentId === equipmentId);
             if (equipmentProtocol) {
                 setProtocolSteps(equipmentProtocol.steps);
@@ -338,25 +328,13 @@ export default function NewCedulaPage() {
                         <SelectContent>
                         {filteredEquipments.map(eq => (
                             <SelectItem key={eq.id} value={eq.id}>
-                                {eq.name} ({eq.serial})
+                                {eq.name}
+                                {eq.alias && ` (${eq.alias})`}
+                                {` - Modelo: ${eq.model}, N/S: ${eq.serial}`}
                             </SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
-                </div>
-                 <div className="grid md:grid-cols-3 gap-4">
-                    <div className="grid gap-3">
-                        <Label htmlFor="alias">Alias del Equipo</Label>
-                        <Input id="alias" value={alias} readOnly disabled />
-                    </div>
-                    <div className="grid gap-3">
-                        <Label htmlFor="model">Modelo</Label>
-                        <Input id="model" value={model} readOnly disabled />
-                    </div>
-                    <div className="grid gap-3">
-                        <Label htmlFor="serial">Número de Serie</Label>
-                        <Input id="serial" value={serialNumber} readOnly disabled />
-                    </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
