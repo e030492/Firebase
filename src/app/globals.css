@@ -86,18 +86,26 @@
 }
 
 @media print {
+  :root {
+    --page-margin: 2cm;
+  }
+  
   body {
-    background-color: white;
-    -webkit-print-color-adjust: exact; /* Chrome, Safari, Edge */
-    color-adjust: exact; /* Firefox */
+    background-color: white !important;
+    -webkit-print-color-adjust: exact !important; /* Chrome, Safari, Edge */
+    color-adjust: exact !important; /* Firefox */
   }
 
   .print\:hidden {
     display: none !important;
   }
   
-  .page-break {
+  .break-after-page {
     page-break-after: always;
+  }
+  
+  .no-break-after {
+    page-break-after: avoid;
   }
 
   .break-inside-avoid {
@@ -109,8 +117,56 @@
     margin: 0 !important;
   }
 
+  .report-footer-block {
+      position: fixed;
+      bottom: 1.5cm;
+      right: var(--page-margin);
+      width: 40%;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-align: center;
+      border-radius: 0.25rem;
+  }
+
+  .page-number {
+      position: fixed;
+      bottom: 1.5cm;
+      left: var(--page-margin);
+      font-size: 0.75rem;
+      color: #666;
+  }
+
+  .page-number::before {
+      counter-increment: page;
+      content: "Página " counter(page) " de " counter(pages);
+  }
+
+
   @page {
-    size: A4;
-    margin: 2cm;
+    size: letter;
+    margin: var(--page-margin);
+    counter-increment: page;
+    counter-reset: page 1;
+    
+    @bottom-left {
+        content: "";
+    }
+
+    @bottom-right {
+        content: "";
+    }
+  }
+
+  body {
+    counter-reset: page;
+  }
+  
+  .report-container {
+    counter-reset: pages;
+  }
+
+  .break-after-page {
+    counter-increment: pages;
   }
 }

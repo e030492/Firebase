@@ -54,9 +54,12 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
             case 'Rojo':
                 return { color: 'bg-red-500 text-white', text: 'Rojo (Crítico)' };
             default:
-                return { color: 'bg-gray-300 text-gray-800', text: 'Sin evaluación' };
+                return null;
         }
     }
+    
+    // Use the semaforo of the first cedula for the repeating footer
+    const mainSemaforoInfo = data.length > 0 ? getSemaforoInfo(data[0].semaforo) : null;
 
     return (
         <div className="report-container">
@@ -77,101 +80,101 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                 </div>
             </header>
 
-            <main className="space-y-8 print:space-y-0">
+            {mainSemaforoInfo && (
+                <div className={cn("report-footer-block print:flex hidden", mainSemaforoInfo.color)}>
+                    {mainSemaforoInfo.text}
+                </div>
+            )}
+            <div className="page-number print:block hidden"></div>
+
+            <main className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none print:p-0">
                 {data.map((cedula, cedulaIndex) => {
-                    const semaforoInfo = getSemaforoInfo(cedula.semaforo);
                     const systemColor = cedula.systemDetails?.color || '#6b7280';
                     return (
-                        <div key={cedula.id} className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none break-after-page page-break relative min-h-screen flex flex-col">
-                           <div className="flex-grow">
-                                <header className="border-b-2 border-gray-900 overflow-hidden">
-                                    <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <ShieldCheck className="h-14 w-14" />
-                                            <div>
-                                                <h2 className="text-3xl font-bold">Reporte de Servicio</h2>
-                                                <p className="text-sm opacity-90">{cedula.system}</p>
+                        <div key={cedula.id} className={cn("break-after-page", { 'no-break-after': cedulaIndex === data.length - 1 })}>
+                            <header className="border-b-2 border-gray-900 overflow-hidden">
+                                <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <ShieldCheck className="h-14 w-14" />
+                                        <div>
+                                            <h2 className="text-3xl font-bold">Reporte de Servicio</h2>
+                                            <p className="text-sm opacity-90">{cedula.system}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm opacity-90">Escuadra Tecnology</p>
+                                </div>
+                                <div className="bg-white p-4 flex items-start justify-between">
+                                    <div className="text-left">
+                                        <p className="font-semibold text-gray-500 text-xs uppercase">Cliente</p>
+                                        <p className="font-bold text-lg">{cedula.client}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-semibold text-gray-500 text-xs uppercase">Folio</p>
+                                        <p className="font-bold text-lg text-gray-700">{cedula.folio}</p>
+                                        <p className="text-sm text-gray-500">{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p>
+                                    </div>
+                                </div>
+                            </header>
+                            
+                            <section className="mt-6">
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm">
+                                        <tbody>
+                                            <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600 w-1/4">Dirección</td><td className="px-4 py-2 text-gray-800">{cedula.equipmentDetails?.location || 'No especificada'}</td></tr>
+                                            <tr><td className="px-4 py-2 font-semibold text-gray-600">Equipo</td><td className="px-4 py-2 text-gray-800">{`${cedula.equipment} (Modelo: ${cedula.equipmentDetails?.model || 'N/A'}, N/S: ${cedula.serial})`}</td></tr>
+                                            <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600">Técnico</td><td className="px-4 py-2 text-gray-800">{cedula.technician}</td></tr>
+                                            <tr><td className="px-4 py-2 font-semibold text-gray-600">Supervisor</td><td className="px-4 py-2 text-gray-800">{cedula.supervisor}</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="mt-4 border border-gray-200 rounded-lg p-4">
+                                    <h4 className="font-semibold text-sm text-gray-600">Descripción del Trabajo</h4>
+                                    <p className="text-sm text-gray-800 mt-1">{cedula.description}</p>
+                                </div>
+                            </section>
+
+                            {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
+                                <section className="mt-6 break-inside-avoid">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-2">Protocolo de Mantenimiento</h3>
+                                    <div className="border rounded-md">
+                                        {cedula.protocolSteps.map((step, index) => (
+                                            <div key={index} className="p-4 break-inside-avoid border-b last:border-b-0">
+                                                <table className="w-full text-sm">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td className="pr-4 py-2 font-semibold align-top w-1/5">Paso</td>
+                                                            <td className="py-2">{step.step}</td>
+                                                        </tr>
+                                                         <tr>
+                                                            <td className="pr-4 py-2 font-semibold align-top">Notas</td>
+                                                            <td className="py-2 text-muted-foreground">{step.notes || 'Sin notas.'}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td className="pr-4 py-2 font-semibold">Estado</td>
+                                                            <td className="py-2">
+                                                                <div className="flex items-center gap-4">
+                                                                    <Badge variant="secondary">Progreso: {step.completion}%</Badge>
+                                                                    <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">Prioridad: {step.priority}</Badge>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        {step.imageUrl && (
+                                                            <tr>
+                                                                <td className="pr-4 py-2 font-semibold align-top">Evidencia</td>
+                                                                <td className="py-2">
+                                                                    <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover border w-1/2 h-auto" style={{maxWidth: '50%', height: 'auto'}}/>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        </div>
-                                         <p className="text-sm opacity-90">Escuadra Tecnology</p>
-                                    </div>
-                                    <div className="bg-white p-4 flex items-start justify-between">
-                                        <div className="text-left">
-                                             <p className="font-semibold text-gray-500 text-xs uppercase">Cliente</p>
-                                            <p className="font-bold text-lg">{cedula.client}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-semibold text-gray-500 text-xs uppercase">Folio</p>
-                                            <p className="font-bold text-lg text-gray-700">{cedula.folio}</p>
-                                            <p className="text-sm text-gray-500">{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p>
-                                        </div>
-                                    </div>
-                                </header>
-                                
-                                <section className="mt-6 mb-8">
-                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                        <table className="w-full text-sm">
-                                            <tbody>
-                                                <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600 w-1/4">Dirección</td><td className="px-4 py-2 text-gray-800">{cedula.equipmentDetails?.location || 'No especificada'}</td></tr>
-                                                <tr><td className="px-4 py-2 font-semibold text-gray-600">Equipo</td><td className="px-4 py-2 text-gray-800">{`${cedula.equipment} (Modelo: ${cedula.equipmentDetails?.model || 'N/A'}, N/S: ${cedula.serial})`}</td></tr>
-                                                <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600">Técnico</td><td className="px-4 py-2 text-gray-800">{cedula.technician}</td></tr>
-                                                <tr><td className="px-4 py-2 font-semibold text-gray-600">Supervisor</td><td className="px-4 py-2 text-gray-800">{cedula.supervisor}</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="mt-4 border border-gray-200 rounded-lg p-4">
-                                        <h4 className="font-semibold text-sm text-gray-600">Descripción del Trabajo</h4>
-                                        <p className="text-sm text-gray-800 mt-1">{cedula.description}</p>
+                                        ))}
                                     </div>
                                 </section>
-
-                                {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
-                                    <section className="break-inside-avoid">
-                                        <h3 className="text-xl font-bold text-gray-800 mb-2">Protocolo de Mantenimiento</h3>
-                                         <div className="border rounded-md mt-2 divide-y">
-                                            {cedula.protocolSteps.map((step, index) => (
-                                                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 break-inside-avoid">
-                                                    <div className={cn(!step.imageUrl && "md:col-span-2")}>
-                                                        <div className="space-y-3">
-                                                            <div>
-                                                                <Label className="font-semibold text-base">Paso: {step.step}</Label>
-                                                            </div>
-                                                            <div>
-                                                                <Label className="font-semibold">Notas del Técnico</Label>
-                                                                <p className="text-sm text-muted-foreground">{step.notes || 'Sin notas.'}</p>
-                                                            </div>
-                                                            <div className="flex items-center gap-4">
-                                                                <div>
-                                                                    <Label className="font-semibold">Progreso</Label>
-                                                                    <div><Badge variant="secondary">{step.completion}%</Badge></div>
-                                                                </div>
-                                                                <div>
-                                                                    <Label className="font-semibold">Prioridad</Label>
-                                                                    <div><Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge></div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {step.imageUrl && (
-                                                        <div className="space-y-2">
-                                                            <Label className="font-semibold">Evidencia Fotográfica</Label>
-                                                            <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video border w-full h-auto" style={{maxWidth: '100%', height: 'auto'}}/>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </section>
-                                )}
-                           </div>
-                            
-                           {cedula.semaforo && (
-                                <footer className="mt-8 -mx-8 -mb-8 print:-mx-8 print:-mb-8">
-                                    <div className={cn("p-4 text-center text-xl font-bold", semaforoInfo.color)}>
-                                        {semaforoInfo.text}
-                                    </div>
-                                </footer>
                             )}
+                            
+                            {cedulaIndex < data.length - 1 && <div className="print:hidden my-8"><Separator /></div>}
                         </div>
                     );
                 })}
@@ -319,17 +322,17 @@ export default function ReportsPage() {
   };
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
-    switch (priority?.toLowerCase()) {
-      case 'alta':
-        return 'destructive';
-      case 'media':
-        return 'default';
-      case 'baja':
-        return 'secondary';
-      default:
-        return 'secondary';
-    }
-  };
+        switch (priority?.toLowerCase()) {
+          case 'alta':
+            return 'destructive';
+          case 'media':
+            return 'default';
+          case 'baja':
+            return 'secondary';
+          default:
+            return 'secondary';
+        }
+    };
   
   if (loading) {
       return (
@@ -535,7 +538,7 @@ export default function ReportsPage() {
                                                             <Label className="text-base">Protocolo de Mantenimiento Ejecutado</Label>
                                                             <div className="border rounded-md mt-2 divide-y">
                                                                 {cedula.protocolSteps.map((step, index) => (
-                                                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4">
+                                                                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4">
                                                                         <div className="md:col-span-2 space-y-3">
                                                                             <div>
                                                                                 <Label className="font-semibold">Paso del Protocolo</Label>
