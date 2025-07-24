@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -35,7 +37,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getCedula, updateCedula, getClients, getSystems, getEquipments, getUsers, getProtocols, Cedula, Client, Equipment, User, System, Protocol, ProtocolStep } from '@/lib/services';
-import { CardDescription } from '@/components/ui/card';
 
 
 export default function EditCedulaPage() {
