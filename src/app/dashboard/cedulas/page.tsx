@@ -313,19 +313,19 @@ export default function CedulasPage() {
                         {getSortIcon('client')}
                      </Button>
                   </TableHead>
-                  <TableHead className="hidden md:table-cell">
+                  <TableHead className="hidden sm:table-cell">
                     <Button variant="ghost" onClick={() => requestSort('system' as SortableKey)}>
                       Sistema
                       {getSortIcon('system' as SortableKey)}
                     </Button>
                   </TableHead>
-                  <TableHead className="hidden md:table-cell">
+                  <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('equipment')}>
                       Equipo
                       {getSortIcon('equipment')}
                     </Button>
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell">
+                  <TableHead className="hidden md:table-cell">
                     <Button variant="ghost" onClick={() => requestSort('technician')}>
                       Técnico
                       {getSortIcon('technician')}
@@ -337,16 +337,10 @@ export default function CedulasPage() {
                       {getSortIcon('supervisor' as SortableKey)}
                     </Button>
                   </TableHead>
-                   <TableHead className="hidden md:table-cell">
+                   <TableHead className="hidden sm:table-cell">
                     <Button variant="ghost" onClick={() => requestSort('creationDate')}>
                       Fecha
                       {getSortIcon('creationDate')}
-                    </Button>
-                  </TableHead>
-                   <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('semaforo')}>
-                      Semáforo
-                      {getSortIcon('semaforo')}
                     </Button>
                   </TableHead>
                   <TableHead>
@@ -369,33 +363,19 @@ export default function CedulasPage() {
                     <TableRow className="cursor-pointer" onClick={() => handleToggleDetails(cedula.id)}>
                       <TableCell className="font-medium">{cedula.folio}</TableCell>
                       <TableCell>{cedula.client}</TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="hidden sm:table-cell">
                         <span className="font-medium" style={{ color: cedula.systemColor }}>
                           {cedula.system}
                         </span>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell>
                         {cedula.equipment}
                         <span className="block text-xs text-muted-foreground">({cedula.serial})</span>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">{cedula.technician}</TableCell>
+                      <TableCell className="hidden md:table-cell">{cedula.technician}</TableCell>
                       <TableCell className="hidden lg:table-cell">{cedula.supervisor}</TableCell>
-                       <TableCell className="hidden md:table-cell">
+                       <TableCell className="hidden sm:table-cell">
                         {new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
-                      </TableCell>
-                       <TableCell>
-                          {cedula.semaforo ? (
-                              <div className="flex items-center gap-2">
-                                  <div className={cn("h-2.5 w-2.5 rounded-full", {
-                                      'bg-green-500': cedula.semaforo === 'Verde',
-                                      'bg-orange-500': cedula.semaforo === 'Naranja',
-                                      'bg-red-500': cedula.semaforo === 'Rojo',
-                                  })} />
-                                  <span className="hidden xl:inline">{cedula.semaforo}</span>
-                              </div>
-                          ) : (
-                              <span className="text-muted-foreground text-xs">N/A</span>
-                          )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(cedula.status)}>{cedula.status}</Badge>
@@ -437,7 +417,7 @@ export default function CedulasPage() {
                     </TableRow>
                     {expandedCedulaId === cedula.id && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={11} className="p-0">
+                            <TableCell colSpan={10} className="p-0">
                                 <div className="p-4">
                                 <Card className="shadow-inner">
                                     <CardHeader>
