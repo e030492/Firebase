@@ -41,17 +41,33 @@ import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, HardHat, C
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { deleteEquipment, deleteProtocolByEquipmentId, Equipment } from '@/lib/services';
+import { getEquipments, deleteEquipment, deleteProtocolByEquipmentId, Equipment } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useData } from '@/hooks/use-data-provider';
 
 type SortableKey = keyof Equipment;
 
 export default function EquipmentsPage() {
-  const { equipments, loading, refreshData } = useData();
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(null);
+
+  const fetchEquipments = async () => {
+    setLoading(true);
+    try {
+      const data = await getEquipments();
+      setEquipments(data);
+    } catch (error) {
+      console.error("Failed to fetch equipments", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchEquipments();
+  }, []);
 
   const sortedEquipments = useMemo(() => {
     let sortableItems = [...equipments];
@@ -95,7 +111,7 @@ export default function EquipmentsPage() {
       try {
         await deleteEquipment(equipmentToDelete.id);
         await deleteProtocolByEquipmentId(equipmentToDelete.id);
-        await refreshData();
+        await fetchEquipments();
       } catch (error) {
         console.error("Failed to delete equipment:", error);
         alert("Error al eliminar el equipo y su protocolo asociado.");
@@ -313,3 +329,5 @@ export default function EquipmentsPage() {
     </>
   );
 }
+
+    

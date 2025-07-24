@@ -43,15 +43,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
-import { deleteCedula, Cedula, Client, Equipment, System } from '@/lib/services';
+import { getCedulas, getClients, getEquipments, getSystems, deleteCedula, Cedula, Client, Equipment, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useData } from '@/hooks/use-data-provider';
 
 type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo' | 'system';
 type AugmentedCedula = Cedula & { system: string; serial: string; systemColor?: string; };
 
 export default function CedulasPage() {
-  const { cedulas, clients, equipments: allEquipments, systems, loading, refreshData } = useData();
+  const [cedulas, setCedulas] = useState<Cedula[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const { can } = usePermissions();
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -64,6 +68,30 @@ export default function CedulasPage() {
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'folio', direction: 'ascending' });
 
   const [expandedCedulaId, setExpandedCedulaId] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [cedulasData, clientsData, equipmentsData, systemsData] = await Promise.all([
+        getCedulas(),
+        getClients(),
+        getEquipments(),
+        getSystems(),
+      ]);
+      setCedulas(cedulasData);
+      setClients(clientsData);
+      setAllEquipments(equipmentsData);
+      setSystems(systemsData);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -150,7 +178,7 @@ export default function CedulasPage() {
     if (cedulaToDelete) {
       try {
         await deleteCedula(cedulaToDelete.id);
-        await refreshData();
+        await fetchData();
       } catch (error) {
         console.error("Failed to delete cedula:", error);
         alert("Error al eliminar la cédula.");
@@ -187,7 +215,7 @@ export default function CedulasPage() {
   };
 
   const handleToggleDetails = (cedulaId: string) => {
-    setExpandedCedulaId(prevId => prevId === cedulaId ? null : prevId);
+    setExpandedCedulaId(prevId => prevId === cedulaId ? null : cedulaId);
   };
 
   const canCreateCedulas = can('create', 'cedulas');
@@ -547,3 +575,5 @@ export default function CedulasPage() {
     </>
   );
 }
+
+    
