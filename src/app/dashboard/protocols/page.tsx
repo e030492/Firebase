@@ -57,8 +57,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { getEquipments, getProtocols, getClients, getSystems, updateProtocol, deleteProtocol, createProtocol, Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
+import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useData } from '@/hooks/use-data-provider';
 
 type EditingStepInfo = {
   protocolId: string;
@@ -72,44 +73,27 @@ type DeletingStepInfo = {
 
 export default function ProtocolsPage() {
   const router = useRouter();
+  const { 
+      equipments: allEquipments, 
+      protocols, 
+      clients, 
+      systems, 
+      loading,
+      createProtocol,
+      updateProtocol,
+      deleteProtocol,
+  } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
-  const [protocols, setProtocols] = useState<Protocol[]>([]);
-  const [loading, setLoading] = useState(true);
-
+  
   const [editingStep, setEditingStep] = useState<EditingStepInfo | null>(null);
   const [deletingStep, setDeletingStep] = useState<DeletingStepInfo | null>(null);
   const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
   
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadData() {
-        try {
-            const [equipmentsData, protocolsData, clientsData, systemsData] = await Promise.all([
-                getEquipments(),
-                getProtocols(),
-                getClients(),
-                getSystems(),
-            ]);
-            setAllEquipments(equipmentsData);
-            setProtocols(protocolsData);
-            setClients(clientsData);
-            setSystems(systemsData);
-        } catch (error) {
-            console.error("Failed to load protocols page data", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-    loadData();
-  }, []);
   
   const filteredEquipments = useMemo(() => {
     let equipments = [...allEquipments];
@@ -189,7 +173,6 @@ export default function ProtocolsPage() {
 
     try {
         await updateProtocol(editingStep.protocolId, { steps: newSteps });
-        setProtocols(protocols.map(p => p.id === editingStep.protocolId ? {...p, steps: newSteps} : p));
         setEditingStep(null);
     } catch (error) {
         console.error("Failed to save step edit:", error);
@@ -207,7 +190,6 @@ export default function ProtocolsPage() {
 
       try {
         await updateProtocol(deletingStep.protocolId, { steps: newSteps });
-        setProtocols(protocols.map(p => p.id === deletingStep.protocolId ? {...p, steps: newSteps} : p));
         setDeletingStep(null);
       } catch (error) {
         console.error("Failed to delete step:", error);
@@ -220,7 +202,6 @@ export default function ProtocolsPage() {
 
     try {
         await deleteProtocol(protocolToDelete.id);
-        setProtocols(protocols.filter(p => p.id !== protocolToDelete.id));
         setProtocolToDelete(null);
     } catch (error) {
         console.error("Failed to delete protocol:", error);
@@ -244,12 +225,7 @@ export default function ProtocolsPage() {
           steps: result.map(step => ({ ...step, imageUrl: '', notes: '', completion: 0 })),
         };
         
-        const newProtocolDoc = await createProtocol(newProtocolData);
-        // We need the ID from the created doc to add to our local state
-        const newProtocol = { id: newProtocolDoc.id, ...newProtocolData };
-
-        setProtocols(prevProtocols => [...prevProtocols, newProtocol]);
-
+        await createProtocol(newProtocolData);
       } else {
         alert("La IA no pudo generar un protocolo para este equipo.");
       }

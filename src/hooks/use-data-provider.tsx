@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { 
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as createUserService,
+    updateUser as updateUserService,
     deleteUser as deleteUserService,
     createClient as createClientService,
     updateClient as updateClientService,
@@ -54,6 +55,14 @@ type DataContextType = {
   createEquipment: (equipmentData: Omit<Equipment, 'id'>) => Promise<void>;
   updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<void>;
   deleteEquipment: (equipmentId: string) => Promise<void>;
+  // Protocol mutations
+  createProtocol: (protocolData: Omit<Protocol, 'id'>) => Promise<void>;
+  updateProtocol: (protocolId: string, protocolData: Partial<Protocol>) => Promise<void>;
+  deleteProtocol: (protocolId: string) => Promise<void>;
+  // Cedula mutations
+  createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<void>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<void>;
+  deleteCedula: (cedulaId: string) => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -107,62 +116,129 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loadAllData();
   }, [loadAllData]);
   
-  // --- USER MUTATIONS ---
+  // --- USER MUTATIONS (OPTIMIZED) ---
   const createUser = async (userData: Omit<User, 'id'>) => {
-    createUserService(userData);
-    await loadAllData();
+    const newUser = createUserService(userData);
+    setUsers(prev => [...prev, newUser]);
+    setDebugMessage(`User "${newUser.name}" created.`);
   };
   const updateUser = async (userId: string, userData: Partial<User>) => {
-    updateUserService(userId, userData);
-    await loadAllData();
+    const updatedUser = updateUserService(userId, userData);
+    if(updatedUser) {
+        setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+        setDebugMessage(`User "${updatedUser.name}" updated.`);
+    }
   };
   const deleteUser = async (userId: string) => {
-    deleteUserService(userId);
-    await loadAllData();
+    if (deleteUserService(userId)) {
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        setDebugMessage(`User with ID ${userId} deleted.`);
+    }
   };
   
-  // --- CLIENT MUTATIONS ---
+  // --- CLIENT MUTATIONS (OPTIMIZED) ---
   const createClient = async (clientData: Omit<Client, 'id'>) => {
-    createClientService(clientData);
-    await loadAllData();
+    const newClient = createClientService(clientData);
+    setClients(prev => [...prev, newClient]);
+    setDebugMessage(`Client "${newClient.name}" created.`);
   };
   const updateClient = async (clientId: string, clientData: Partial<Client>) => {
-    updateClientService(clientId, clientData);
-    await loadAllData();
+    const updatedClient = updateClientService(clientId, clientData);
+    if (updatedClient) {
+        setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
+        setDebugMessage(`Client "${updatedClient.name}" updated.`);
+    }
   };
   const deleteClient = async (clientId: string) => {
-    deleteClientService(clientId);
-    await loadAllData();
+    if (deleteClientService(clientId)) {
+        setClients(prev => prev.filter(c => c.id !== clientId));
+        setDebugMessage(`Client with ID ${clientId} deleted.`);
+    }
   };
 
-  // --- SYSTEM MUTATIONS ---
+  // --- SYSTEM MUTATIONS (OPTIMIZED) ---
   const createSystem = async (systemData: Omit<System, 'id'>) => {
-    createSystemService(systemData);
-    await loadAllData();
+    const newSystem = createSystemService(systemData);
+    setSystems(prev => [...prev, newSystem]);
+    setDebugMessage(`System "${newSystem.name}" created.`);
   };
   const updateSystem = async (systemId: string, systemData: Partial<System>) => {
-    updateSystemService(systemId, systemData);
-    await loadAllData();
+    const updatedSystem = updateSystemService(systemId, systemData);
+    if (updatedSystem) {
+        setSystems(prev => prev.map(s => s.id === systemId ? updatedSystem : s));
+        setDebugMessage(`System "${updatedSystem.name}" updated.`);
+    }
   };
   const deleteSystem = async (systemId: string) => {
-    deleteSystemService(systemId);
-    await loadAllData();
+    if (deleteSystemService(systemId)) {
+        setSystems(prev => prev.filter(s => s.id !== systemId));
+        setDebugMessage(`System with ID ${systemId} deleted.`);
+    }
   };
 
-  // --- EQUIPMENT MUTATIONS ---
+  // --- EQUIPMENT MUTATIONS (OPTIMIZED) ---
   const createEquipment = async (equipmentData: Omit<Equipment, 'id'>) => {
-    createEquipmentService(equipmentData);
-    await loadAllData();
+    const newEquipment = createEquipmentService(equipmentData);
+    setEquipments(prev => [...prev, newEquipment]);
+    setDebugMessage(`Equipment "${newEquipment.name}" created.`);
   };
   const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>) => {
-    updateEquipmentService(equipmentId, equipmentData);
-    await loadAllData();
+    const updatedEquipment = updateEquipmentService(equipmentId, equipmentData);
+    if (updatedEquipment) {
+        setEquipments(prev => prev.map(e => e.id === equipmentId ? updatedEquipment : e));
+        setDebugMessage(`Equipment "${updatedEquipment.name}" updated.`);
+    }
   };
   const deleteEquipment = async (equipmentId: string) => {
-    deleteEquipmentService(equipmentId);
-    deleteProtocolByEquipmentIdService(equipmentId); // Also delete associated protocol
-    await loadAllData();
+    if (deleteEquipmentService(equipmentId)) {
+        deleteProtocolByEquipmentIdService(equipmentId); // Also delete associated protocol
+        setEquipments(prev => prev.filter(e => e.id !== equipmentId));
+        setProtocols(prev => prev.filter(p => p.equipmentId !== equipmentId));
+        setDebugMessage(`Equipment with ID ${equipmentId} and its protocol deleted.`);
+    }
   };
+
+  // --- PROTOCOL MUTATIONS (OPTIMIZED) ---
+    const createProtocol = async (protocolData: Omit<Protocol, 'id'>) => {
+        const newProtocol = createProtocolService(protocolData);
+        setProtocols(prev => [...prev, newProtocol]);
+        setDebugMessage(`Protocol for equipment ID ${newProtocol.equipmentId} created.`);
+    };
+
+    const updateProtocol = async (protocolId: string, protocolData: Partial<Protocol>) => {
+        const updatedProtocol = updateProtocolService(protocolId, protocolData);
+        if (updatedProtocol) {
+            setProtocols(prev => prev.map(p => p.id === protocolId ? updatedProtocol : p));
+            setDebugMessage(`Protocol with ID ${protocolId} updated.`);
+        }
+    };
+
+    const deleteProtocol = async (protocolId: string) => {
+        if (deleteProtocolService(protocolId)) {
+            setProtocols(prev => prev.filter(p => p.id !== protocolId));
+            setDebugMessage(`Protocol with ID ${protocolId} deleted.`);
+        }
+    };
+    
+  // --- CEDULA MUTATIONS (OPTIMIZED) ---
+    const createCedula = async (cedulaData: Omit<Cedula, 'id'>) => {
+        const newCedula = createCedulaService(cedulaData);
+        setCedulas(prev => [...prev, newCedula]);
+        setDebugMessage(`Cédula with folio ${newCedula.folio} created.`);
+    };
+    const updateCedula = async (cedulaId: string, cedulaData: Partial<Cedula>) => {
+        const updatedCedula = updateCedulaService(cedulaId, cedulaData);
+        if (updatedCedula) {
+            setCedulas(prev => prev.map(c => c.id === cedulaId ? updatedCedula : c));
+            setDebugMessage(`Cédula with folio ${updatedCedula.folio} updated.`);
+        }
+    };
+    const deleteCedula = async (cedulaId: string) => {
+        if (deleteCedulaService(cedulaId)) {
+            setCedulas(prev => prev.filter(c => c.id !== cedulaId));
+            setDebugMessage(`Cédula with ID ${cedulaId} deleted.`);
+        }
+    };
 
 
   const value = {
@@ -192,6 +268,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     createEquipment,
     updateEquipment,
     deleteEquipment,
+    // Protocols
+    createProtocol,
+    updateProtocol,
+    deleteProtocol,
+    // Cedulas
+    createCedula,
+    updateCedula,
+    deleteCedula,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

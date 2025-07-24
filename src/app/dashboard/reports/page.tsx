@@ -11,10 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Printer, ChevronDown, Camera, ArrowLeft, ShieldCheck, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { getCedulas, getClients, getEquipments, getSystems, Cedula, Client, Equipment, System } from '@/lib/services';
+import { Cedula, Client, Equipment, System } from '@/lib/services';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useData } from '@/hooks/use-data-provider';
 
 
 type EnrichedCedula = Cedula & { 
@@ -176,11 +177,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
 }
 
 export default function ReportsPage() {
-  const [cedulas, setCedulas] = useState<Cedula[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { cedulas, clients, equipments: allEquipments, systems, loading } = useData();
   
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
@@ -192,28 +189,6 @@ export default function ReportsPage() {
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'creationDate', direction: 'descending' });
 
   const [reportData, setReportData] = useState<EnrichedCedula[] | null>(null);
-
-  useEffect(() => {
-    async function loadData() {
-        try {
-            const [cedulasData, clientsData, equipmentsData, systemsData] = await Promise.all([
-                getCedulas(),
-                getClients(),
-                getEquipments(),
-                getSystems(),
-            ]);
-            setCedulas(cedulasData);
-            setClients(clientsData);
-            setAllEquipments(equipmentsData);
-            setSystems(systemsData);
-        } catch (error) {
-            console.error("Failed to load report data:", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-    loadData();
-  }, []);
 
   useEffect(() => {
     if (selectedClientId) {

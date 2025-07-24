@@ -36,7 +36,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
-import { getCedula, updateCedula, getClients, getSystems, getEquipments, getUsers, getProtocols, Cedula, Client, Equipment, User, System, Protocol, ProtocolStep } from '@/lib/services';
+import { Cedula, Client, Equipment, User, System, Protocol, ProtocolStep } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 
 export default function EditCedulaPage() {
@@ -44,14 +45,12 @@ export default function EditCedulaPage() {
   const router = useRouter();
   const cedulaId = params.id as string;
   const { can } = usePermissions();
+  const { 
+      cedulas, clients, equipments: allEquipments, users, systems, protocols, 
+      loading, updateCedula 
+  } = useData();
 
   const [cedula, setCedula] = useState<Cedula | null>(null);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
-  const [protocols, setProtocols] = useState<Protocol[]>([]);
-
   const [folio, setFolio] = useState('');
   const [clientId, setClientId] = useState('');
   const [systemId, setSystemId] = useState('');
@@ -71,51 +70,24 @@ export default function EditCedulaPage() {
 
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
   
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const dataLoadedRef = useRef(false);
 
   useEffect(() => {
-    async function loadInitialData() {
-        if (!cedulaId) return;
-        try {
-            const [
-                cedulaData,
-                clientsData,
-                equipmentsData,
-                usersData,
-                systemsData,
-                protocolsData
-            ] = await Promise.all([
-                getCedula(cedulaId),
-                getClients(),
-                getEquipments(),
-                getUsers(),
-                getSystems(),
-                getProtocols()
-            ]);
-
-            if (cedulaData) {
-                setClients(clientsData);
-                setAllEquipments(equipmentsData);
-                setUsers(usersData);
-                setSystems(systemsData);
-                setProtocols(protocolsData);
-                setCedula(cedulaData);
-            } else {
-                setNotFound(true);
-            }
-        } catch (error) {
-            console.error("Failed to load data for cedula editing", error);
-            setNotFound(true);
-        }
+    if (!loading && cedulaId) {
+      const cedulaData = cedulas.find(c => c.id === cedulaId);
+      if (cedulaData) {
+        setCedula(cedulaData);
+      } else {
+        setNotFound(true);
+      }
     }
-    loadInitialData();
-  }, [cedulaId]);
+  }, [cedulaId, cedulas, loading]);
   
   useEffect(() => {
-    if (cedula && clients.length > 0 && allEquipments.length > 0 && users.length > 0 && systems.length > 0 && !dataLoadedRef.current) {
+    if (cedula && !dataLoadedRef.current) {
         setFolio(cedula.folio);
         setDescription(cedula.description);
         setStatus(cedula.status);
@@ -160,7 +132,7 @@ export default function EditCedulaPage() {
         }
         
         dataLoadedRef.current = true;
-        setLoading(false);
+        setPageLoading(false);
     }
   }, [cedula, clients, allEquipments, users, systems, protocols]);
 
@@ -176,7 +148,6 @@ export default function EditCedulaPage() {
     } else {
         setFilteredEquipments([]);
     }
-    // No reseteamos equipmentId aquí para no perder el valor pre-cargado
   }, [clientId, systemId, allEquipments, clients, systems]);
   
   const handleClientChange = (newClientId: string) => {
@@ -269,7 +240,7 @@ export default function EditCedulaPage() {
 
   const canUpdateCedulas = can('update', 'cedulas');
 
-  if (loading) {
+  if (pageLoading || loading) {
     return (
        <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">

@@ -32,13 +32,16 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { getClients, getSystems, getEquipments, getProtocols, getUsers, createCedula, Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from '@/lib/services';
+import { Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardDescription } from '@/components/ui/card';
+import { useData } from '@/hooks/use-data-provider';
 
 
 export default function NewCedulaPage() {
   const router = useRouter();
+  const { clients, systems: allSystems, equipments: allEquipments, users, protocols, createCedula, loading } = useData();
+
   const [folio, setFolio] = useState(`C-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`);
   const [clientId, setClientId] = useState('');
   const [systemId, setSystemId] = useState('');
@@ -51,10 +54,6 @@ export default function NewCedulaPage() {
   const [status, setStatus] = useState('Pendiente');
   const [semaforo, setSemaforo] = useState('');
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [allSystems, setAllSystems] = useState<System[]>([]);
-  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
-  const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [filteredSystems, setFilteredSystems] = useState<System[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
@@ -67,33 +66,12 @@ export default function NewCedulaPage() {
   const [imageUrls, setImageUrls] = useState<{ [step: string]: string }>({});
   const [notes, setNotes] = useState<{ [step: string]: string }>({});
   
-  const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    async function loadData() {
-        try {
-            const [clientsData, systemsData, equipmentsData, usersData, protocolsData] = await Promise.all([
-                getClients(),
-                getSystems(),
-                getEquipments(),
-                getUsers(),
-                getProtocols()
-            ]);
-            setClients(clientsData);
-            setAllSystems(systemsData);
-            setAllEquipments(equipmentsData);
-            setTechnicians(usersData.filter(user => user.role === 'Técnico'));
-            setSupervisors(usersData.filter(user => user.role === 'Supervisor'));
-            setProtocols(protocolsData);
-        } catch (error) {
-            console.error("Failed to load initial data", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-    loadData();
-  }, []);
+    setTechnicians(users.filter(user => user.role === 'Técnico'));
+    setSupervisors(users.filter(user => user.role === 'Supervisor'));
+  }, [users]);
 
   useEffect(() => {
     if (clientId) {
