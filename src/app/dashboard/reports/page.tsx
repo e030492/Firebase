@@ -27,7 +27,7 @@ type EnrichedCedula = Cedula & {
   systemColor?: string;
   serial: string;
 };
-type SortableKey = 'folio' | 'client' | 'system' | 'equipment' | 'creationDate';
+type SortableKey = 'folio' | 'client' | 'warehouse' | 'system' | 'equipment' | 'creationDate';
 
 function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => void }) {
     const reportDate = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -427,6 +427,12 @@ export default function ReportsPage() {
                                 </Button>
                             </TableHead>
                             <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('warehouse' as SortableKey)}>
+                                    Almacén
+                                    {getSortIcon('warehouse' as SortableKey)}
+                                </Button>
+                            </TableHead>
+                            <TableHead>
                                 <Button variant="ghost" onClick={() => requestSort('system')}>
                                     Sistema
                                     {getSortIcon('system')}
@@ -465,6 +471,7 @@ export default function ReportsPage() {
                                     </TableCell>
                                     <TableCell className="font-medium">{cedula.folio}</TableCell>
                                     <TableCell>{cedula.client}</TableCell>
+                                    <TableCell>{cedula.warehouse}</TableCell>
                                     <TableCell>
                                         <span className="font-medium" style={{ color: cedula.systemColor }}>
                                             {cedula.system}
@@ -491,7 +498,7 @@ export default function ReportsPage() {
                                 </TableRow>
                                 {expandedCedulaId === cedula.id && (
                                      <TableRow className="bg-muted/30 hover:bg-muted/30">
-                                        <TableCell colSpan={7} className="p-0">
+                                        <TableCell colSpan={8} className="p-0">
                                             <div className="p-4">
                                             <Card className="shadow-inner">
                                                 <CardHeader>
@@ -578,7 +585,7 @@ export default function ReportsPage() {
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center">No se encontraron cédulas con los filtros aplicados.</TableCell>
+                                <TableCell colSpan={8} className="h-24 text-center">No se encontraron cédulas con los filtros aplicados.</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
