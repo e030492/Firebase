@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { debugMessage } = useData();
+  const { isDebugWindowVisible } = useData();
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +34,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // CRITICAL FIX: Get users from localStorage via services, not from static mockUsers
       const allUsers = getUsers();
       const user = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
 
@@ -60,7 +59,7 @@ export default function LoginPage() {
 
   return (
     <>
-      {debugMessage && <DebugWindow />}
+      {isDebugWindowVisible && <DebugWindow />}
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">

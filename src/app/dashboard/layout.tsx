@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Bug } from 'lucide-react';
 import { DashboardNav } from '@/components/dashboard-nav';
 import {
   SidebarProvider,
@@ -30,11 +30,12 @@ import { ACTIVE_USER_STORAGE_KEY } from '@/lib/services';
 import { PermissionsProvider } from '@/hooks/use-permissions';
 import { useData } from '@/hooks/use-data-provider';
 import { DebugWindow } from '@/components/debug-window';
+import { cn } from '@/lib/utils';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [activeUser, setActiveUser] = useState<User | null>(null);
-  const { debugMessage } = useData();
+  const { isDebugWindowVisible, toggleDebugWindow } = useData();
 
   useEffect(() => {
     const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
@@ -117,7 +118,21 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           </header>
           <main className="flex-1 p-4 md:p-6">{children}</main>
         </SidebarInset>
-        {debugMessage && <DebugWindow />}
+        
+        {isDebugWindowVisible && <DebugWindow />}
+
+        <Button
+          onClick={toggleDebugWindow}
+          variant={isDebugWindowVisible ? "destructive" : "outline"}
+          size="icon"
+          className={cn(
+            "fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-2xl z-50 transition-all duration-300",
+            !isDebugWindowVisible && "bg-primary/80 text-primary-foreground hover:bg-primary"
+          )}
+        >
+          <Bug className="h-6 w-6" />
+          <span className="sr-only">Toggle Debug Window</span>
+        </Button>
       </SidebarProvider>
   )
 }

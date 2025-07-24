@@ -38,6 +38,8 @@ type DataContextType = {
   loading: boolean;
   error: string | null;
   debugMessage: string;
+  isDebugWindowVisible: boolean;
+  toggleDebugWindow: () => void;
   refreshData: () => void;
   // User mutations
   createUser: (userData: Omit<User, 'id'>) => Promise<void>;
@@ -77,6 +79,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [debugMessage, setDebugMessage] = useState('Initializing DataProvider...');
+  const [isDebugWindowVisible, setIsDebugWindowVisible] = useState(true);
+
+  const toggleDebugWindow = () => {
+    setIsDebugWindowVisible(prev => !prev);
+  };
 
   const loadAllData = useCallback(async () => {
     setLoading(true);
@@ -251,6 +258,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     debugMessage,
+    isDebugWindowVisible,
+    toggleDebugWindow,
     refreshData: loadAllData,
     // Users
     createUser,
