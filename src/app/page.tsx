@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getUsers, User, seedDatabase, ACTIVE_USER_STORAGE_KEY } from '@/lib/services';
+import { mockUsers } from '@/lib/mock-data';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,48 +36,42 @@ export default function LoginPage() {
     setError('');
     setDebugMessages([]);
     setIsLoading(true);
+    addDebugMessage("1. Iniciando proceso de login...");
 
     try {
-      addDebugMessage("1. Iniciando proceso de login...");
-      addDebugMessage("2. Consultando base de datos para obtener usuarios...");
-      let users = await getUsers();
-      
-      if (users.length === 0) {
-        addDebugMessage("WARN: La colección de usuarios está vacía. Sembrando datos iniciales...");
-        await seedDatabase();
-        addDebugMessage("INFO: Base de datos sembrada. Volviendo a consultar usuarios...");
-        users = await getUsers();
-        if (users.length === 0) {
-          throw new Error("No se pudieron cargar los usuarios después de la inicialización.");
-        }
-        addDebugMessage(`INFO: ${users.length} usuarios encontrados después de sembrar.`);
-      }
-
-      addDebugMessage(`3. ${users.length} usuarios encontrados. Verificando credenciales...`);
-      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      addDebugMessage("2. Verificando credenciales localmente...");
+      const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
 
       if (user) {
-        addDebugMessage(`INFO: Usuario ${user.email} encontrado.`);
+        addDebugMessage(`INFO: Usuario ${user.email} encontrado en datos locales.`);
         if (user.password === password) {
-          addDebugMessage("4. Login exitoso. Redirigiendo...");
+          addDebugMessage("3. Login exitoso. Guardando usuario y redirigiendo...");
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
+
+          // Check and seed database in the background after login
+          const dbUsers = await getUsers();
+          if (dbUsers.length === 0) {
+              console.log("Database is empty, seeding in background...");
+              await seedDatabase();
+          }
+
           router.push('/dashboard/users');
         } else {
           addDebugMessage("ERROR: Contraseña incorrecta.");
           setError('Contraseña incorrecta.');
         }
       } else {
-        addDebugMessage("ERROR: Usuario no encontrado.");
+        addDebugMessage("ERROR: Usuario no encontrado en datos locales.");
         setError('Usuario no encontrado.');
       }
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       addDebugMessage(`FATAL: ${errorMessage}`);
       console.error("Login failed:", err);
-      setError("Error al conectar con la base de datos. Verifique la consola.");
+      setError("Error crítico durante el login. Verifique la consola.");
     } finally {
       setIsLoading(false);
-      addDebugMessage("5. Proceso de login finalizado.");
+      addDebugMessage("4. Proceso de login finalizado.");
     }
   };
 
@@ -144,5 +139,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
