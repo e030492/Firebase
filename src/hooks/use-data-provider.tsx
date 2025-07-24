@@ -6,6 +6,22 @@ import {
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as createUserService,
     deleteUser as deleteUserService,
+    createClient as createClientService,
+    updateClient as updateClientService,
+    deleteClient as deleteClientService,
+    createSystem as createSystemService,
+    updateSystem as updateSystemService,
+    deleteSystem as deleteSystemService,
+    createEquipment as createEquipmentService,
+    updateEquipment as updateEquipmentService,
+    deleteEquipment as deleteEquipmentService,
+    createProtocol as createProtocolService,
+    updateProtocol as updateProtocolService,
+    deleteProtocol as deleteProtocolService,
+    deleteProtocolByEquipmentId as deleteProtocolByEquipmentIdService,
+    createCedula as createCedulaService,
+    updateCedula as updateCedulaService,
+    deleteCedula as deleteCedulaService,
     seedDatabase,
     User, Client, System, Equipment, Protocol, Cedula
 } from '@/lib/services';
@@ -22,8 +38,22 @@ type DataContextType = {
   error: string | null;
   debugMessage: string;
   refreshData: () => void;
+  // User mutations
   createUser: (userData: Omit<User, 'id'>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
+  updateUser: (userId: string, userData: Partial<User>) => Promise<void>;
+  // Client mutations
+  createClient: (clientData: Omit<Client, 'id'>) => Promise<void>;
+  updateClient: (clientId: string, clientData: Partial<Client>) => Promise<void>;
+  deleteClient: (clientId: string) => Promise<void>;
+  // System mutations
+  createSystem: (systemData: Omit<System, 'id'>) => Promise<void>;
+  updateSystem: (systemId: string, systemData: Partial<System>) => Promise<void>;
+  deleteSystem: (systemId: string) => Promise<void>;
+  // Equipment mutations
+  createEquipment: (equipmentData: Omit<Equipment, 'id'>) => Promise<void>;
+  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<void>;
+  deleteEquipment: (equipmentId: string) => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -76,20 +106,64 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadAllData();
   }, [loadAllData]);
-
+  
+  // --- USER MUTATIONS ---
   const createUser = async (userData: Omit<User, 'id'>) => {
-    setDebugMessage(`Creating user ${userData.name}...`);
     createUserService(userData);
-    await loadAllData(); // Refresh all data from localStorage
-    setDebugMessage(`User ${userData.name} created.`);
+    await loadAllData();
+  };
+  const updateUser = async (userId: string, userData: Partial<User>) => {
+    updateUserService(userId, userData);
+    await loadAllData();
+  };
+  const deleteUser = async (userId: string) => {
+    deleteUserService(userId);
+    await loadAllData();
+  };
+  
+  // --- CLIENT MUTATIONS ---
+  const createClient = async (clientData: Omit<Client, 'id'>) => {
+    createClientService(clientData);
+    await loadAllData();
+  };
+  const updateClient = async (clientId: string, clientData: Partial<Client>) => {
+    updateClientService(clientId, clientData);
+    await loadAllData();
+  };
+  const deleteClient = async (clientId: string) => {
+    deleteClientService(clientId);
+    await loadAllData();
   };
 
-  const deleteUser = async (userId: string) => {
-    setDebugMessage(`Deleting user ${userId}...`);
-    deleteUserService(userId);
-    await loadAllData(); // Refresh all data from localStorage
-    setDebugMessage(`User ${userId} deleted.`);
+  // --- SYSTEM MUTATIONS ---
+  const createSystem = async (systemData: Omit<System, 'id'>) => {
+    createSystemService(systemData);
+    await loadAllData();
   };
+  const updateSystem = async (systemId: string, systemData: Partial<System>) => {
+    updateSystemService(systemId, systemData);
+    await loadAllData();
+  };
+  const deleteSystem = async (systemId: string) => {
+    deleteSystemService(systemId);
+    await loadAllData();
+  };
+
+  // --- EQUIPMENT MUTATIONS ---
+  const createEquipment = async (equipmentData: Omit<Equipment, 'id'>) => {
+    createEquipmentService(equipmentData);
+    await loadAllData();
+  };
+  const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>) => {
+    updateEquipmentService(equipmentId, equipmentData);
+    await loadAllData();
+  };
+  const deleteEquipment = async (equipmentId: string) => {
+    deleteEquipmentService(equipmentId);
+    deleteProtocolByEquipmentIdService(equipmentId); // Also delete associated protocol
+    await loadAllData();
+  };
+
 
   const value = {
     users,
@@ -102,8 +176,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     error,
     debugMessage,
     refreshData: loadAllData,
+    // Users
     createUser,
+    updateUser,
     deleteUser,
+    // Clients
+    createClient,
+    updateClient,
+    deleteClient,
+    // Systems
+    createSystem,
+    updateSystem,
+    deleteSystem,
+    // Equipments
+    createEquipment,
+    updateEquipment,
+    deleteEquipment,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

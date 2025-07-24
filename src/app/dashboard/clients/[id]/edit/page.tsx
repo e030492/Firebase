@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -17,12 +16,14 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getClient, updateClient, Client, Almacen } from '@/lib/services';
+import { Client, Almacen } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 export default function EditClientPage() {
   const params = useParams();
   const router = useRouter();
   const clientId = params.id as string;
+  const { clients, updateClient, loading: dataLoading } = useData();
 
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
@@ -33,35 +34,27 @@ export default function EditClientPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (clientId) {
-      const fetchClient = async () => {
-        try {
-          const foundClient = await getClient(clientId);
-          if (foundClient) {
-            setName(foundClient.name);
-            setResponsable(foundClient.responsable);
-            setDireccion(foundClient.direccion);
-            const clientAlmacenes = foundClient.almacenes || [];
-            const displayAlmacenes: Almacen[] = [
-                { nombre: '', direccion: '' },
-                { nombre: '', direccion: '' },
-            ];
-            if (clientAlmacenes[0]) displayAlmacenes[0] = clientAlmacenes[0];
-            if (clientAlmacenes[1]) displayAlmacenes[1] = clientAlmacenes[1];
-            setAlmacenes(displayAlmacenes);
-          } else {
-            setNotFound(true);
-          }
-        } catch (error) {
-          console.error("Failed to fetch client:", error);
-          setNotFound(true);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchClient();
+    if (!dataLoading && clientId) {
+      const foundClient = clients.find(c => c.id === clientId);
+      if (foundClient) {
+        setName(foundClient.name);
+        setResponsable(foundClient.responsable);
+        setDireccion(foundClient.direccion);
+        const clientAlmacenes = foundClient.almacenes || [];
+        const displayAlmacenes: Almacen[] = [
+            { nombre: '', direccion: '' },
+            { nombre: '', direccion: '' },
+        ];
+        if (clientAlmacenes[0]) displayAlmacenes[0] = clientAlmacenes[0];
+        if (clientAlmacenes[1]) displayAlmacenes[1] = clientAlmacenes[1];
+        setAlmacenes(displayAlmacenes);
+        setLoading(false);
+      } else {
+        setNotFound(true);
+        setLoading(false);
+      }
     }
-  }, [clientId]);
+  }, [clientId, clients, dataLoading]);
 
   const handleAlmacenChange = (index: number, field: keyof Almacen, value: string) => {
     const newAlmacenes = [...almacenes];
@@ -93,7 +86,7 @@ export default function EditClientPage() {
     }
   }
 
-  if (loading) {
+  if (loading || dataLoading) {
     return (
        <div className="mx-auto grid max-w-4xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">

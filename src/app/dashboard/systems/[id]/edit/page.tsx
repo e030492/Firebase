@@ -16,12 +16,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getSystem, updateSystem, System } from '@/lib/services';
+import { System } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 export default function EditSystemPage() {
   const params = useParams();
   const router = useRouter();
   const systemId = params.id as string;
+  const { systems, updateSystem, loading: dataLoading } = useData();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -31,27 +33,19 @@ export default function EditSystemPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (systemId) {
-      const fetchSystem = async () => {
-        try {
-          const foundSystem = await getSystem(systemId);
-          if (foundSystem) {
-            setName(foundSystem.name);
-            setDescription(foundSystem.description);
-            setColor(foundSystem.color || '#3b82f6');
-          } else {
-            setNotFound(true);
-          }
-        } catch (error) {
-          console.error("Failed to fetch system:", error);
-          setNotFound(true);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchSystem();
+    if (!dataLoading && systemId) {
+      const foundSystem = systems.find(s => s.id === systemId);
+      if (foundSystem) {
+        setName(foundSystem.name);
+        setDescription(foundSystem.description);
+        setColor(foundSystem.color || '#3b82f6');
+        setLoading(false);
+      } else {
+        setNotFound(true);
+        setLoading(false);
+      }
     }
-  }, [systemId]);
+  }, [systemId, systems, dataLoading]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +68,7 @@ export default function EditSystemPage() {
     }
   }
 
-  if (loading) {
+  if (loading || dataLoading) {
     return (
        <div className="mx-auto grid max-w-2xl auto-rows-max items-start gap-4 lg:gap-8">
         <div className="flex items-center gap-4">

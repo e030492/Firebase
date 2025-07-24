@@ -34,28 +34,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { deleteSystem, getSystems, System } from '@/lib/services';
+import { System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useData } from '@/hooks/use-data-provider';
 
 type SortableKey = 'name' | 'description';
 
 
 export default function SystemsPage() {
-  const [systems, setSystems] = useState<System[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { systems, loading, deleteSystem: deleteSystemFromProvider } = useData();
   const [systemToDelete, setSystemToDelete] = useState<System | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
-
-  const fetchSystems = async () => {
-    setLoading(true);
-    const systemsData = await getSystems();
-    setSystems(systemsData);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchSystems();
-  }, []);
 
   const sortedSystems = useMemo(() => {
     let sortableItems = [...systems];
@@ -94,8 +83,7 @@ export default function SystemsPage() {
   const handleDeleteSystem = async () => {
     if (systemToDelete) {
       try {
-        await deleteSystem(systemToDelete.id);
-        await fetchSystems();
+        await deleteSystemFromProvider(systemToDelete.id);
       } catch (error) {
         console.error("Failed to delete system:", error);
         alert("Error al eliminar el sistema.");

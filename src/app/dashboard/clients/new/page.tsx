@@ -15,11 +15,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft } from 'lucide-react';
-import { createClient, Client } from '@/lib/services';
+import { Client } from '@/lib/services';
 import type { Almacen } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 export default function NewClientPage() {
   const router = useRouter();
+  const { createClient } = useData();
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');

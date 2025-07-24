@@ -15,10 +15,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft } from 'lucide-react';
-import { createSystem, System } from '@/lib/services';
+import { System } from '@/lib/services';
+import { useData } from '@/hooks/use-data-provider';
 
 export default function NewSystemPage() {
   const router = useRouter();
+  const { createSystem } = useData();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#3b82f6');
