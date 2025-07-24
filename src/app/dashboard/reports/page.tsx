@@ -121,8 +121,8 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                     <h3 className="text-lg font-bold text-gray-800 mb-4">Protocolo de Mantenimiento Ejecutado</h3>
                                     <div className="border rounded-lg divide-y divide-gray-200">
                                         {cedula.protocolSteps.map((step, index) => (
-                                            <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4 break-inside-avoid">
-                                                <div className="md:col-span-2 space-y-3">
+                                            <div key={index} className={cn("p-4 break-inside-avoid", step.imageUrl && "grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4")}>
+                                                <div className={cn("space-y-3", step.imageUrl && "md:col-span-2")}>
                                                     <div>
                                                         <p className="font-semibold text-gray-600 text-sm">Paso del Protocolo</p>
                                                         <p className="text-gray-800">{step.step}</p>
@@ -144,9 +144,9 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <p className="font-semibold text-gray-600 text-sm">Evidencia Fotográfica</p>
-                                                    {step.imageUrl ? (
+                                                {step.imageUrl && (
+                                                    <div className="space-y-1 mt-4 md:mt-0">
+                                                        <p className="font-semibold text-gray-600 text-sm">Evidencia Fotográfica</p>
                                                         <Image 
                                                             src={step.imageUrl} 
                                                             alt={`Evidencia para ${step.step}`} 
@@ -155,15 +155,8 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                                             data-ai-hint="protocol evidence" 
                                                             className="rounded-md object-cover border w-full aspect-[4/3]"
                                                         />
-                                                    ) : (
-                                                        <div className="w-full aspect-[4/3] bg-gray-100 rounded-md flex items-center justify-center border text-center">
-                                                            <div>
-                                                                <Camera className="h-8 w-8 text-gray-400 mx-auto"/>
-                                                                <p className="text-xs text-gray-400 mt-1">Sin evidencia</p>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
