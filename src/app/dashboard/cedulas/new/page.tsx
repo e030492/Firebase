@@ -452,37 +452,20 @@ export default function NewCedulaPage() {
                 <CardContent className="grid gap-6">
                     {protocolSteps.map((step, index) => (
                        <div key={index}>
-                        <div className="grid gap-4 p-4 border rounded-lg">
-                            <p className="font-medium">{step.step}</p>
-                            <div className="grid md:grid-cols-2 gap-6 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4 border rounded-lg">
+                           <div className="md:col-span-2 space-y-4">
+                                <div className="space-y-1">
+                                    <Label className="text-base font-semibold">Paso del Protocolo</Label>
+                                    <p className="text-muted-foreground">{step.step}</p>
+                                </div>
                                 <div className="grid gap-3">
-                                    <Label>Evidencia Fotográfica</Label>
-                                    {imageUrls[step.step] ? (
-                                        <Image src={imageUrls[step.step]} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
-                                    ) : (
-                                        <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
-                                            <Camera className="h-10 w-10 text-muted-foreground" />
-                                        </div>
-                                    )}
-                                    <div className="flex items-center gap-2">
-                                        <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={isSaving}>
-                                            <Camera className="mr-2 h-4 w-4" />
-                                            {imageUrls[step.step] ? 'Cambiar Foto' : 'Tomar o Subir Foto'}
-                                        </Button>
-                                        {imageUrls[step.step] && (
-                                            <Button type="button" variant="destructive" size="icon" onClick={() => handleImageDelete(step.step)} disabled={isSaving}>
-                                                <Trash2 className="h-4 w-4" />
-                                                <span className="sr-only">Eliminar Foto</span>
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <Input
-                                        id={`image-upload-${index}`}
-                                        type="file"
-                                        accept="image/*"
-                                        capture="environment"
-                                        onChange={(e) => handleImageChange(step.step, e)}
-                                        className="hidden"
+                                    <Label htmlFor={`step-notes-${index}`}>Notas</Label>
+                                    <Textarea
+                                        id={`step-notes-${index}`}
+                                        placeholder="Añadir notas sobre el procedimiento..."
+                                        value={notes[step.step] || ''}
+                                        onChange={(e) => handleNotesChange(step.step, e.target.value)}
+                                        className="min-h-24"
                                         disabled={isSaving}
                                     />
                                 </div>
@@ -493,7 +476,7 @@ export default function NewCedulaPage() {
                                         onValueChange={(value) => handlePercentageChange(step.step, value)}
                                         disabled={isSaving}
                                     >
-                                        <SelectTrigger id={`step-percentage-${index}`} className="w-auto">
+                                        <SelectTrigger id={`step-percentage-${index}`} className="w-48">
                                             <SelectValue placeholder="% Ejecutado" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -506,15 +489,35 @@ export default function NewCedulaPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            </div>
-                             <div className="grid gap-3 mt-4">
-                                <Label htmlFor={`step-notes-${index}`}>Notas</Label>
-                                <Textarea
-                                    id={`step-notes-${index}`}
-                                    placeholder="Añadir notas sobre el procedimiento..."
-                                    value={notes[step.step] || ''}
-                                    onChange={(e) => handleNotesChange(step.step, e.target.value)}
-                                    className="min-h-24"
+                           </div>
+                           <div className="grid gap-3">
+                                <Label>Evidencia Fotográfica</Label>
+                                {imageUrls[step.step] ? (
+                                    <Image src={imageUrls[step.step]} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                ) : (
+                                    <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
+                                        <Camera className="h-10 w-10 text-muted-foreground" />
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                    <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={isSaving}>
+                                        <Camera className="mr-2 h-4 w-4" />
+                                        {imageUrls[step.step] ? 'Cambiar Foto' : 'Tomar o Subir Foto'}
+                                    </Button>
+                                    {imageUrls[step.step] && (
+                                        <Button type="button" variant="destructive" size="icon" onClick={() => handleImageDelete(step.step)} disabled={isSaving}>
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Eliminar Foto</span>
+                                        </Button>
+                                    )}
+                                </div>
+                                <Input
+                                    id={`image-upload-${index}`}
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    onChange={(e) => handleImageChange(step.step, e)}
+                                    className="hidden"
                                     disabled={isSaving}
                                 />
                             </div>
@@ -562,5 +565,3 @@ export default function NewCedulaPage() {
     </>
   );
 }
-
-    
