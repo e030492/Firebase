@@ -12,9 +12,7 @@ export default function DashboardRedirectPage() {
 
     return (
         <div className="flex items-center justify-center h-full">
-            <p>Redirigiendo...</p>
+            <p>Redirigiendo al dashboard...</p>
         </div>
     );
 }
-
-    
