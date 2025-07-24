@@ -37,6 +37,7 @@ import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'luc
 import { Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
+import { Badge } from '@/components/ui/badge';
 
 type SortableKey = 'name' | 'responsable' | 'direccion';
 
@@ -155,6 +156,9 @@ export default function ClientsPage() {
                         {getSortIcon('direccion')}
                     </Button>
                   </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Almacenes
+                  </TableHead>
                   <TableHead>
                     <span className="sr-only">Acciones</span>
                   </TableHead>
@@ -166,6 +170,17 @@ export default function ClientsPage() {
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{client.responsable}</TableCell>
                     <TableCell className="hidden lg:table-cell">{client.direccion}</TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {client.almacenes && client.almacenes.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {client.almacenes.map((almacen, index) => (
+                            <Badge key={index} variant="secondary">{almacen.nombre}</Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
