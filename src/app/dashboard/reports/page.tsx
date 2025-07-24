@@ -80,20 +80,30 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
             <main className="space-y-8 print:space-y-0">
                 {data.map((cedula) => {
                     const semaforoInfo = getSemaforoInfo(cedula.semaforo);
+                    const systemColor = cedula.systemDetails?.color || '#6b7280';
                     return (
                         <div key={cedula.id} className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none break-after-page page-break relative min-h-screen flex flex-col">
                            <div className="flex-grow">
-                                <header className="flex items-start justify-between pb-4 border-b-2 border-gray-900">
-                                    <div className="flex items-center gap-4">
-                                        <ShieldCheck className="h-14 w-14 text-primary" />
-                                        <div>
-                                            <h2 className="text-3xl font-bold text-gray-800">Reporte de Servicio</h2>
-                                            <p className="text-sm text-gray-500">Escuadra Tecnology - Control de Mantenimiento</p>
+                                <header className="border-b-2 border-gray-900 overflow-hidden">
+                                    <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <ShieldCheck className="h-14 w-14" />
+                                            <div>
+                                                <h2 className="text-3xl font-bold">Reporte de Servicio</h2>
+                                                <p className="text-sm opacity-90">Escuadra Tecnology - Control de Mantenimiento</p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-lg text-gray-700">{cedula.folio}</p>
-                                        <p className="text-sm text-gray-500">{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p>
+                                    <div className="bg-white p-4 flex items-start justify-between">
+                                        <div className="text-left">
+                                             <p className="font-semibold text-gray-500 text-xs uppercase">Sistema</p>
+                                            <p className="font-bold text-lg" style={{color: systemColor}}>{cedula.system}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-semibold text-gray-500 text-xs uppercase">Folio</p>
+                                            <p className="font-bold text-lg text-gray-700">{cedula.folio}</p>
+                                            <p className="text-sm text-gray-500">{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p>
+                                        </div>
                                     </div>
                                 </header>
                                 
@@ -104,9 +114,8 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                                 <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600 w-1/4">Cliente</td><td className="px-4 py-2 text-gray-800">{cedula.client}</td></tr>
                                                 <tr><td className="px-4 py-2 font-semibold text-gray-600">Dirección</td><td className="px-4 py-2 text-gray-800">{cedula.equipmentDetails?.location || 'No especificada'}</td></tr>
                                                 <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600">Equipo</td><td className="px-4 py-2 text-gray-800">{`${cedula.equipment} (Modelo: ${cedula.equipmentDetails?.model || 'N/A'}, N/S: ${cedula.serial})`}</td></tr>
-                                                <tr><td className="px-4 py-2 font-semibold text-gray-600">Sistema</td><td className="px-4 py-2 text-gray-800"><span style={{ color: cedula.systemDetails?.color, fontWeight: 500 }}>{cedula.system}</span></td></tr>
-                                                <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600">Técnico</td><td className="px-4 py-2 text-gray-800">{cedula.technician}</td></tr>
-                                                <tr><td className="px-4 py-2 font-semibold text-gray-600">Supervisor</td><td className="px-4 py-2 text-gray-800">{cedula.supervisor}</td></tr>
+                                                <tr><td className="px-4 py-2 font-semibold text-gray-600">Técnico</td><td className="px-4 py-2 text-gray-800">{cedula.technician}</td></tr>
+                                                <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600">Supervisor</td><td className="px-4 py-2 text-gray-800">{cedula.supervisor}</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -123,8 +132,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                             <table className="w-full text-sm">
                                                 <thead className="bg-gray-50 text-left text-gray-600">
                                                     <tr>
-                                                        <th className="px-4 py-2 font-semibold w-[45%]">Paso del Protocolo</th>
-                                                        <th className="px-4 py-2 font-semibold">Notas</th>
+                                                        <th className="px-4 py-2 font-semibold w-full">Paso del Protocolo</th>
                                                         <th className="px-4 py-2 font-semibold text-center w-[10%]">Progreso</th>
                                                         <th className="px-4 py-2 font-semibold text-center w-[10%]">Prioridad</th>
                                                     </tr>
@@ -132,24 +140,27 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                                                 <tbody>
                                                     {cedula.protocolSteps.map((step, index) => (
                                                         <Fragment key={index}>
-                                                            <tr className={cn(index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50')}>
-                                                                <td className="px-4 py-2 align-top">{step.step}</td>
-                                                                <td className="px-4 py-2 align-top text-gray-600 italic">"{step.notes || 'Sin notas.'}"</td>
+                                                           <tr className={cn(index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50')}>
+                                                                <td className="px-4 py-2 align-top">
+                                                                    <p>{step.step}</p>
+                                                                    {step.notes && <p className="text-gray-600 italic mt-1">"{step.notes}"</p>}
+                                                                </td>
                                                                 <td className="px-4 py-2 align-top text-center"><Badge variant="secondary">{step.completion}%</Badge></td>
                                                                 <td className="px-4 py-2 align-top text-center"><Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge></td>
                                                             </tr>
                                                             {step.imageUrl && (
                                                                 <tr className={cn("break-inside-avoid", index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50')}>
-                                                                    <td colSpan={4} className="px-4 py-3">
-                                                                        <div className="pl-4">
-                                                                            <p className="font-semibold text-xs text-gray-500 mb-1">Evidencia Fotográfica</p>
+                                                                    <td colSpan={3} className="px-4 py-3 text-center">
+                                                                        <div className="inline-block mx-auto">
+                                                                            <p className="font-semibold text-xs text-gray-500 mb-1 text-left">Evidencia Fotográfica</p>
                                                                             <Image 
                                                                                 src={step.imageUrl} 
                                                                                 alt={`Evidencia para ${step.step}`} 
                                                                                 width={400} 
                                                                                 height={300} 
                                                                                 data-ai-hint="protocol evidence" 
-                                                                                className="rounded-md object-cover border w-1/2"
+                                                                                className="rounded-md object-cover border"
+                                                                                style={{ width: '50%', height: 'auto'}}
                                                                             />
                                                                         </div>
                                                                     </td>
@@ -462,7 +473,6 @@ export default function ReportsPage() {
                                 <Fragment key={cedula.id}>
                                 <TableRow
                                   data-state={selectedCedulaIds.includes(cedula.id) ? "selected" : ""}
-                                  onClick={() => handleToggleDetails(cedula.id)}
                                   className="cursor-pointer"
                                 >
                                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -472,19 +482,19 @@ export default function ReportsPage() {
                                             aria-label={`Seleccionar cédula ${cedula.folio}`}
                                         />
                                     </TableCell>
-                                    <TableCell className="font-medium">{cedula.folio}</TableCell>
-                                    <TableCell>{cedula.client}</TableCell>
-                                    <TableCell>{cedula.warehouse}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="font-medium" onClick={() => handleToggleDetails(cedula.id)}>{cedula.folio}</TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.client}</TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.warehouse}</TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>
                                         <span className="font-medium" style={{ color: cedula.systemColor }}>
                                             {cedula.system}
                                         </span>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>
                                         {cedula.equipment}
                                         <span className="block text-xs text-muted-foreground">(N/S: {cedula.serial})</span>
                                     </TableCell>
-                                    <TableCell className="hidden md:table-cell">{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
+                                    <TableCell className="hidden md:table-cell" onClick={() => handleToggleDetails(cedula.id)}>{new Date(cedula.creationDate).toLocaleDateString('es-ES')}</TableCell>
                                     <TableCell>
                                         <Button
                                             variant="ghost"
@@ -605,5 +615,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    
