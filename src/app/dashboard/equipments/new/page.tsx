@@ -42,6 +42,7 @@ export default function NewEquipmentPage() {
   const { clients, systems, createEquipment, loading: dataLoading } = useData();
   
   const [name, setName] = useState('');
+  const [alias, setAlias] = useState('');
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
   const [systemId, setSystemId] = useState('');
@@ -95,6 +96,7 @@ export default function NewEquipmentPage() {
     try {
         const newEquipment: Omit<Equipment, 'id'> = {
           name,
+          alias,
           description,
           brand,
           model,
@@ -161,6 +163,10 @@ export default function NewEquipmentPage() {
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
                 <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Cámara IP" required disabled={isSaving}/>
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="alias">Alias del Equipo (Opcional)</Label>
+                <Input id="alias" value={alias} onChange={e => setAlias(e.target.value)} placeholder="Ej. Cámara de Entrada" disabled={isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>

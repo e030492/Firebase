@@ -45,6 +45,7 @@ export default function EditEquipmentPage() {
   const { clients, systems, equipments, updateEquipment, loading: dataLoading } = useData();
 
   const [name, setName] = useState('');
+  const [alias, setAlias] = useState('');
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
   const [systemId, setSystemId] = useState('');
@@ -71,6 +72,7 @@ export default function EditEquipmentPage() {
         
         if (equipmentData) {
             setName(equipmentData.name);
+            setAlias(equipmentData.alias || '');
             setDescription(equipmentData.description);
             setBrand(equipmentData.brand || '');
             setModel(equipmentData.model || '');
@@ -131,6 +133,7 @@ export default function EditEquipmentPage() {
     try {
         const updatedData: Partial<Equipment> = {
           name,
+          alias,
           description,
           brand,
           model,
@@ -278,6 +281,10 @@ export default function EditEquipmentPage() {
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
                 <Input id="name" value={name} onChange={e => setName(e.target.value)} required disabled={isSaving}/>
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="alias">Alias del Equipo (Opcional)</Label>
+                <Input id="alias" value={alias} onChange={e => setAlias(e.target.value)} placeholder="Ej. Cámara de Entrada" disabled={isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>

@@ -213,7 +213,12 @@ export default function EquipmentsPage() {
                                 </div>
                             )}
                         </TableCell>
-                        <TableCell className="font-medium">{equipment.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {equipment.name}
+                          {equipment.alias && (
+                            <span className="block text-xs text-muted-foreground">{equipment.alias}</span>
+                          )}
+                        </TableCell>
                         <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
                         <TableCell className="hidden lg:table-cell">{equipment.system}</TableCell>
                         <TableCell>

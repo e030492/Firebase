@@ -163,6 +163,7 @@ export const mockEquipments = [
   {
     id: '1',
     name: 'Cámara Domo PTZ',
+    alias: 'Cámara Entrada Principal',
     description: 'Cámara de vigilancia exterior con zoom óptico 20x.',
     brand: 'Hikvision',
     model: 'DS-2DE4225IW-DE',
@@ -179,6 +180,7 @@ export const mockEquipments = [
   {
     id: '2',
     name: 'Lector de Tarjetas RFID',
+    alias: 'Lector Oficina',
     description: 'Lector de proximidad para puerta de oficina.',
     brand: 'ZKTeco',
     model: 'KR500',
@@ -195,6 +197,7 @@ export const mockEquipments = [
   {
     id: '3',
     name: 'Detector de Humo Fotoeléctrico',
+    alias: 'Detector Servidores',
     description: 'Detector de humo para área de servidores.',
     brand: 'Honeywell',
     model: 'System Sensor 2W-B',
@@ -211,6 +214,7 @@ export const mockEquipments = [
     {
     id: '4',
     name: 'Barrera Infrarroja Perimetral',
+    alias: 'Barrera Barda Norte',
     description: 'Barrera de 4 haces para protección de barda perimetral.',
     brand: 'Optex',
     model: 'SL-200QN',
