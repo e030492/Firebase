@@ -21,6 +21,7 @@ const collections = {
     equipments: 'equipments',
     protocols: 'protocols',
     cedulas: 'cedulas',
+    _connectionTest: '_connectionTest',
 };
 
 const mockDataMap: { [key: string]: any[] } = {
@@ -33,20 +34,35 @@ const mockDataMap: { [key: string]: any[] } = {
 };
 
 
+// --- Firebase Connection Test ---
+export const connectionTest = async (log: (message: string) => void) => {
+    try {
+        log(`Attempting to read doc '${collections._connectionTest}/test'`);
+        const testDocRef = doc(db, collections._connectionTest, 'test');
+        await getDoc(testDocRef);
+        log(`Read successful.`);
+        return true;
+    } catch (error: any) {
+        log(`Connection test failed. Original error: ${error.message}`);
+        throw new Error(`Firestore connection test failed. This often means your security rules are too restrictive. Please ensure they allow read/write access. Original error: ${error.message}`);
+    }
+}
+
+
 // --- Firebase Seeding ---
-export const seedDatabase = async () => {
+export const seedDatabase = async (log: (message: string) => void) => {
     try {
         const usersCollectionRef = collection(db, collections.users);
         const usersSnapshot = await getDocs(usersCollectionRef);
 
         if (usersSnapshot.empty) {
-            console.log("Database is empty, seeding with mock data...");
+            log("Users collection is empty, proceeding with seeding...");
             const batch = writeBatch(db);
             
             for (const [collectionName, data] of Object.entries(mockDataMap)) {
                 const collectionRef = collection(db, collectionName);
+                log(` - Seeding ${data.length} documents into '${collectionName}'...`);
                 data.forEach(item => {
-                    // We don't want to use the mock IDs, Firestore will generate them.
                     const { id, ...rest } = item;
                     const newDocRef = doc(collectionRef);
                     batch.set(newDocRef, rest);
@@ -54,13 +70,14 @@ export const seedDatabase = async () => {
             }
             
             await batch.commit();
-            console.log("Database seeded successfully.");
+            log("Batch commit successful. Database seeded.");
             return true;
         } else {
-            console.log("Database already contains data, no seeding needed.");
+            log("Users collection already contains data. No seeding needed.");
             return false;
         }
     } catch (error) {
+        log(`Error seeding database: ${error instanceof Error ? error.message : 'Unknown error'}`);
         console.error("Error seeding database:", error);
         throw error;
     }
@@ -90,7 +107,6 @@ async function createDocument<T extends { id: string }>(collectionName: string, 
 async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
     const docRef = doc(db, collectionName, id);
     await updateDoc(docRef, data);
-    // Return the merged object
     const updatedDoc = await getDoc(docRef);
     return { id: updatedDoc.id, ...updatedDoc.data() } as T;
 }
@@ -161,3 +177,5 @@ export const getCedula = (id: string): Promise<Cedula> => getDocumentById<Cedula
 export const createCedula = (data: Omit<Cedula, 'id'>): Promise<Cedula> => createDocument<Cedula>(collections.cedulas, data);
 export const updateCedula = (id: string, data: Partial<Cedula>): Promise<Cedula> => updateDocument<Cedula>(collections.cedulas, id, data);
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
+
+    

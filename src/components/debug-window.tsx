@@ -11,7 +11,7 @@ import { firebaseConfig } from '@/lib/firebase';
 export function DebugWindow() {
     const { 
         loading, 
-        debugMessage, 
+        debugLog, 
         users,
         clients,
         systems,
@@ -25,6 +25,14 @@ export function DebugWindow() {
     const [isDragging, setIsDragging] = useState(false);
     const dragStartPos = useRef({ x: 0, y: 0 });
     const windowRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (contentRef.current) {
+            contentRef.current.scrollTop = contentRef.current.scrollHeight;
+        }
+    }, [debugLog]);
+
 
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
         setIsDragging(true);
@@ -32,13 +40,11 @@ export function DebugWindow() {
             x: e.clientX - position.x,
             y: e.clientY - position.y,
         };
-        // Disable text selection while dragging
         document.body.style.userSelect = 'none';
     };
 
     const handleMouseUp = () => {
         setIsDragging(false);
-        // Re-enable text selection
         document.body.style.userSelect = '';
     };
 
@@ -72,6 +78,8 @@ export function DebugWindow() {
         if (loading) return 'secondary';
         return 'default';
     }
+    
+    const finalLog = error ? [...debugLog, `ERROR: ${error}`] : debugLog;
 
     return (
         <div
@@ -79,7 +87,7 @@ export function DebugWindow() {
             className="fixed z-50 shadow-2xl"
             style={{ top: `${position.y}px`, left: `${position.x}px` }}
         >
-            <Card className="w-96 border-4 border-primary/20">
+            <Card className="w-[450px] border-4 border-primary/20">
                 <CardHeader 
                     className="p-3 bg-primary/10 cursor-move flex-row items-center justify-between"
                     onMouseDown={handleMouseDown}
@@ -93,21 +101,38 @@ export function DebugWindow() {
                     </Badge>
                 </CardHeader>
                 <CardContent className="p-4 pt-2 text-sm">
-                    <div className="bg-muted p-3 rounded-md h-64 overflow-y-auto text-xs font-mono space-y-2">
-                        <p className="font-bold border-b pb-1 mb-1 text-base">Connection Status:</p>
-                        <p className={error ? "text-destructive font-bold text-sm" : "text-sm"}>{debugMessage}</p>
-                        <p className="font-bold text-xs mt-2">Project ID: <span className="font-normal">{firebaseConfig.projectId}</span></p>
-
-                        <p className="font-bold border-b pb-1 mt-4 text-base">Record Counts:</p>
-                        <p>Users: <span className="font-bold">{users.length}</span></p>
-                        <p>Clients: <span className="font-bold">{clients.length}</span></p>
-                        <p>Systems: <span className="font-bold">{systems.length}</span></p>
-                        <p>Equipments: <span className="font-bold">{equipments.length}</span></p>
-                        <p>Protocols: <span className="font-bold">{protocols.length}</span></p>
-                        <p>Cédulas: <span className="font-bold">{cedulas.length}</span></p>
+                    <div 
+                        ref={contentRef}
+                        className="bg-muted p-3 rounded-md h-64 overflow-y-auto text-xs font-mono space-y-1"
+                    >
+                        <p className="font-bold border-b pb-1 mb-2 text-base">Connection Status:</p>
+                        {finalLog.map((msg, i) => (
+                           <p key={i} className={msg.startsWith('FATAL') || msg.startsWith('ERROR') ? 'text-destructive font-bold' : ''}>
+                             {`> ${msg}`}
+                           </p>
+                        ))}
+                    </div>
+                     <div className="bg-muted p-3 rounded-md h-40 overflow-y-auto text-xs font-mono space-y-2 mt-2">
+                        <p className="font-bold border-b pb-1 mb-2 text-base">Firebase Config:</p>
+                        <pre className="whitespace-pre-wrap">
+                            {JSON.stringify(firebaseConfig, null, 2)}
+                        </pre>
+                    </div>
+                    <div className="bg-muted p-3 rounded-md text-xs font-mono space-y-1 mt-2">
+                        <p className="font-bold border-b pb-1 mb-2 text-base">Live Record Counts:</p>
+                        <div className="grid grid-cols-2 gap-x-4">
+                            <p>Users: <span className="font-bold">{users.length}</span></p>
+                            <p>Clients: <span className="font-bold">{clients.length}</span></p>
+                            <p>Systems: <span className="font-bold">{systems.length}</span></p>
+                            <p>Equipments: <span className="font-bold">{equipments.length}</span></p>
+                            <p>Protocols: <span className="font-bold">{protocols.length}</span></p>
+                            <p>Cédulas: <span className="font-bold">{cedulas.length}</span></p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
         </div>
     );
 }
+
+    
