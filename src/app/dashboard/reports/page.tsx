@@ -78,98 +78,98 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
             </header>
 
             <main className="space-y-8 print:space-y-0">
-                {data.map((cedula, cedulaIndex) => {
+                {data.map((cedula) => {
                     const semaforoInfo = getSemaforoInfo(cedula.semaforo);
                     return (
                         <div key={cedula.id} className="bg-white p-6 sm:p-8 shadow-lg print:shadow-none break-after-page page-break relative min-h-screen flex flex-col">
                            <div className="flex-grow">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-                                <div className="flex items-center gap-4">
-                                    <ShieldCheck className="h-12 w-12 text-primary" />
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-gray-800">Reporte de Mantenimiento</h2>
-                                        <p className="text-sm text-gray-500">Escuadra Tecnology - Control de Seguridad</p>
+                                <header className="flex items-start justify-between pb-4 border-b-2 border-gray-900">
+                                    <div className="flex items-center gap-4">
+                                        <ShieldCheck className="h-14 w-14 text-primary" />
+                                        <div>
+                                            <h2 className="text-3xl font-bold text-gray-800">Reporte de Servicio</h2>
+                                            <p className="text-sm text-gray-500">Escuadra Tecnology - Control de Mantenimiento</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="text-left sm:text-right mt-4 sm:mt-0">
-                                    <p className="font-semibold text-gray-700">Folio: <span className="font-normal">{cedula.folio}</span></p>
-                                    <p className="font-semibold text-gray-700">Fecha de Reporte: <span className="font-normal">{reportDate}</span></p>
-                                </div>
-                            </div>
-                            <Separator className="my-6"/>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm mb-6">
-                                <div><p className="font-semibold text-gray-700">Cliente:</p><p>{cedula.client}</p></div>
-                                <div><p className="font-semibold text-gray-700">Fecha de Cédula:</p><p>{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p></div>
-                                <div><p className="font-semibold text-gray-700">Técnico:</p><p>{cedula.technician}</p></div>
-                                <div><p className="font-semibold text-gray-700">Equipo:</p><p>{cedula.equipment} ({cedula.serial})</p></div>
-                                <div><p className="font-semibold text-gray-700">Sistema:</p><p style={{color: cedula.systemDetails?.color}}>{cedula.equipmentDetails?.system || 'N/A'}</p></div>
-                                <div><p className="font-semibold text-gray-700">Supervisor:</p><p>{cedula.supervisor}</p></div>
-                            </div>
-                            <div className="text-sm mb-6">
-                                <p className="font-semibold text-gray-700">Ubicación:</p>
-                                <p>{cedula.equipmentDetails?.location || 'No especificada'}</p>
-                            </div>
-
-                            <div className="text-sm">
-                                <p className="font-semibold text-gray-700">Descripción del Trabajo:</p>
-                                <p className="mt-1 p-3 border rounded-md bg-gray-50">{cedula.description}</p>
-                            </div>
-                            
-                            {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
-                                <div className="mt-8">
-                                    <h3 className="text-lg font-bold text-gray-800 mb-4">Protocolo de Mantenimiento Ejecutado</h3>
-                                    <div className="border rounded-lg divide-y divide-gray-200">
-                                        {cedula.protocolSteps.map((step, index) => (
-                                            <div key={index} className={cn("p-4 break-inside-avoid", step.imageUrl && "grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4")}>
-                                                <div className={cn("space-y-3", step.imageUrl && "md:col-span-2")}>
-                                                    <div>
-                                                        <p className="font-semibold text-gray-600 text-sm">Paso del Protocolo</p>
-                                                        <p className="text-gray-800">{step.step}</p>
-                                                    </div>
-                                                    {step.notes && (
-                                                        <div>
-                                                            <p className="font-semibold text-gray-600 text-sm">Notas del Técnico</p>
-                                                            <p className="text-gray-700 italic text-sm">"{step.notes}"</p>
-                                                        </div>
-                                                    )}
-                                                    <div className="flex items-center gap-4 pt-2">
-                                                        <div>
-                                                            <p className="font-semibold text-gray-600 text-sm">Progreso</p>
-                                                            <Badge variant="secondary">{step.completion}%</Badge>
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-semibold text-gray-600 text-sm">Prioridad</p>
-                                                            <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {step.imageUrl && (
-                                                    <div className="space-y-1 mt-4 md:mt-0">
-                                                        <p className="font-semibold text-gray-600 text-sm">Evidencia Fotográfica</p>
-                                                        <Image 
-                                                            src={step.imageUrl} 
-                                                            alt={`Evidencia para ${step.step}`} 
-                                                            width={300} 
-                                                            height={225} 
-                                                            data-ai-hint="protocol evidence" 
-                                                            className="rounded-md object-cover border w-full aspect-[4/3]"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
+                                    <div className="text-right">
+                                        <p className="font-bold text-lg text-gray-700">{cedula.folio}</p>
+                                        <p className="text-sm text-gray-500">{new Date(cedula.creationDate).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</p>
                                     </div>
-                                </div>
-                            )}
+                                </header>
+                                
+                                <section className="mt-6 mb-8">
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                        <table className="w-full text-sm">
+                                            <tbody>
+                                                <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600 w-1/4">Cliente</td><td className="px-4 py-2 text-gray-800">{cedula.client}</td></tr>
+                                                <tr><td className="px-4 py-2 font-semibold text-gray-600">Dirección</td><td className="px-4 py-2 text-gray-800">{cedula.equipmentDetails?.location || 'No especificada'}</td></tr>
+                                                <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600">Equipo</td><td className="px-4 py-2 text-gray-800">{`${cedula.equipment} (Modelo: ${cedula.equipmentDetails?.model || 'N/A'}, N/S: ${cedula.serial})`}</td></tr>
+                                                <tr><td className="px-4 py-2 font-semibold text-gray-600">Sistema</td><td className="px-4 py-2 text-gray-800"><span style={{ color: cedula.systemDetails?.color, fontWeight: 500 }}>{cedula.system}</span></td></tr>
+                                                <tr className="bg-gray-50"><td className="px-4 py-2 font-semibold text-gray-600">Técnico</td><td className="px-4 py-2 text-gray-800">{cedula.technician}</td></tr>
+                                                <tr><td className="px-4 py-2 font-semibold text-gray-600">Supervisor</td><td className="px-4 py-2 text-gray-800">{cedula.supervisor}</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="mt-4 border border-gray-200 rounded-lg p-4">
+                                        <h4 className="font-semibold text-sm text-gray-600">Descripción del Trabajo</h4>
+                                        <p className="text-sm text-gray-800 mt-1">{cedula.description}</p>
+                                    </div>
+                                </section>
+
+                                {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
+                                    <section className="break-inside-avoid">
+                                        <h3 className="text-xl font-bold text-gray-800 mb-2">Protocolo de Mantenimiento</h3>
+                                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-gray-50 text-left text-gray-600">
+                                                    <tr>
+                                                        <th className="px-4 py-2 font-semibold w-[45%]">Paso del Protocolo</th>
+                                                        <th className="px-4 py-2 font-semibold">Notas</th>
+                                                        <th className="px-4 py-2 font-semibold text-center w-[10%]">Progreso</th>
+                                                        <th className="px-4 py-2 font-semibold text-center w-[10%]">Prioridad</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {cedula.protocolSteps.map((step, index) => (
+                                                        <Fragment key={index}>
+                                                            <tr className={cn(index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50')}>
+                                                                <td className="px-4 py-2 align-top">{step.step}</td>
+                                                                <td className="px-4 py-2 align-top text-gray-600 italic">"{step.notes || 'Sin notas.'}"</td>
+                                                                <td className="px-4 py-2 align-top text-center"><Badge variant="secondary">{step.completion}%</Badge></td>
+                                                                <td className="px-4 py-2 align-top text-center"><Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge></td>
+                                                            </tr>
+                                                            {step.imageUrl && (
+                                                                <tr className={cn("break-inside-avoid", index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50')}>
+                                                                    <td colSpan={4} className="px-4 py-3">
+                                                                        <div className="pl-4">
+                                                                            <p className="font-semibold text-xs text-gray-500 mb-1">Evidencia Fotográfica</p>
+                                                                            <Image 
+                                                                                src={step.imageUrl} 
+                                                                                alt={`Evidencia para ${step.step}`} 
+                                                                                width={400} 
+                                                                                height={300} 
+                                                                                data-ai-hint="protocol evidence" 
+                                                                                className="rounded-md object-cover border w-1/2"
+                                                                            />
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </Fragment>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </section>
+                                )}
                            </div>
                             
                            {cedula.semaforo && (
-                                <div className="mt-8 -mx-8 -mb-8 print:-mx-10 print:-mb-10">
+                                <footer className="mt-8 -mx-8 -mb-8 print:-mx-8 print:-mb-8">
                                     <div className={cn("p-4 text-center text-xl font-bold", semaforoInfo.color)}>
                                         {semaforoInfo.text}
                                     </div>
-                                </div>
+                                </footer>
                             )}
                         </div>
                     );
@@ -605,3 +605,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
