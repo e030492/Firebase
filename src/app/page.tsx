@@ -22,7 +22,7 @@ import { useData } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser, isDebugWindowVisible } = useData();
+  const { loginUser, isDebugWindowVisible, loading: dataLoading } = useData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,6 +51,8 @@ export default function LoginPage() {
     }
   };
 
+  const isFormDisabled = isLoading || dataLoading;
+
   return (
     <>
       {isDebugWindowVisible && <DebugWindow />}
@@ -76,20 +78,20 @@ export default function LoginPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="admin@escuadra.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
+                  <Input id="email" type="email" placeholder="admin@escuadra.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isFormDisabled} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
-                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading} placeholder="admin"/>
+                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isFormDisabled} placeholder="admin"/>
                 </div>
                 {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
               </CardContent>
               <CardFooter className="flex-col gap-4">
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
+                <Button type="submit" className="w-full" disabled={isFormDisabled}>
+                  {isFormDisabled ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Accediendo...</span>
+                      <span>{dataLoading ? 'Cargando datos...' : 'Accediendo...'}</span>
                     </>
                   ) : 'Acceder'}
                 </Button>
