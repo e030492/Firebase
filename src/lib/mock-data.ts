@@ -9,6 +9,7 @@ export const mockUsers = [
     role: 'Administrador',
     password: 'admin',
     signatureUrl: '',
+    photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
         clients: { create: true, update: true, delete: true },
         equipments: { create: true, update: true, delete: true },
@@ -25,6 +26,7 @@ export const mockUsers = [
     role: 'Administrador',
     password: 'admin',
     signatureUrl: '',
+    photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
         clients: { create: true, update: true, delete: true },
         equipments: { create: true, update: true, delete: true },
@@ -41,6 +43,7 @@ export const mockUsers = [
     role: 'Administrador',
     password: 'admin',
     signatureUrl: '',
+    photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
         clients: { create: true, update: true, delete: true },
         equipments: { create: true, update: true, delete: true },
@@ -57,6 +60,7 @@ export const mockUsers = [
     role: 'Técnico',
     password: 'tech',
     signatureUrl: '',
+    photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
         clients: { create: false, update: false, delete: false },
         equipments: { create: false, update: true, delete: false },
@@ -73,6 +77,7 @@ export const mockUsers = [
     role: 'Técnico',
     password: 'tech',
     signatureUrl: '',
+    photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
         clients: { create: false, update: false, delete: false },
         equipments: { create: false, update: true, delete: false },
@@ -89,6 +94,7 @@ export const mockUsers = [
     role: 'Supervisor',
     password: 'super',
     signatureUrl: '',
+    photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
         clients: { create: true, update: true, delete: false },
         equipments: { create: true, update: true, delete: false },

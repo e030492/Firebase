@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShieldCheck, Bug } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { DashboardNav } from '@/components/dashboard-nav';
 import {
   SidebarProvider,
@@ -28,8 +28,6 @@ import {
 import type { User } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { PermissionsProvider } from '@/hooks/use-permissions';
-import { useData } from '@/hooks/use-data-provider';
-import { cn } from '@/lib/utils';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -93,7 +91,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                   <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
                     <Avatar>
                       <AvatarImage
-                        src="https://placehold.co/32x32.png"
+                        src={activeUser?.photoUrl || ''}
                         alt="User avatar"
                         data-ai-hint="user avatar"
                       />

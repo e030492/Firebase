@@ -31,10 +31,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Camera } from 'lucide-react';
+import { ArrowLeft, Camera, User as UserIcon } from 'lucide-react';
 import { User } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -95,6 +96,7 @@ export default function NewUserPage() {
   const router = useRouter();
   const { createUser } = useData();
   const signatureInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
@@ -102,6 +104,7 @@ export default function NewUserPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [permissions, setPermissions] = useState<Permissions>(initialPermissions);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
@@ -131,6 +134,16 @@ export default function NewUserPage() {
     }
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,6 +167,7 @@ export default function NewUserPage() {
             password,
             permissions,
             signatureUrl: signatureUrl || '',
+            photoUrl: photoUrl || '',
         };
 
         await createUser(newUser);
@@ -187,6 +201,29 @@ export default function NewUserPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
+              <div className="grid gap-3">
+                <Label>Foto de Perfil</Label>
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={photoUrl || ''} alt={name} data-ai-hint="user photo" />
+                    <AvatarFallback><UserIcon className="h-10 w-10" /></AvatarFallback>
+                  </Avatar>
+                  <Button type="button" variant="outline" onClick={() => photoInputRef.current?.click()} disabled={loading}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Subir Foto
+                  </Button>
+                  <Input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    ref={photoInputRef}
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+              <Separator />
               <div className="grid gap-3">
                 <Label htmlFor="nombre">Nombre Completo</Label>
                 <Input id="nombre" placeholder="Ej. Juan Pérez" value={name} onChange={e => setName(e.target.value)} required disabled={loading} />

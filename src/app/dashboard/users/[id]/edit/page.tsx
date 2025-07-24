@@ -31,12 +31,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Camera } from 'lucide-react';
+import { ArrowLeft, Camera, User as UserIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
 import { User } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -106,6 +107,7 @@ export default function EditUserPage() {
   const { can } = usePermissions();
   const { users, updateUser, loading: dataLoading } = useData();
   const signatureInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -114,6 +116,7 @@ export default function EditUserPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [permissions, setPermissions] = useState<Permissions>(initialPermissions);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -128,6 +131,7 @@ export default function EditUserPage() {
             setRole(roleToValueMap[foundUser.role] || '');
             setPermissions(foundUser.permissions || initialPermissions);
             setSignatureUrl(foundUser.signatureUrl || null);
+            setPhotoUrl(foundUser.photoUrl || null);
             setLoading(false);
         } else {
             setNotFound(true);
@@ -162,6 +166,17 @@ export default function EditUserPage() {
       reader.readAsDataURL(file);
     }
   };
+  
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +194,7 @@ export default function EditUserPage() {
             role: valueToRoleMap[role],
             permissions,
             signatureUrl: signatureUrl || '',
+            photoUrl: photoUrl || '',
         };
         if (password) {
             updatedData.password = password;
@@ -278,6 +294,29 @@ export default function EditUserPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
+              <div className="grid gap-3">
+                <Label>Foto de Perfil</Label>
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={photoUrl || ''} alt={name} data-ai-hint="user photo" />
+                    <AvatarFallback><UserIcon className="h-10 w-10" /></AvatarFallback>
+                  </Avatar>
+                  <Button type="button" variant="outline" onClick={() => photoInputRef.current?.click()} disabled={!canUpdateUsers || isSaving}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Subir Foto
+                  </Button>
+                  <Input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    ref={photoInputRef}
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                    disabled={!canUpdateUsers || isSaving}
+                  />
+                </div>
+              </div>
+              <Separator/>
               <div className="grid gap-3">
                 <Label htmlFor="nombre">Nombre Completo</Label>
                 <Input id="nombre" value={name} onChange={(e) => setName(e.target.value)} required disabled={!canUpdateUsers || isSaving} />
