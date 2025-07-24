@@ -47,32 +47,29 @@ export default function LoginPage() {
         if (user.password === password) {
           addDebugMessage("3. Login exitoso. Guardando usuario y redirigiendo...");
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-
-          // Check and seed database in the background after login
-          const dbUsers = await getUsers();
-          if (dbUsers.length === 0) {
-              console.log("Database is empty, seeding in background...");
-              await seedDatabase();
-          }
-
+          
+          // The check and seed will happen on the dashboard side if needed
+          // to avoid blocking the login process.
           router.push('/dashboard/users');
+
         } else {
           addDebugMessage("ERROR: Contraseña incorrecta.");
           setError('Contraseña incorrecta.');
+          setIsLoading(false);
         }
       } else {
         addDebugMessage("ERROR: Usuario no encontrado en datos locales.");
         setError('Usuario no encontrado.');
+        setIsLoading(false);
       }
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       addDebugMessage(`FATAL: ${errorMessage}`);
       console.error("Login failed:", err);
       setError("Error crítico durante el login. Verifique la consola.");
-    } finally {
       setIsLoading(false);
-      addDebugMessage("4. Proceso de login finalizado.");
-    }
+    } 
+    // No "finally" block to set isLoading to false, because a successful login navigates away.
   };
 
   return (

@@ -35,7 +35,7 @@ import {
 import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/use-permissions';
-import { deleteUser, getUsers, User } from '@/lib/services';
+import { deleteUser, getUsers, User, seedDatabase } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type SortableKey = 'name' | 'email' | 'role';
@@ -50,7 +50,13 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-        const usersData = await getUsers();
+        let usersData = await getUsers();
+        // If the database is empty, seed it and refetch.
+        if (usersData.length === 0) {
+            console.log("No users found, seeding database...");
+            await seedDatabase();
+            usersData = await getUsers();
+        }
         setUsers(usersData);
     } catch (error) {
         console.error("Failed to fetch users:", error);
@@ -101,7 +107,7 @@ export default function UsersPage() {
     if (userToDelete) {
       try {
         await deleteUser(userToDelete.id);
-        await fetchUsers();
+        await fetchUsers(); // Refetch users after deletion
       } catch (error) {
         console.error("Failed to delete user:", error);
         alert("Error al eliminar el usuario.");
