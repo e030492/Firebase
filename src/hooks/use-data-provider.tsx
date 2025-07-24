@@ -41,7 +41,7 @@ type DataContextType = {
   debugMessage: string;
   isDebugWindowVisible: boolean;
   toggleDebugWindow: () => void;
-  refreshData: () => void;
+  refreshData: () => Promise<void>;
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
   // User mutations
@@ -91,38 +91,41 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setDebugMessage('Seeding local storage if necessary...');
-    try {
-      await seedDatabase();
-      setDebugMessage('Local storage seeded. Loading all data...');
-      
-      const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData] = await Promise.all([
-        getUsers(),
-        getClients(),
-        getSystems(),
-        getEquipments(),
-        getProtocols(),
-        getCedulas(),
-      ]);
-      
-      setUsers(usersData);
-      setClients(clientsData);
-      setSystems(systemsData);
-      setEquipments(equipmentsData);
-      setProtocols(protocolsData);
-      setCedulas(cedulasData);
+    setDebugMessage('Connecting to Firestore and checking for data...');
 
-      setDebugMessage('All data loaded successfully from Local Storage.');
+    try {
+        const wasSeeded = await seedDatabase();
+        setDebugMessage(wasSeeded ? 'Firestore was empty. Seeded with mock data.' : 'Firestore already has data.');
+        
+        // Fetch all data from Firestore
+        const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData] = await Promise.all([
+            getUsers(),
+            getClients(),
+            getSystems(),
+            getEquipments(),
+            getProtocols(),
+            getCedulas(),
+        ]);
+        
+        setUsers(usersData);
+        setClients(clientsData);
+        setSystems(systemsData);
+        setEquipments(equipmentsData);
+        setProtocols(protocolsData);
+        setCedulas(cedulasData);
+
+        setDebugMessage('All data loaded successfully from Firestore.');
 
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
-      setError(errorMessage);
-      setDebugMessage(`FATAL ERROR: ${errorMessage}`);
-      console.error("Failed to load data:", e);
+      setError(`Firestore connection failed: ${errorMessage}`);
+      setDebugMessage(`FATAL ERROR: ${errorMessage}. The app may not function correctly.`);
+      console.error("Failed to load or seed data from Firestore:", e);
     } finally {
       setLoading(false);
     }
   }, []);
+
 
   useEffect(() => {
     loadAllData();
@@ -130,14 +133,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   
   // --- AUTH ---
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
-      const allUsers = await getUsers(); // Always get the latest from storage for login
-      const foundUser = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+      // Uses the state which is already loaded from Firestore
+      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       if (foundUser && foundUser.password === pass) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(foundUser));
           setDebugMessage(`User "${foundUser.name}" logged in successfully.`);
           return foundUser;
       }
-      setDebugMessage(`Login failed for email: ${email}.`);
+      setDebugMessage(`Login failed for email: ${email}. User not found or password incorrect.`);
       return null;
   };
 
@@ -205,7 +208,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   const deleteEquipment = async (equipmentId: string) => {
     await deleteEquipmentService(equipmentId);
-    await deleteProtocolByEquipmentIdService(equipmentId);
+    await deleteProtocolByEquipmentIdService(equipmentId); // Also delete associated protocol
     setEquipments(prev => prev.filter(e => e.id !== equipmentId));
     setProtocols(prev => prev.filter(p => p.equipmentId !== equipmentId));
     setDebugMessage(`Equipment with ID ${equipmentId} and its protocol deleted.`);

@@ -96,7 +96,7 @@ export function DebugWindow() {
                     <div className="bg-muted p-3 rounded-md h-64 overflow-y-auto text-xs font-mono space-y-2">
                         <p className="font-bold border-b pb-1 mb-1 text-base">Connection Status:</p>
                         <p className={error ? "text-destructive font-bold text-sm" : "text-sm"}>{debugMessage}</p>
-                        <p className="font-bold text-xs mt-2">Data Source: <span className="font-normal">localStorage</span></p>
+                        <p className="font-bold text-xs mt-2">Project ID: <span className="font-normal">{firebaseConfig.projectId}</span></p>
 
                         <p className="font-bold border-b pb-1 mt-4 text-base">Record Counts:</p>
                         <p>Users: <span className="font-bold">{users.length}</span></p>

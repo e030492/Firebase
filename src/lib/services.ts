@@ -1,7 +1,7 @@
-
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
+import { db } from './firebase';
 import { 
     mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
-    USERS_STORAGE_KEY, CLIENTS_STORAGE_KEY, SYSTEMS_STORAGE_KEY, EQUIPMENTS_STORAGE_KEY, PROTOCOLS_STORAGE_KEY, CEDULAS_STORAGE_KEY
 } from './mock-data';
 
 // Interfaces based on mock-data structure
@@ -15,15 +15,15 @@ export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] 
 export type Cedula = typeof mockCedulas[0] & { id: string };
 
 const collections = {
-    users: USERS_STORAGE_KEY,
-    clients: CLIENTS_STORAGE_KEY,
-    systems: SYSTEMS_STORAGE_KEY,
-    equipments: EQUIPMENTS_STORAGE_KEY,
-    protocols: PROTOCOLS_STORAGE_KEY,
-    cedulas: CEDULAS_STORAGE_KEY,
+    users: 'users',
+    clients: 'clients',
+    systems: 'systems',
+    equipments: 'equipments',
+    protocols: 'protocols',
+    cedulas: 'cedulas',
 };
 
-const mockDataMap = {
+const mockDataMap: { [key: string]: any[] } = {
     [collections.users]: mockUsers,
     [collections.clients]: mockClients,
     [collections.systems]: mockSystems,
@@ -33,52 +33,71 @@ const mockDataMap = {
 };
 
 
-// --- LocalStorage Seeding ---
+// --- Firebase Seeding ---
 export const seedDatabase = async () => {
-    for (const [key, data] of Object.entries(mockDataMap)) {
-        if (!localStorage.getItem(key)) {
-            localStorage.setItem(key, JSON.stringify(data));
+    try {
+        const usersCollectionRef = collection(db, collections.users);
+        const usersSnapshot = await getDocs(usersCollectionRef);
+
+        if (usersSnapshot.empty) {
+            console.log("Database is empty, seeding with mock data...");
+            const batch = writeBatch(db);
+            
+            for (const [collectionName, data] of Object.entries(mockDataMap)) {
+                const collectionRef = collection(db, collectionName);
+                data.forEach(item => {
+                    // We don't want to use the mock IDs, Firestore will generate them.
+                    const { id, ...rest } = item;
+                    const newDocRef = doc(collectionRef);
+                    batch.set(newDocRef, rest);
+                });
+            }
+            
+            await batch.commit();
+            console.log("Database seeded successfully.");
+            return true;
+        } else {
+            console.log("Database already contains data, no seeding needed.");
+            return false;
         }
+    } catch (error) {
+        console.error("Error seeding database:", error);
+        throw error;
     }
 };
 
-// --- Generic LocalStorage Service Functions ---
+// --- Generic Firestore Service Functions ---
 async function getCollection<T>(collectionName: string): Promise<T[]> {
-    const data = localStorage.getItem(collectionName);
-    return data ? JSON.parse(data) : [];
+    const collectionRef = collection(db, collectionName);
+    const snapshot = await getDocs(collectionRef);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 }
 
-async function getDocumentById<T extends {id: string}>(collectionName: string, id: string): Promise<T> {
-    const items = await getCollection<T>(collectionName);
-    const item = items.find(i => i.id === id);
-    if (!item) throw new Error(`Document with id ${id} not found in ${collectionName}`);
-    return item;
+async function getDocumentById<T>(collectionName: string, id: string): Promise<T> {
+    const docRef = doc(db, collectionName, id);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) throw new Error(`Document with id ${id} not found in ${collectionName}`);
+    return { id: docSnap.id, ...docSnap.data() } as T;
 }
 
 async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
-    const items = await getCollection<T>(collectionName);
-    const newId = String(Date.now() + Math.random());
-    const newItem = { ...data, id: newId } as T;
-    items.push(newItem);
-    localStorage.setItem(collectionName, JSON.stringify(items));
-    return newItem;
+    const collectionRef = collection(db, collectionName);
+    const docRef = await addDoc(collectionRef, data);
+    return { ...data, id: docRef.id } as T;
 }
 
 
-async function updateDocument<T extends {id: string}>(collectionName: string, id: string, data: Partial<Omit<T, 'id'>>): Promise<T> {
-    let items = await getCollection<T>(collectionName);
-    const itemIndex = items.findIndex(i => i.id === id);
-    if (itemIndex === -1) throw new Error(`Document with id ${id} not found in ${collectionName}`);
-    const updatedItem = { ...items[itemIndex], ...data };
-    items[itemIndex] = updatedItem;
-    localStorage.setItem(collectionName, JSON.stringify(items));
-    return updatedItem;
+async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
+    const docRef = doc(db, collectionName, id);
+    await updateDoc(docRef, data);
+    // Return the merged object
+    const updatedDoc = await getDoc(docRef);
+    return { id: updatedDoc.id, ...updatedDoc.data() } as T;
 }
 
 async function deleteDocument(collectionName: string, id: string): Promise<boolean> {
-    let items = await getCollection<any>(collectionName);
-    const updatedItems = items.filter(i => i.id !== id);
-    localStorage.setItem(collectionName, JSON.stringify(updatedItems));
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
     return true;
 }
 
@@ -120,13 +139,20 @@ export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Pro
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
 
 export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<boolean> {
-    const protocols = await getProtocols();
-    const protocolToDelete = protocols.find(p => p.equipmentId === equipmentId);
-    if (protocolToDelete) {
-        await deleteProtocol(protocolToDelete.id);
-        return true;
+    const protocolsRef = collection(db, collections.protocols);
+    const q = query(protocolsRef, where("equipmentId", "==", equipmentId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        return false;
     }
-    return false;
+
+    const batch = writeBatch(db);
+    querySnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+    return true;
 }
 
 // CEDULAS
