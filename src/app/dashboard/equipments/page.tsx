@@ -41,23 +41,59 @@ import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, HardHat, C
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Equipment } from '@/lib/services';
+import { Equipment, Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type SortableKey = keyof Equipment;
 
 export default function EquipmentsPage() {
-  const { equipments, deleteEquipment, loading } = useData();
+  const { equipments, clients, systems, deleteEquipment, loading } = useData();
   const [equipmentToDelete, setEquipmentToDelete] = useState<Equipment | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(null);
 
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedSystemId, setSelectedSystemId] = useState<string>('');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
+  const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (selectedClientId) {
+        const client = clients.find(c => c.id === selectedClientId);
+        setClientWarehouses(client?.almacenes.map(a => a.nombre) || []);
+        setSelectedWarehouse(''); // Reset warehouse selection
+    } else {
+        setClientWarehouses([]);
+        setSelectedWarehouse('');
+    }
+  }, [selectedClientId, clients]);
+
 
   const sortedEquipments = useMemo(() => {
-    let sortableItems = [...equipments];
+    let filtered = [...equipments];
+
+    if (selectedClientId) {
+      const clientName = clients.find(c => c.id === selectedClientId)?.name;
+      if (clientName) {
+        filtered = filtered.filter(eq => eq.client === clientName);
+      }
+    }
+
+    if (selectedSystemId) {
+        const systemName = systems.find(s => s.id === selectedSystemId)?.name;
+        if (systemName) {
+            filtered = filtered.filter(eq => eq.system === systemName);
+        }
+    }
+
+    if (selectedWarehouse) {
+        filtered = filtered.filter(eq => eq.location === selectedWarehouse);
+    }
+    
     if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
+      filtered.sort((a, b) => {
         const valA = a[sortConfig.key];
         const valB = b[sortConfig.key];
         
@@ -70,8 +106,8 @@ export default function EquipmentsPage() {
         return 0;
       });
     }
-    return sortableItems;
-  }, [equipments, sortConfig]);
+    return filtered;
+  }, [equipments, sortConfig, selectedClientId, selectedSystemId, selectedWarehouse, clients, systems]);
 
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -133,6 +169,7 @@ export default function EquipmentsPage() {
               </div>
               <Card>
                   <CardContent className="pt-6">
+                      <Skeleton className="h-24 w-full mb-6" />
                       <div className="space-y-4">
                           <Skeleton className="h-16 w-full" />
                           <Skeleton className="h-16 w-full" />
@@ -164,6 +201,51 @@ export default function EquipmentsPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+                <div className="grid gap-2">
+                    <Label htmlFor="client-filter">Filtrar por Cliente</Label>
+                    <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? '' : value)} value={selectedClientId || 'all'}>
+                        <SelectTrigger id="client-filter">
+                            <SelectValue placeholder="Todos los clientes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los clientes</SelectItem>
+                            {clients.map(client => (
+                                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="warehouse-filter">Filtrar por Almacén</Label>
+                    <Select onValueChange={(value) => setSelectedWarehouse(value === 'all' ? '' : value)} value={selectedWarehouse || 'all'} disabled={!selectedClientId}>
+                        <SelectTrigger id="warehouse-filter">
+                            <SelectValue placeholder="Todos los almacenes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los almacenes</SelectItem>
+                            {clientWarehouses.map(warehouse => (
+                                <SelectItem key={warehouse} value={warehouse}>{warehouse}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="system-filter">Filtrar por Sistema</Label>
+                    <Select onValueChange={(value) => setSelectedSystemId(value === 'all' ? '' : value)} value={selectedSystemId || 'all'}>
+                        <SelectTrigger id="system-filter">
+                            <SelectValue placeholder="Todos los sistemas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los sistemas</SelectItem>
+                            {systems.map(system => (
+                                <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <Separator className="mb-6"/>
             <Table>
               <TableHeader>
                 <TableRow>
