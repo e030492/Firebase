@@ -537,7 +537,7 @@ export default function EditCedulaPage() {
                                     <div className="flex items-center gap-2">
                                         <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={!canUpdateCedulas || isSaving}>
                                             <Camera className="mr-2 h-4 w-4" />
-                                            {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                                            {step.imageUrl ? 'Cambiar Foto' : 'Tomar o Subir Foto'}
                                         </Button>
                                         {step.imageUrl && (
                                             <Button type="button" variant="destructive" size="icon" onClick={() => handleImageDelete(index)} disabled={!canUpdateCedulas || isSaving}>
@@ -608,3 +608,5 @@ export default function EditCedulaPage() {
     </form>
   );
 }
+
+    
