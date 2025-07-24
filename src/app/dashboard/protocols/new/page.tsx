@@ -4,6 +4,7 @@
 import { useActionState, useState, useEffect, Suspense } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 
 import {
   suggestMaintenanceProtocol,
@@ -40,7 +41,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera } from 'lucide-react';
 import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -107,6 +108,7 @@ function ProtocolGenerator() {
   const [equipmentAlias, setEquipmentAlias] = useState('');
   const [equipmentModel, setEquipmentModel] = useState('');
   const [equipmentSerial, setEquipmentSerial] = useState('');
+  const [equipmentImageUrl, setEquipmentImageUrl] = useState('');
 
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   const [isModificationMode, setIsModificationMode] = useState(false);
@@ -131,6 +133,7 @@ function ProtocolGenerator() {
             setEquipmentAlias(equipment.alias || '');
             setEquipmentModel(equipment.model);
             setEquipmentSerial(equipment.serial);
+            setEquipmentImageUrl(equipment.imageUrl || '');
         }
     }
   }, [searchParams, allEquipments, clients, systems, loading]);
@@ -182,12 +185,14 @@ function ProtocolGenerator() {
       setEquipmentAlias(selected.alias || '');
       setEquipmentModel(selected.model);
       setEquipmentSerial(selected.serial);
+      setEquipmentImageUrl(selected.imageUrl || '');
     } else {
       setEquipmentName('');
       setEquipmentDescription('');
       setEquipmentAlias('');
       setEquipmentModel('');
       setEquipmentSerial('');
+      setEquipmentImageUrl('');
     }
   };
 
@@ -351,19 +356,36 @@ function ProtocolGenerator() {
             {isModificationMode && (
                 <>
                 <Separator/>
-                <div className="grid md:grid-cols-3 gap-4">
-                     <div className="grid gap-3">
-                         <Label>Alias</Label>
-                         <Input value={equipmentAlias} readOnly />
-                     </div>
-                     <div className="grid gap-3">
-                         <Label>Modelo</Label>
-                         <Input value={equipmentModel} readOnly />
-                     </div>
-                     <div className="grid gap-3">
-                         <Label>No. Serie</Label>
-                         <Input value={equipmentSerial} readOnly />
-                     </div>
+                <div className="grid md:grid-cols-2 gap-6 items-start">
+                    <div className="grid gap-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div className="grid gap-3">
+                                <Label>Alias</Label>
+                                <Input value={equipmentAlias} readOnly />
+                            </div>
+                            <div className="grid gap-3">
+                                <Label>Modelo</Label>
+                                <Input value={equipmentModel} readOnly />
+                            </div>
+                        </div>
+                        <div className="grid gap-3">
+                            <Label>No. Serie</Label>
+                            <Input value={equipmentSerial} readOnly />
+                        </div>
+                    </div>
+                    <div className="grid gap-3">
+                        <Label>Fotografía del Equipo</Label>
+                        {equipmentImageUrl ? (
+                            <Image src={equipmentImageUrl} alt={`Foto de ${equipmentName}`} width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video border" />
+                        ) : (
+                            <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                <div className="text-center text-muted-foreground">
+                                    <Camera className="h-10 w-10 mx-auto" />
+                                    <p className="text-sm mt-2">Sin imagen</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 </>
             )}
