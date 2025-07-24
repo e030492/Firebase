@@ -63,6 +63,8 @@ type State = {
   error: string | null;
 };
 
+type EquipmentWithProtocolStatus = Equipment & { hasProtocol: boolean };
+
 // Server Action
 async function generateProtocolAction(prevState: State, formData: FormData): Promise<State> {
   const equipmentName = formData.get('equipmentName') as string;
@@ -108,7 +110,7 @@ function ProtocolGenerator() {
   const dataLoadedRef = useRef(false);
 
   // Data states
-  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<EquipmentWithProtocolStatus[]>([]);
   
   // Selection states
   const [clientId, setClientId] = useState('');
@@ -163,12 +165,18 @@ function ProtocolGenerator() {
       const clientName = clients.find(c => c.id === clientId)?.name;
       const systemName = systems.find(s => s.id === systemId)?.name;
       if (clientName && systemName) {
-        setFilteredEquipments(allEquipments.filter(eq => eq.client === clientName && eq.system === systemName));
+        const filtered = allEquipments
+          .filter(eq => eq.client === clientName && eq.system === systemName)
+          .map(eq => ({
+              ...eq,
+              hasProtocol: protocols.some(p => p.equipmentId === eq.id && p.steps.length > 0)
+          }));
+        setFilteredEquipments(filtered);
       }
     } else {
       setFilteredEquipments([]);
     }
-  }, [clientId, systemId, clients, systems, allEquipments]);
+  }, [clientId, systemId, clients, systems, allEquipments, protocols]);
 
   // Reset selections when AI result changes
   useEffect(() => {
@@ -402,7 +410,11 @@ function ProtocolGenerator() {
                    </SelectTrigger>
                    <SelectContent>
                      {filteredEquipments.map(eq => (
-                       <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
+                        <SelectItem key={eq.id} value={eq.id} className={!eq.hasProtocol ? 'text-destructive' : ''}>
+                          {eq.name}
+                          {eq.alias && ` (${eq.alias})`}
+                          {` - N/S: ${eq.serial}`}
+                        </SelectItem>
                      ))}
                    </SelectContent>
                  </Select>
