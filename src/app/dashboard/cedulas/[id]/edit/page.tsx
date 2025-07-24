@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, Camera, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -182,6 +182,10 @@ export default function EditCedulaPage() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleImageDelete = (index: number) => {
+    handleStepChange(index, 'imageUrl', '');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -530,10 +534,18 @@ export default function EditCedulaPage() {
                                             <Camera className="h-10 w-10 text-muted-foreground" />
                                         </div>
                                     )}
-                                    <Button type="button" variant="outline" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={!canUpdateCedulas || isSaving}>
-                                        <Camera className="mr-2 h-4 w-4" />
-                                        {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={!canUpdateCedulas || isSaving}>
+                                            <Camera className="mr-2 h-4 w-4" />
+                                            {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                                        </Button>
+                                        {step.imageUrl && (
+                                            <Button type="button" variant="destructive" size="icon" onClick={() => handleImageDelete(index)} disabled={!canUpdateCedulas || isSaving}>
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="sr-only">Eliminar Foto</span>
+                                            </Button>
+                                        )}
+                                    </div>
                                     <Input
                                         id={`image-upload-${index}`}
                                         type="file"
