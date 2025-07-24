@@ -115,17 +115,19 @@ function ProtocolGenerator() {
   
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
-    if (loading) return; // Wait for data to load
     const equipmentIdParam = searchParams.get('equipmentId');
-    if (equipmentIdParam && allEquipments.length && clients.length && systems.length) {
+    if (equipmentIdParam && !loading) {
         const equipment = allEquipments.find(e => e.id === equipmentIdParam);
         if (equipment) {
-            setIsModificationMode(true);
             const client = clients.find(c => c.name === equipment.client);
             const system = systems.find(s => s.name === equipment.system);
-
-            if (client) setClientId(client.id);
-            if (system) setSystemId(system.id);
+            
+            if (client) {
+                setClientId(client.id);
+            }
+            if (system) {
+                setSystemId(system.id);
+            }
             
             setSelectedEquipmentId(equipment.id);
             setEquipmentName(equipment.name);
@@ -134,6 +136,8 @@ function ProtocolGenerator() {
             setEquipmentModel(equipment.model);
             setEquipmentSerial(equipment.serial);
             setEquipmentImageUrl(equipment.imageUrl || '');
+            
+            setIsModificationMode(true);
         }
     }
   }, [searchParams, allEquipments, clients, systems, loading]);
