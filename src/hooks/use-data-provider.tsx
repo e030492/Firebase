@@ -40,6 +40,8 @@ type DataContextType = {
   isDebugWindowVisible: boolean;
   toggleDebugWindow: () => void;
   refreshData: () => void;
+  // Auth
+  loginUser: (email: string, pass: string) => Promise<User | null>;
   // User mutations
   createUser: (userData: Omit<User, 'id'>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
@@ -124,6 +126,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loadAllData();
   }, [loadAllData]);
   
+  // --- AUTH ---
+  const loginUser = async (email: string, pass: string): Promise<User | null> => {
+      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (foundUser && foundUser.password === pass) {
+          setDebugMessage(`User "${foundUser.name}" logged in successfully.`);
+          return foundUser;
+      }
+      setDebugMessage(`Login failed for email: ${email}.`);
+      return null;
+  };
+
   // --- USER MUTATIONS ---
   const createUser = async (userData: Omit<User, 'id'>) => {
     const newUser = await createUserService(userData);
@@ -256,6 +269,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     isDebugWindowVisible,
     toggleDebugWindow,
     refreshData: loadAllData,
+    // Auth
+    loginUser,
     // Users
     createUser,
     updateUser,

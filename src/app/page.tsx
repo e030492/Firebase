@@ -16,18 +16,17 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getUsers } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { DebugWindow } from '@/components/debug-window';
 import { useData } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { loginUser, isDebugWindowVisible } = useData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { isDebugWindowVisible } = useData();
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,25 +34,19 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const allUsers = await getUsers();
-      const user = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+      const user = await loginUser(email, password);
 
       if (user) {
-        if (user.password === password) {
-          localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-          router.push('/dashboard/users');
-        } else {
-          setError('Contraseña incorrecta.');
-          setIsLoading(false);
-        }
+        localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
+        router.push('/dashboard/users');
       } else {
-        setError('Usuario no encontrado.');
+        setError('Usuario o contraseña incorrectos.');
         setIsLoading(false);
       }
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Login failed:", err);
-      setError("Error crítico durante el login. Verifique la consola.");
+      setError(`Error crítico durante el login: ${errorMessage}`);
       setIsLoading(false);
     }
   };
