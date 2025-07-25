@@ -52,11 +52,11 @@ export default function LoginPage() {
 
   return (
     <>
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <main className="flex min-h-screen flex-col items-center justify-start bg-background p-4 pt-12">
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-64 w-96 items-center justify-center">
-              <Image src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} alt="Escuadra Technology Logo" width={200} height={200} data-ai-hint="logo" className="object-contain w-full h-full" />
+            <div className="mb-4 flex items-center justify-center">
+              <Image src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} alt="Escuadra Technology Logo" width={200} height={200} data-ai-hint="logo" className="object-contain" />
             </div>
             <p className="text-muted-foreground">Control de Mantenimiento de Seguridad</p>
           </div>
