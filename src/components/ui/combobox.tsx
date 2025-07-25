@@ -18,7 +18,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Input } from "./input"
 
 interface ComboboxProps {
   options: { label: string; value: string }[];
@@ -40,6 +39,11 @@ export function Combobox({
     disabled = false
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
+  const [inputValue, setInputValue] = React.useState(value)
+
+  React.useEffect(() => {
+    setInputValue(value)
+  }, [value])
 
   const handleSelect = (currentValue: string) => {
     const newValue = currentValue === value ? "" : currentValue;
@@ -47,23 +51,34 @@ export function Combobox({
     setOpen(false);
   }
   
+  const handleInputChange = (search: string) => {
+    setInputValue(search)
+    onChange(search)
+  }
+
+  const selectedOptionLabel = options.find((option) => option.value.toLowerCase() === value?.toLowerCase())?.label || value || placeholder;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="relative">
-            <CommandInput
-                value={value}
-                onValueChange={onChange}
-                placeholder={placeholder}
-                className="w-full"
-                disabled={disabled}
-                onFocus={() => setOpen(true)}
-            />
-            <ChevronsUpDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
-        </div>
+        <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+            disabled={disabled}
+        >
+            <span className="truncate">{selectedOptionLabel}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" style={{ minWidth: "var(--radix-popover-trigger-width)" }}>
         <Command>
+            <CommandInput
+                placeholder={searchPlaceholder}
+                value={inputValue}
+                onValueChange={handleInputChange}
+            />
           <CommandList>
             <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
             <CommandGroup>
