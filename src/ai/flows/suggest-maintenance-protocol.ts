@@ -48,7 +48,7 @@ const prompt = ai.definePrompt({
   output: {schema: SuggestMaintenanceProtocolOutputSchema},
   prompt: `You are an expert maintenance technician.
 
-You will suggest maintenance protocol steps for the given equipment, including the priority (baja, media, alta) and estimated percentage of completion for each step. Return a JSON array of objects with "step", "priority", and "percentage" keys.
+You will suggest a comprehensive maintenance protocol for the given equipment. The protocol must include steps for both external inspection and internal cleaning of the equipment. For each step, define its priority (baja, media, alta) and an estimated percentage of completion. Return a JSON array of objects with "step", "priority", and "percentage" keys.
 
 Equipment Name: {{{equipmentName}}}
 Equipment Description: {{{equipmentDescription}}}`,
