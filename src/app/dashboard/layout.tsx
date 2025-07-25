@@ -182,7 +182,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                   <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
                     <Avatar>
                       <AvatarImage
-                        src={user?.photoUrl || ''}
+                        src={user?.photoUrl || undefined}
                         alt="User avatar"
                         data-ai-hint="user avatar"
                       />

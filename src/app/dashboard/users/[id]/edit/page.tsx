@@ -205,8 +205,8 @@ export default function EditUserPage() {
             email,
             role: valueToRoleMap[role],
             permissions,
-            signatureUrl: signatureUrl || '',
-            photoUrl: photoUrl || '',
+            signatureUrl: signatureUrl || null,
+            photoUrl: photoUrl || null,
         };
 
         if (role === 'cliente') {
@@ -468,5 +468,3 @@ export default function EditUserPage() {
     </form>
   );
 }
-
-    

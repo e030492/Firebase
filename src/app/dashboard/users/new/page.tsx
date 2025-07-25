@@ -181,8 +181,8 @@ export default function NewUserPage() {
             role: valueToRoleMap[role],
             password,
             permissions,
-            signatureUrl: signatureUrl || '',
-            photoUrl: photoUrl || '',
+            signatureUrl: signatureUrl || null,
+            photoUrl: photoUrl || null,
             clientId: role === 'cliente' ? selectedClientId : undefined,
         };
 
