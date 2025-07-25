@@ -80,10 +80,10 @@ export default function DashboardPage() {
             </Card>
             
             <main className="grid w-full auto-rows-max items-start gap-8">
-                <section>
+                <section className="w-full max-w-4xl mx-auto">
                     <div className="flex justify-center">
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            <Card className="group bg-[hsl(var(--chart-1))] text-primary-foreground w-64">
+                            <Card className="group bg-[hsl(var(--chart-1))] text-primary-foreground w-52">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <Building className="h-5 w-5" />
@@ -97,7 +97,7 @@ export default function DashboardPage() {
                                     </p>
                                 </CardContent>
                             </Card>
-                            <Card className="group bg-[hsl(var(--chart-2))] text-primary-foreground w-64">
+                            <Card className="group bg-[hsl(var(--chart-2))] text-primary-foreground w-52">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <HardHat className="h-5 w-5" />
@@ -111,7 +111,7 @@ export default function DashboardPage() {
                                     </p>
                                 </CardContent>
                             </Card>
-                            <Card className="group bg-[hsl(var(--chart-3))] text-primary-foreground w-64">
+                            <Card className="group bg-[hsl(var(--chart-3))] text-primary-foreground w-52">
                                 <CardHeader>
                                     <div className="flex items-center gap-2">
                                         <FileCheck className="h-5 w-5" />
@@ -129,14 +129,14 @@ export default function DashboardPage() {
                     </div>
                 </section>
 
-                <Card className="col-span-1 lg:col-span-3">
+                <Card className="col-span-1 lg:col-span-3 w-full max-w-4xl mx-auto">
                     <CardHeader className="items-center text-center">
                         <CardTitle>Resumen General</CardTitle>
                         <CardDescription>
                             Una vista general de los indicadores clave del sistema.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="pl-2 mx-auto w-1/2">
+                    <CardContent className="pl-2 w-1/2 mx-auto">
                         <ChartContainer config={{}} className="h-80 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
