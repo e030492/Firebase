@@ -36,7 +36,7 @@ export default function EditClientPage() {
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [almacenes, setAlmacenes] = useState<Omit<Almacen, 'planos'> & { planos: Plano[] }[]>([
+  const [almacenes, setAlmacenes] = useState<(Omit<Almacen, 'planos'> & { planos: Plano[] })[]>([
     { nombre: '', direccion: '', planos: [] },
     { nombre: '', direccion: '', planos: [] }
   ]);
@@ -133,7 +133,7 @@ export default function EditClientPage() {
     
     try {
         const almacenesToSave = almacenes
-            .filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '')
+            .filter(a => a.nombre.trim() !== '')
             .map(a => ({
                 nombre: a.nombre,
                 direccion: a.direccion,

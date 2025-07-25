@@ -96,7 +96,7 @@ export default function NewClientPage() {
 
     try {
         const almacenesToSave = almacenes
-            .filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '')
+            .filter(a => a.nombre.trim() !== '')
             .map(a => ({
                 nombre: a.nombre,
                 direccion: a.direccion,
