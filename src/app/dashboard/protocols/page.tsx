@@ -75,7 +75,7 @@ type DeletingStepInfo = {
 };
 type ProtocolToCopyInfo = {
     sourceProtocol: Protocol;
-    sourceEquipmentName: string;
+    sourceEquipment: Equipment;
     targetEquipment: Equipment;
 }
 
@@ -169,28 +169,33 @@ export default function ProtocolsPage() {
   };
 
   const handleSearchSimilar = (targetEquipment: Equipment) => {
-    const similarEquipmentWithProtocol = allEquipments.find(
-      (eq) =>
-        eq.id !== targetEquipment.id &&
-        eq.name === targetEquipment.name &&
-        eq.type === targetEquipment.type &&
-        protocols.some((p) => p.equipmentId === eq.id && p.steps.length > 0)
+    // 1. Find all equipments with the same name and type, excluding the target itself.
+    const similarEquipments = allEquipments.filter(
+        (eq) =>
+            eq.id !== targetEquipment.id &&
+            eq.name === targetEquipment.name &&
+            eq.type === targetEquipment.type
     );
-  
+
+    // 2. From that list, find the first one that has a defined protocol.
+    const similarEquipmentWithProtocol = similarEquipments.find(
+        (eq) => protocols.some((p) => p.equipmentId === eq.id && p.steps.length > 0)
+    );
+
     if (similarEquipmentWithProtocol) {
-      const sourceProtocol = protocols.find(
-        (p) => p.equipmentId === similarEquipmentWithProtocol.id
-      );
-      if (sourceProtocol) {
-        setProtocolToCopy({
-          sourceProtocol,
-          sourceEquipmentName: similarEquipmentWithProtocol.name,
-          targetEquipment,
-        });
-        return;
-      }
+        const sourceProtocol = protocols.find(
+            (p) => p.equipmentId === similarEquipmentWithProtocol.id
+        );
+        if (sourceProtocol) {
+            setProtocolToCopy({
+                sourceProtocol,
+                sourceEquipment: similarEquipmentWithProtocol,
+                targetEquipment,
+            });
+            return;
+        }
     }
-  
+
     setShowNoSimilarFoundAlert(targetEquipment);
   };
   
@@ -423,8 +428,24 @@ export default function ProtocolsPage() {
                     <Copy className="h-6 w-6 text-primary" />
                     <AlertDialogTitle>Protocolo Similar Encontrado</AlertDialogTitle>
                 </div>
-                <AlertDialogDescription>
-                    Se encontró un protocolo para un equipo similar ("{protocolToCopy?.sourceEquipmentName}"). ¿Desea copiar sus pasos a "{protocolToCopy?.targetEquipment.name}"?
+                 <AlertDialogDescription>
+                    ¿Desea copiar los pasos del siguiente equipo de origen al equipo de destino?
+                    <div className="grid grid-cols-2 gap-4 my-4 text-sm text-foreground">
+                        <div className="bg-muted p-3 rounded-md">
+                            <h4 className="font-semibold mb-1">Origen:</h4>
+                            <p>{protocolToCopy?.sourceEquipment.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {`Modelo: ${protocolToCopy?.sourceEquipment.model}, N/S: ${protocolToCopy?.sourceEquipment.serial}, Cliente: ${protocolToCopy?.sourceEquipment.client}`}
+                            </p>
+                        </div>
+                         <div className="bg-muted p-3 rounded-md">
+                            <h4 className="font-semibold mb-1">Destino:</h4>
+                            <p>{protocolToCopy?.targetEquipment.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {`Modelo: ${protocolToCopy?.targetEquipment.model}, N/S: ${protocolToCopy?.targetEquipment.serial}, Cliente: ${protocolToCopy?.targetEquipment.client}`}
+                            </p>
+                        </div>
+                    </div>
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -448,6 +469,7 @@ export default function ProtocolsPage() {
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
+                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction onClick={() => {
                     const equipmentId = showNoSimilarFoundAlert?.id;
                     setShowNoSimilarFoundAlert(null);
@@ -457,7 +479,6 @@ export default function ProtocolsPage() {
                 }}>
                     Generar con IA
                 </AlertDialogAction>
-                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
@@ -482,3 +503,5 @@ export default function ProtocolsPage() {
     </>
   );
 }
+
+    
