@@ -10,7 +10,7 @@ import {
 // Interfaces based on mock-data structure
 export type Plano = { url: string; name: string; size: number };
 export type Almacen = { nombre: string; direccion: string; };
-export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[], officePhotoUrl?: string | null, phone1?: string, phone2?: string };
+export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[]};
 export type Equipment = typeof mockEquipments[0] & { id: string, imageUrl?: string | null };
 export type System = typeof mockSystems[0] & { id: string };
 export type User = typeof mockUsers[0] & { id: string; clientId?: string, photoUrl?: string | null, signatureUrl?: string | null };
@@ -53,36 +53,36 @@ export const connectionTest = async () => {
 }
 
 // --- Helper Functions ---
-const processImagesInObject = async (data: any): Promise<any> => {
+const processImagesInObject = async (data: any, onProgress?: (progress: number) => void): Promise<any> => {
     const dataWithUrls = { ...data };
-
-    if (data.imageUrl && data.imageUrl.startsWith('data:')) {
-        const storageRef = ref(storage, `equipments/${Date.now()}`);
-        const uploadResult = await uploadString(storageRef, data.imageUrl, 'data_url');
-        dataWithUrls.imageUrl = await getDownloadURL(uploadResult.ref);
+    const imageFields = ['imageUrl', 'photoUrl', 'signatureUrl', 'logoUrl', 'officePhotoUrl'];
+    
+    // Process top-level image fields
+    for (const field of imageFields) {
+        if (data[field] && typeof data[field] === 'string' && data[field].startsWith('data:')) {
+            const path = field === 'logoUrl' ? `settings/logo` : `${collectionName}/${Date.now()}`;
+            const storageRef = ref(storage, path);
+            const uploadResult = await uploadString(storageRef, data[field], 'data_url');
+            onProgress?.(50);
+            dataWithUrls[field] = await getDownloadURL(uploadResult.ref);
+            onProgress?.(100);
+        }
     }
-     if (data.photoUrl && data.photoUrl.startsWith('data:')) {
-        const storageRef = ref(storage, `users/photos/${Date.now()}`);
-        const uploadResult = await uploadString(storageRef, data.photoUrl, 'data_url');
-        dataWithUrls.photoUrl = await getDownloadURL(uploadResult.ref);
-    }
-    if (data.signatureUrl && data.signatureUrl.startsWith('data:')) {
-        const storageRef = ref(storage, `users/signatures/${Date.now()}`);
-        const uploadResult = await uploadString(storageRef, data.signatureUrl, 'data_url');
-        dataWithUrls.signatureUrl = await getDownloadURL(uploadResult.ref);
-    }
-    if (data.logoUrl && data.logoUrl.startsWith('data:')) {
-        const storageRef = ref(storage, `settings/logo`);
-        const uploadResult = await uploadString(storageRef, data.logoUrl, 'data_url');
-        dataWithUrls.logoUrl = await getDownloadURL(uploadResult.ref);
-    }
-
+    
+    // Process protocolSteps images
     if (Array.isArray(data.protocolSteps)) {
+        let completedSteps = 0;
+        const totalSteps = data.protocolSteps.filter((step: any) => step.imageUrl && step.imageUrl.startsWith('data:')).length;
+        if(totalSteps > 0) onProgress?.(10);
+        
         dataWithUrls.protocolSteps = await Promise.all(data.protocolSteps.map(async (step: any) => {
-            if(step.imageUrl && step.imageUrl.startsWith('data:')) {
+            if (step.imageUrl && step.imageUrl.startsWith('data:')) {
                 const storageRef = ref(storage, `cedulas/steps/${Date.now()}`);
                 const uploadResult = await uploadString(storageRef, step.imageUrl, 'data_url');
-                return { ...step, imageUrl: await getDownloadURL(uploadResult.ref) };
+                const newUrl = await getDownloadURL(uploadResult.ref);
+                completedSteps++;
+                onProgress?.(10 + (completedSteps / totalSteps) * 90);
+                return { ...step, imageUrl: newUrl };
             }
             return step;
         }));
@@ -139,13 +139,13 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
 }
 
 async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>, onProgress?: (progress: number) => void): Promise<T> {
-    const processedData = await processImagesInObject(data);
+    const processedData = await processImagesInObject(data, onProgress);
     const docRef = await addDoc(collection(db, collectionName), processedData);
     return { ...processedData, id: docRef.id } as T;
 }
 
 async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>, onProgress?: (progress: number) => void): Promise<T> {
-    const processedData = await processImagesInObject(data);
+    const processedData = await processImagesInObject(data, onProgress);
     const docRef = doc(db, collectionName, id);
     await updateDoc(docRef, processedData);
     const updatedDoc = await getDoc(docRef);
