@@ -59,17 +59,23 @@ type State = {
 
 // Server Action
 async function generateProtocolAction(prevState: State, formData: FormData): Promise<State> {
-  const equipmentName = formData.get('equipmentName') as string;
-  const equipmentDescription = formData.get('equipmentDescription') as string;
+  const name = formData.get('name') as string;
+  const description = formData.get('description') as string;
+  const brand = formData.get('brand') as string;
+  const model = formData.get('model') as string;
+  const type = formData.get('type') as string;
 
-  if (!equipmentName || !equipmentDescription) {
+  if (!name || !description) {
     return { ...prevState, error: 'Por favor, complete el nombre y la descripción del equipo.', result: null };
   }
 
   try {
     const result = await suggestMaintenanceProtocol({
-      equipmentName,
-      equipmentDescription,
+      name,
+      description,
+      brand,
+      model,
+      type,
     });
     return { result, error: null };
   } catch (e: any) {
@@ -407,10 +413,6 @@ function ProtocolGenerator() {
                                 <Input value={selectedEquipment.type || 'N/A'} readOnly />
                             </div>
                         </div>
-                        <div className="grid gap-3">
-                            <Label>No. Serie</Label>
-                            <Input value={selectedEquipment.serial} readOnly />
-                        </div>
                          <div className="grid gap-3">
                             <Label>Descripción</Label>
                             <Textarea value={selectedEquipment.description} readOnly className="h-24"/>
@@ -499,8 +501,11 @@ function ProtocolGenerator() {
                 <CardDescription>La IA sugerirá pasos basados en la información del equipo.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
-                <Input name="equipmentName" value={selectedEquipment.name} type="hidden" />
-                <Input name="equipmentDescription" value={selectedEquipment.description} type="hidden" />
+                <Input name="name" value={selectedEquipment.name} type="hidden" />
+                <Input name="description" value={selectedEquipment.description} type="hidden" />
+                <Input name="brand" value={selectedEquipment.brand} type="hidden" />
+                <Input name="model" value={selectedEquipment.model} type="hidden" />
+                <Input name="type" value={selectedEquipment.type} type="hidden" />
                  <p className="text-sm text-muted-foreground">
                     Se generarán sugerencias para: <span className="font-semibold text-foreground">{selectedEquipment.name}</span>.
                 </p>
@@ -681,5 +686,3 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
-
-    

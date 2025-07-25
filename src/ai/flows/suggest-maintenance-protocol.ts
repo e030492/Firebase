@@ -13,8 +13,11 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SuggestMaintenanceProtocolInputSchema = z.object({
-  equipmentName: z.string().describe('The name of the equipment.'),
-  equipmentDescription: z.string().describe('The description of the equipment.'),
+  name: z.string().describe('The name of the equipment.'),
+  description: z.string().describe('The description of the equipment.'),
+  brand: z.string().describe('The brand of the equipment.'),
+  model: z.string().describe('The model of the equipment.'),
+  type: z.string().describe('The type of the equipment.'),
 });
 export type SuggestMaintenanceProtocolInput = z.infer<
   typeof SuggestMaintenanceProtocolInputSchema
@@ -61,8 +64,12 @@ Además de la limpieza interna, el protocolo debe cubrir la inspección y manten
 
 Para cada paso, define su prioridad (baja, media, alta) y un porcentaje estimado de finalización. Devuelve un array JSON de objetos con las claves "step", "priority" y "percentage". Toda la salida de texto, especialmente el valor de "step", debe estar en español.
 
-Nombre del Equipo: {{{equipmentName}}}
-Descripción del Equipo: {{{equipmentDescription}}}`,
+Estos son los datos del equipo:
+Nombre del Equipo: {{{name}}}
+Marca: {{{brand}}}
+Modelo: {{{model}}}
+Tipo: {{{type}}}
+Descripción del Equipo: {{{description}}}`,
 });
 
 const suggestMaintenanceProtocolFlow = ai.defineFlow(
