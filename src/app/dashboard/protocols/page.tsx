@@ -88,6 +88,7 @@ export default function ProtocolsPage() {
       systems, 
       loading,
       createProtocol,
+      deleteProtocol,
   } = useData();
   
   const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
@@ -168,25 +169,26 @@ export default function ProtocolsPage() {
 
   const handleSearchSimilar = (targetEquipment: Equipment) => {
     const similarEquipmentWithProtocol = allEquipments.find(
-      eq =>
+      (eq) =>
         eq.id !== targetEquipment.id &&
-        eq.name === targetEquipment.name &&
         eq.type === targetEquipment.type &&
-        protocols.some(p => p.equipmentId === eq.id)
+        protocols.some((p) => p.equipmentId === eq.id)
     );
-
+  
     if (similarEquipmentWithProtocol) {
-      const sourceProtocol = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
+      const sourceProtocol = protocols.find(
+        (p) => p.equipmentId === similarEquipmentWithProtocol.id
+      );
       if (sourceProtocol) {
-        setProtocolToCopy({ 
-            sourceProtocol, 
-            sourceEquipmentName: similarEquipmentWithProtocol.name,
-            targetEquipment 
+        setProtocolToCopy({
+          sourceProtocol,
+          sourceEquipmentName: similarEquipmentWithProtocol.name,
+          targetEquipment,
         });
         return;
       }
     }
-    
+  
     setShowNoSimilarFoundAlert(targetEquipment);
   };
   
