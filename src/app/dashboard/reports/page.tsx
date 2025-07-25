@@ -33,7 +33,7 @@ type SortableCedulaKey = 'folio' | 'client' | 'warehouse' | 'system' | 'equipmen
 type SortableEquipmentKey = 'name' | 'client' | 'system' | 'location' | 'nextMaintenanceDate';
 
 
-function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => void }) {
+function ReportView({ data, onBack, logoUrl }: { data: EnrichedCedula[], onBack: () => void, logoUrl: string | null }) {
 
     const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
         switch (priority?.toLowerCase()) {
@@ -69,7 +69,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
         <div className="report-container">
             <header className="flex items-center justify-between mb-8 print:hidden">
                 <div className="flex items-center gap-2">
-                    <Image src="https://placehold.co/24x24.png" alt="Escuadra Technology Logo" width={24} height={24} data-ai-hint="logo"/>
+                    <Image src={logoUrl || "https://placehold.co/24x24.png"} alt="Escuadra Technology Logo" width={24} height={24} data-ai-hint="logo"/>
                     <h1 className="text-xl font-bold">Vista Previa del Reporte</h1>
                 </div>
                 <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
             <div className="report-header print:block hidden">
                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <Image src="https://placehold.co/80x80.png" alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
+                        <Image src={logoUrl || "https://placehold.co/80x80.png"} alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
                     </div>
                 </div>
             </div>
@@ -106,7 +106,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                              <header className="border-b-2 border-gray-900 overflow-hidden print:hidden">
                                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                                     <div className="flex items-center gap-4">
-                                        <Image src="https://placehold.co/80x80.png" alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
+                                        <Image src={logoUrl || "https://placehold.co/80x80.png"} alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 flex items-start justify-between">
@@ -192,7 +192,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
 }
 
 function CedulasReportGenerator() {
-  const { cedulas, clients, equipments: allEquipments, systems, loading } = useData();
+  const { cedulas, clients, equipments: allEquipments, systems, loading, companySettings } = useData();
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
@@ -352,7 +352,7 @@ function CedulasReportGenerator() {
   }
 
   if (reportData) {
-    return <ReportView data={reportData} onBack={() => setReportData(null)} />;
+    return <ReportView data={reportData} onBack={() => setReportData(null)} logoUrl={companySettings?.logoUrl || null} />;
   }
 
   return (

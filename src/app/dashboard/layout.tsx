@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShieldCheck, User as UserIcon } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, Settings, Upload, Save } from 'lucide-react';
 import { DashboardNav } from '@/components/dashboard-nav';
 import {
   SidebarProvider,
@@ -29,10 +29,99 @@ import {
 import type { User } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { PermissionsProvider, usePermissions } from '@/hooks/use-permissions';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
+import { useData } from '@/hooks/use-data-provider';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+
+
+function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
+    const { companySettings, updateCompanySettings, loading } = useData();
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const logoInputRef = useRef<HTMLInputElement>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (companySettings) {
+            setLogoUrl(companySettings.logoUrl);
+        }
+    }, [companySettings]);
+
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setLogoUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await updateCompanySettings({ logoUrl: logoUrl || '' });
+            alert('Configuración guardada con éxito.');
+            onOpenChange(false);
+        } catch (error) {
+            console.error('Failed to save settings', error);
+            alert('Error al guardar la configuración.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent>
+                <SheetHeader>
+                    <SheetTitle>Configuración General</SheetTitle>
+                    <SheetDescription>
+                        Ajustes globales de la aplicación, como el logo de la empresa.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="grid gap-6 py-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="logo-upload">Logo de la Empresa</Label>
+                        <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center p-2 border">
+                            {logoUrl ? (
+                                <Image src={logoUrl} alt="Logo de la empresa" width={200} height={200} data-ai-hint="company logo preview" className="object-contain max-h-full" />
+                            ) : (
+                                <p className="text-sm text-muted-foreground">Sin logo</p>
+                            )}
+                        </div>
+                        <Input
+                            id="logo-upload"
+                            type="file"
+                            accept="image/*"
+                            ref={logoInputRef}
+                            onChange={handleLogoChange}
+                            className="hidden"
+                        />
+                        <Button type="button" variant="outline" onClick={() => logoInputRef.current?.click()}>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Subir Logo
+                        </Button>
+                    </div>
+                </div>
+                <SheetFooter>
+                    <Button onClick={handleSave} disabled={isSaving || loading}>
+                        {isSaving ? 'Guardando...' : <><Save className="mr-2 h-4 w-4" /> Guardar Cambios</>}
+                    </Button>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
+    );
+}
+
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, setUser } = usePermissions();
+  const { user, setUser, can } = usePermissions();
+  const { companySettings } = useData();
+
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
@@ -72,7 +161,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               className="group flex h-9 items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center transition-all">
-                <Image src="https://placehold.co/40x40.png" alt="Escuadra Technology Logo" width={40} height={40} data-ai-hint="logo" />
+                <Image src={companySettings?.logoUrl || "https://placehold.co/40x40.png"} alt="Escuadra Technology Logo" width={40} height={40} data-ai-hint="logo" />
               </div>
             </Link>
           </SidebarHeader>
@@ -104,7 +193,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Configuración</DropdownMenuItem>
+                  {can('update', 'users') && (
+                     <DropdownMenuItem onSelect={() => setSettingsPanelOpen(true)}>
+                        <Settings className="mr-2 h-4 w-4"/>
+                        Cambiar Logo
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem>Soporte</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={handleLogout}>
@@ -120,6 +214,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </div>
           </main>
         </SidebarInset>
+        <CompanySettingsPanel open={settingsPanelOpen} onOpenChange={setSettingsPanelOpen} />
       </SidebarProvider>
   )
 }

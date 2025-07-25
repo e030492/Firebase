@@ -1,5 +1,5 @@
 
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { 
     mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
@@ -15,6 +15,7 @@ export type User = typeof mockUsers[0] & { id: string; clientId?: string };
 export type ProtocolStep = typeof mockProtocols[0]['steps'][0];
 export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] };
 export type Cedula = typeof mockCedulas[0] & { id: string };
+export type CompanySettings = { id: string; logoUrl: string };
 
 const collections = {
     users: 'users',
@@ -23,6 +24,7 @@ const collections = {
     equipments: 'equipments',
     protocols: 'protocols',
     cedulas: 'cedulas',
+    settings: 'settings',
     _connectionTest: '_connectionTest',
 };
 
@@ -66,7 +68,10 @@ export const seedDatabase = async () => {
                     batch.set(docRef, rest);
                 });
             }
-            
+             // Seed initial company settings
+            const settingsDocRef = doc(db, collections.settings, 'companyProfile');
+            batch.set(settingsDocRef, { logoUrl: '' });
+
             await batch.commit();
             return true;
         } else {
@@ -113,6 +118,28 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 }
 
 // --- Specific Service Functions ---
+
+// SETTINGS
+export const subscribeToCompanySettings = (setSettings: (settings: CompanySettings | null) => void) => {
+    const docRef = doc(db, collections.settings, 'companyProfile');
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setSettings({ id: docSnap.id, ...docSnap.data() } as CompanySettings);
+        } else {
+            setSettings(null);
+        }
+    }, (error) => {
+        console.error("Error listening to company settings:", error);
+        setSettings(null);
+    });
+    return unsubscribe;
+};
+
+export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
+    const docRef = doc(db, collections.settings, 'companyProfile');
+    await setDoc(docRef, data, { merge: true });
+};
+
 
 // USERS
 export const subscribeToUsers = (setUsers: (users: User[]) => void) => subscribeToCollection<User>(collections.users, setUsers);

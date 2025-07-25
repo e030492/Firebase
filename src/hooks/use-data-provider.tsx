@@ -10,6 +10,8 @@ import {
     subscribeToEquipments,
     subscribeToProtocols,
     subscribeToCedulas,
+    subscribeToCompanySettings,
+    updateCompanySettings as updateCompanySettingsService,
     createUser as createUserService,
     updateUser as updateUserService,
     deleteUser as deleteUserService,
@@ -31,7 +33,7 @@ import {
     deleteCedula as deleteCedulaService,
     connectionTest,
 } from '@/lib/services';
-import type { User, Client, System, Equipment, Protocol, Cedula } from '@/lib/services';
+import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 
 
@@ -42,10 +44,13 @@ type DataContextType = {
   equipments: Equipment[];
   protocols: Protocol[];
   cedulas: Cedula[];
+  companySettings: CompanySettings | null;
   loading: boolean;
   error: string | null;
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
+  // Settings
+  updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;
   // User mutations
   createUser: (userData: Omit<User, 'id'>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
@@ -81,6 +86,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +106,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           subscribeToEquipments(setEquipments),
           subscribeToProtocols(setProtocols),
           subscribeToCedulas(setCedulas),
+          subscribeToCompanySettings(setCompanySettings),
         ];
 
         setLoading(false);
@@ -140,10 +147,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     equipments,
     protocols,
     cedulas,
+    companySettings,
     loading,
     error,
     // Auth
     loginUser,
+    // Settings
+    updateCompanySettings: updateCompanySettingsService,
     // Users
     createUser: createUserService,
     updateUser: updateUserService,

@@ -21,7 +21,7 @@ import { useData } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser, loading: dataLoading } = useData();
+  const { loginUser, loading: dataLoading, companySettings } = useData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +57,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
             <div className="mb-4 flex items-center justify-center">
-              <Image src="https://placehold.co/120x120.png" alt="Escuadra Technology Logo" width={120} height={120} data-ai-hint="logo" />
+              <Image src={companySettings?.logoUrl || "https://placehold.co/120x120.png"} alt="Escuadra Technology Logo" width={120} height={120} data-ai-hint="logo" />
             </div>
             <p className="text-muted-foreground">Control de Mantenimiento de Seguridad</p>
           </div>
