@@ -69,9 +69,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <SidebarHeader>
             <Link
               href="/dashboard/dashboard"
-              className="group flex h-9 items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold text-primary"
+              className="group flex h-9 items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-all group-hover:bg-primary/20">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center transition-all">
                 <Image src="/logo.png" alt="Escuadra Technology Logo" width={40} height={40} data-ai-hint="logo" />
               </div>
             </Link>
