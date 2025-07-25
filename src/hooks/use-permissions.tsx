@@ -53,7 +53,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   return (
     <PermissionsContext.Provider value={{ user, setUser, can }}>
       {children}
-    </Permissions-Context.Provider>
+    </PermissionsContext.Provider>
   );
 }
 
