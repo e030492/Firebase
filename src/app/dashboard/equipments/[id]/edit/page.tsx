@@ -36,8 +36,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Equipment, Client, System } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
-import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-
 
 export default function EditEquipmentPage() {
   const params = useParams();
@@ -71,6 +69,10 @@ export default function EditEquipmentPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!dataLoading && equipmentId) {
@@ -114,10 +116,28 @@ export default function EditEquipmentPage() {
     }
   }, [equipmentId, equipments, clients, systems, dataLoading]);
   
-  const equipmentNameOptions = useMemo((): ComboboxOption[] => {
-    const uniqueNames = new Set(equipments.map(eq => eq.name));
-    return Array.from(uniqueNames).map(name => ({ value: name, label: name }));
+  const equipmentUniqueNames = useMemo(() => {
+    return Array.from(new Set(equipments.map(eq => eq.name)));
   }, [equipments]);
+
+  useEffect(() => {
+    if (name) {
+      const filtered = equipmentUniqueNames.filter(n => n.toLowerCase().includes(name.toLowerCase()));
+      setNameSuggestions(filtered);
+    } else {
+      setNameSuggestions([]);
+    }
+  }, [name, equipmentUniqueNames]);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (nameInputRef.current && !nameInputRef.current.contains(event.target as Node)) {
+        setShowNameSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const nextMaintenanceDate = useMemo(() => {
     if (!maintenanceStartDate || !maintenancePeriodicity) return null;
@@ -385,17 +405,35 @@ export default function EditEquipmentPage() {
                  </div>
                </div>
               <Separator/>
-              <div className="grid gap-3">
+              <div className="relative" ref={nameInputRef}>
                 <Label htmlFor="name">Nombre del Equipo</Label>
-                <Combobox
-                  options={equipmentNameOptions}
-                  value={name}
-                  onChange={setName}
-                  placeholder="Seleccione o escriba un nombre"
-                  searchPlaceholder="Buscar nombre..."
-                  emptyResult="No se encontró el nombre."
+                <Input 
+                  id="name"
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                  onFocus={() => setShowNameSuggestions(true)}
+                  required 
                   disabled={isSaving}
+                  autoComplete="off"
                 />
+                {showNameSuggestions && nameSuggestions.length > 0 && (
+                  <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto">
+                    <CardContent className="p-2">
+                      {nameSuggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          className="p-2 hover:bg-muted rounded-md cursor-pointer"
+                          onClick={() => {
+                            setName(suggestion);
+                            setShowNameSuggestions(false);
+                          }}
+                        >
+                          {suggestion}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
@@ -413,8 +451,8 @@ export default function EditEquipmentPage() {
                     <Input id="type" value={type} onChange={e => setType(e.target.value)} required disabled={isSaving}/>
                 </div>
                 <div className="grid gap-3">
-                  <Label htmlFor="serial">Número de Serie</Label>
-                  <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" required disabled={isSaving}/>
+                  <Label htmlFor="serial">Número de Serie (Opcional)</Label>
+                  <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" disabled={isSaving}/>
                 </div>
               </div>
               <div className="grid gap-3">
