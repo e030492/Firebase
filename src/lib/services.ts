@@ -1,8 +1,7 @@
 
 
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, storage } from './firebase';
+import { db } from './firebase';
 import { 
     mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
 } from './mock-data';
@@ -52,46 +51,6 @@ export const connectionTest = async () => {
     }
 }
 
-// --- Helper Functions ---
-const processImagesInObject = async (data: any, onProgress?: (progress: number) => void): Promise<any> => {
-    const dataWithUrls = { ...data };
-    const imageFields = ['imageUrl', 'photoUrl', 'signatureUrl', 'logoUrl', 'officePhotoUrl'];
-    
-    // Process top-level image fields
-    for (const field of imageFields) {
-        if (data[field] && typeof data[field] === 'string' && data[field].startsWith('data:')) {
-            const path = field === 'logoUrl' ? `settings/logo` : `${collectionName}/${Date.now()}`;
-            const storageRef = ref(storage, path);
-            const uploadResult = await uploadString(storageRef, data[field], 'data_url');
-            onProgress?.(50);
-            dataWithUrls[field] = await getDownloadURL(uploadResult.ref);
-            onProgress?.(100);
-        }
-    }
-    
-    // Process protocolSteps images
-    if (Array.isArray(data.protocolSteps)) {
-        let completedSteps = 0;
-        const totalSteps = data.protocolSteps.filter((step: any) => step.imageUrl && step.imageUrl.startsWith('data:')).length;
-        if(totalSteps > 0) onProgress?.(10);
-        
-        dataWithUrls.protocolSteps = await Promise.all(data.protocolSteps.map(async (step: any) => {
-            if (step.imageUrl && step.imageUrl.startsWith('data:')) {
-                const storageRef = ref(storage, `cedulas/steps/${Date.now()}`);
-                const uploadResult = await uploadString(storageRef, step.imageUrl, 'data_url');
-                const newUrl = await getDownloadURL(uploadResult.ref);
-                completedSteps++;
-                onProgress?.(10 + (completedSteps / totalSteps) * 90);
-                return { ...step, imageUrl: newUrl };
-            }
-            return step;
-        }));
-    }
-
-    return dataWithUrls;
-};
-
-
 // --- Firebase Seeding ---
 export const seedDatabase = async () => {
     try {
@@ -138,16 +97,14 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
     return unsubscribe;
 }
 
-async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>, onProgress?: (progress: number) => void): Promise<T> {
-    const processedData = await processImagesInObject(data, onProgress);
-    const docRef = await addDoc(collection(db, collectionName), processedData);
-    return { ...processedData, id: docRef.id } as T;
+async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
+    const docRef = await addDoc(collection(db, collectionName), data);
+    return { ...data, id: docRef.id } as T;
 }
 
-async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>, onProgress?: (progress: number) => void): Promise<T> {
-    const processedData = await processImagesInObject(data, onProgress);
+async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
     const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, processedData);
+    await updateDoc(docRef, data);
     const updatedDoc = await getDoc(docRef);
     return { id: updatedDoc.id, ...updatedDoc.data() } as T;
 }
@@ -178,16 +135,15 @@ export const subscribeToCompanySettings = (setSettings: (settings: CompanySettin
 };
 
 export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
-    const processedData = await processImagesInObject(data);
     const docRef = doc(db, collections.settings, 'companyProfile');
-    await setDoc(docRef, processedData, { merge: true });
+    await setDoc(docRef, data, { merge: true });
 };
 
 
 // USERS
 export const subscribeToUsers = (setUsers: (users: User[]) => void) => subscribeToCollection<User>(collections.users, setUsers);
-export const createUser = (data: Omit<User, 'id'>, onProgress?: (progress: number) => void) => createDocument<User>(collections.users, data, onProgress);
-export const updateUser = (id: string, data: Partial<User>, onProgress?: (progress: number) => void) => updateDocument<User>(collections.users, id, data, onProgress);
+export const createUser = (data: Omit<User, 'id'>) => createDocument<User>(collections.users, data);
+export const updateUser = (id: string, data: Partial<User>) => updateDocument<User>(collections.users, id, data);
 export const deleteUser = (id: string): Promise<boolean> => deleteDocument(collections.users, id);
 
 // CLIENTS
@@ -198,8 +154,8 @@ export const deleteClient = (id: string): Promise<boolean> => deleteDocument(col
 
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
-export const createEquipment = (data: Omit<Equipment, 'id'>, onProgress?: (progress: number) => void) => createDocument<Equipment>(collections.equipments, data, onProgress);
-export const updateEquipment = (id: string, data: Partial<Equipment>, onProgress?: (progress: number) => void) => updateDocument<Equipment>(collections.equipments, id, data, onProgress);
+export const createEquipment = (data: Omit<Equipment, 'id'>) => createDocument<Equipment>(collections.equipments, data);
+export const updateEquipment = (id: string, data: Partial<Equipment>) => updateDocument<Equipment>(collections.equipments, id, data);
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
 // SYSTEMS
@@ -233,6 +189,6 @@ export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<
 
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
-export const createCedula = (data: Omit<Cedula, 'id'>, onProgress?: (progress: number) => void) => createDocument<Cedula>(collections.cedulas, data, onProgress);
-export const updateCedula = (id: string, data: Partial<Cedula>, onProgress?: (progress: number) => void) => updateDocument<Cedula>(collections.cedulas, id, data, onProgress);
+export const createCedula = (data: Omit<Cedula, 'id'>) => createDocument<Cedula>(collections.cedulas, data);
+export const updateCedula = (id: string, data: Partial<Cedula>) => updateDocument<Cedula>(collections.cedulas, id, data);
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

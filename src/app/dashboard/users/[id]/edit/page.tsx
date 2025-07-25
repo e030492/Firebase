@@ -38,7 +38,6 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { User, Client } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -133,8 +132,6 @@ export default function EditUserPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-
 
   useEffect(() => {
     if (!dataLoading && userId) {
@@ -201,7 +198,6 @@ export default function EditUserPage() {
     }
     
     setIsSaving(true);
-    setUploadProgress(0);
 
     try {
         const updatedData: Partial<User> = {
@@ -223,7 +219,7 @@ export default function EditUserPage() {
             updatedData.password = password;
         }
 
-        await updateUser(userId, updatedData, setUploadProgress);
+        await updateUser(userId, updatedData);
         alert('Usuario actualizado con éxito.');
         router.push('/dashboard/users');
     } catch (error) {
@@ -231,7 +227,6 @@ export default function EditUserPage() {
         alert("Error al actualizar el usuario.");
     } finally {
         setIsSaving(false);
-        setUploadProgress(null);
     }
   }
 
@@ -330,7 +325,6 @@ export default function EditUserPage() {
                     <Camera className="mr-2 h-4 w-4" />
                     Subir Foto
                   </Button>
-                   {uploadProgress !== null && photoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                   </div>
 
                   <Input
@@ -408,7 +402,6 @@ export default function EditUserPage() {
                         <Camera className="mr-2 h-4 w-4" />
                         {signatureUrl ? 'Cambiar Firma' : 'Subir Firma'}
                     </Button>
-                    {uploadProgress !== null && signatureUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                 </div>
                 <Input
                     id="signature-upload"

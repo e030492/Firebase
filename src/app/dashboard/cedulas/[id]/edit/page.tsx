@@ -38,7 +38,6 @@ import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Cedula, Client, Equipment, User, System, Protocol, ProtocolStep } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
-import { Progress } from '@/components/ui/progress';
 
 
 export default function EditCedulaPage() {
@@ -74,7 +73,6 @@ export default function EditCedulaPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const dataLoadedRef = useRef(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && cedulaId) {
@@ -193,7 +191,6 @@ export default function EditCedulaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    setUploadProgress(0);
 
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
@@ -228,7 +225,7 @@ export default function EditCedulaPage() {
     };
       
     try {
-        await updateCedula(cedulaId, updatedData, setUploadProgress);
+        await updateCedula(cedulaId, updatedData);
         alert('Cédula actualizada con éxito.');
         router.push('/dashboard/cedulas');
     } catch (error) {
@@ -236,7 +233,6 @@ export default function EditCedulaPage() {
         alert('Error: No se pudo actualizar la cédula.');
     } finally {
         setIsSaving(false);
-        setUploadProgress(null);
     }
   }
 
@@ -599,7 +595,6 @@ export default function EditCedulaPage() {
                                         </Button>
                                     )}
                                 </div>
-                                {uploadProgress !== null && step.imageUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                                 <Input
                                     id={`image-upload-${index}`}
                                     type="file"

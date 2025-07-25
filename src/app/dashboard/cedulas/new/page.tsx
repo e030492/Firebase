@@ -46,7 +46,6 @@ import { Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from 
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardDescription } from '@/components/ui/card';
 import { useData } from '@/hooks/use-data-provider';
-import { Progress } from '@/components/ui/progress';
 
 type EquipmentWithProtocolStatus = Equipment & { hasProtocol: boolean };
 
@@ -77,7 +76,6 @@ export default function NewCedulaPage() {
   
   const [showProtocolAlert, setShowProtocolAlert] = useState(false);
   const [equipmentForProtocol, setEquipmentForProtocol] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
     setTechnicians(users.filter(user => user.role === 'Técnico'));
@@ -178,7 +176,6 @@ export default function NewCedulaPage() {
         return;
     }
     setIsSaving(true);
-    setUploadProgress(0);
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(eq => eq.id === equipmentId)?.name || '';
@@ -211,7 +208,7 @@ export default function NewCedulaPage() {
     };
 
     try {
-        await createCedula(newCedulaData, setUploadProgress);
+        await createCedula(newCedulaData);
         alert('Cédula creada con éxito.');
         router.push('/dashboard/cedulas');
     } catch (error) {
@@ -219,7 +216,6 @@ export default function NewCedulaPage() {
         alert("Error al crear la cédula.");
     } finally {
         setIsSaving(false);
-        setUploadProgress(null);
     }
   };
 
@@ -517,7 +513,6 @@ export default function NewCedulaPage() {
                                         </Button>
                                     )}
                                 </div>
-                                {uploadProgress !== null && step.imageUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                                 <Input
                                     id={`image-upload-${index}`}
                                     type="file"
