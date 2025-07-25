@@ -261,25 +261,24 @@ export default function ProtocolsPage() {
   };
   
   const handleSearchSimilar = (targetEquipment: Equipment) => {
-    const similarEquipments = allEquipments.filter(eq => {
-      if (eq.id === targetEquipment.id) return false;
+    const similarEquipmentsWithProtocols = allEquipments
+      .filter(eq => {
+          if (eq.id === targetEquipment.id) return false;
+          
+          const nameDistance = levenshtein(eq.name, targetEquipment.name);
+          const typeDistance = levenshtein(eq.type, targetEquipment.type);
+          
+          return nameDistance <= 4 && typeDistance <= 4;
+      })
+      .map(eq => {
+          const protocol = protocols.find(p => p.equipmentId === eq.id && p.steps.length > 0);
+          return protocol ? { equipment: eq, protocol } : null;
+      })
+      .filter((item): item is { equipment: Equipment; protocol: Protocol } => item !== null);
       
-      const nameDistance = levenshtein(eq.name, targetEquipment.name);
-      const typeDistance = levenshtein(eq.type, targetEquipment.type);
-      
-      return nameDistance <= 4 && typeDistance <= 4;
-    });
-
-    const similarWithProtocols = similarEquipments
-        .map(eq => ({
-            equipment: eq,
-            protocol: protocols.find(p => p.equipmentId === eq.id && p.steps.length > 0)
-        }))
-        .filter((item): item is { equipment: Equipment; protocol: Protocol } => !!item.protocol);
-
-    if (similarWithProtocols.length > 0) {
+    if (similarEquipmentsWithProtocols.length > 0) {
         setProtocolToCopy({
-            sourceOptions: similarWithProtocols,
+            sourceOptions: similarEquipmentsWithProtocols,
             targetEquipment,
         });
     } else {
@@ -313,8 +312,9 @@ export default function ProtocolsPage() {
         alert("Error al copiar el protocolo.");
     }
   };
+
    const handleToggleDetails = (equipmentId: string) => {
-    setExpandedEquipmentId(prevId => (prevId === equipmentId ? null : prevId));
+    setExpandedEquipmentId(prevId => prevId === equipmentId ? null : equipmentId);
   };
   
   if(loading) {
@@ -415,7 +415,7 @@ export default function ProtocolsPage() {
                     <TableHead>Equipo</TableHead>
                     <TableHead className="hidden md:table-cell">Cliente</TableHead>
                     <TableHead className="hidden lg:table-cell">Sistema</TableHead>
-                    <TableHead className="text-right w-48">Pasos</TableHead>
+                    <TableHead className="text-right">Pasos</TableHead>
                     <TableHead className="text-right w-24">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -426,8 +426,8 @@ export default function ProtocolsPage() {
                       const equipmentProtocolSteps = equipmentProtocol?.steps || [];
                       return (
                         <Fragment key={equipment.id}>
-                          <TableRow>
-                            <TableCell>
+                          <TableRow onClick={() => handleToggleDetails(equipment.id)} className="cursor-pointer">
+                            <TableCell onClick={(e) => e.stopPropagation()}>
                               <RadioGroupItem value={equipment.id} id={`radio-${equipment.id}`} />
                             </TableCell>
                             <TableCell>
@@ -442,53 +442,55 @@ export default function ProtocolsPage() {
                             <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
                             <TableCell className="hidden lg:table-cell">{equipment.system}</TableCell>
                             <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => handleToggleDetails(equipment.id)} disabled={equipmentProtocolSteps.length === 0}>
-                                    <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
-                                    {equipmentProtocolSteps.length > 0 && <ChevronDown className="ml-2 h-4 w-4" />}
-                                </Button>
+                                <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                                    <MoreVertical className="h-4 w-4" />
-                                    <span className="sr-only">Más acciones</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {equipmentProtocol && equipmentProtocol.steps.length > 0 ? (
-                                    <>
-                                      <DropdownMenuItem asChild>
-                                        <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
-                                          <Edit className="mr-2 h-4 w-4" />
-                                          <span>Modificar Protocolo</span>
-                                        </Link>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="text-destructive focus:text-destructive"
-                                        onSelect={() => setProtocolToDelete(equipmentProtocol)}
-                                      >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        <span>Eliminar protocolo</span>
-                                      </DropdownMenuItem>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <DropdownMenuItem onSelect={() => handleSearchSimilar(equipment)}>
-                                        <Search className="mr-2 h-4 w-4" />
-                                        <span>Buscar Similares</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem asChild>
-                                        <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
-                                          <Wand2 className="mr-2 h-4 w-4" />
-                                          <span>Generar con IA</span>
-                                        </Link>
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <div className="flex items-center justify-end">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                      <MoreVertical className="h-4 w-4" />
+                                      <span className="sr-only">Más acciones</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {equipmentProtocol && equipmentProtocol.steps.length > 0 ? (
+                                      <>
+                                        <DropdownMenuItem asChild>
+                                          <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            <span>Modificar Protocolo</span>
+                                          </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onSelect={() => setProtocolToDelete(equipmentProtocol)}
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          <span>Eliminar protocolo</span>
+                                        </DropdownMenuItem>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <DropdownMenuItem onSelect={() => handleSearchSimilar(equipment)}>
+                                          <Search className="mr-2 h-4 w-4" />
+                                          <span>Buscar Similares</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                          <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                            <Wand2 className="mr-2 h-4 w-4" />
+                                            <span>Generar con IA</span>
+                                          </Link>
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={equipmentProtocolSteps.length === 0}>
+                                  <ChevronDown className={cn("h-4 w-4 transition-transform", expandedEquipmentId === equipment.id && "rotate-180")} />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                           {expandedEquipmentId === equipment.id && equipmentProtocolSteps.length > 0 && (
@@ -581,3 +583,4 @@ export default function ProtocolsPage() {
     </>
   );
 }
+
