@@ -62,7 +62,7 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
 
     const handleSave = async () => {
         setIsSaving(true);
-        setUploadProgress(null);
+        setUploadProgress(0); // Start progress at 0
         try {
             await updateCompanySettings({ logoUrl: logoUrl || '' }, setUploadProgress);
             alert('Configuración guardada con éxito.');
@@ -165,8 +165,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               href="/dashboard/dashboard"
               className="group flex h-auto items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
             >
-              <div className="flex shrink-0 items-center justify-center transition-all p-2">
-                <Image src={companySettings?.logoUrl || "https://placehold.co/360x360.png"} alt="Escuadra Technology Logo" width={360} height={360} data-ai-hint="logo" />
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center transition-all p-2">
+                <Image src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} alt="Escuadra Technology Logo" width={200} height={200} data-ai-hint="logo" className="object-contain" />
               </div>
             </Link>
           </SidebarHeader>

@@ -36,6 +36,7 @@ import {
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 
+type ProgressCallback = (progress: number) => void;
 
 type DataContextType = {
   users: User[];
@@ -50,30 +51,30 @@ type DataContextType = {
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
   // Settings
-  updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;
+  updateCompanySettings: (settingsData: Partial<CompanySettings>, onProgress?: ProgressCallback) => Promise<void>;
   // User mutations
-  createUser: (userData: Omit<User, 'id'>) => Promise<void>;
+  createUser: (userData: Omit<User, 'id'>, onProgress?: ProgressCallback) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
-  updateUser: (userId: string, userData: Partial<User>) => Promise<void>;
+  updateUser: (userId: string, userData: Partial<User>, onProgress?: ProgressCallback) => Promise<void>;
   // Client mutations
-  createClient: (clientData: Omit<Client, 'id'>) => Promise<void>;
-  updateClient: (clientId: string, clientData: Partial<Client>) => Promise<void>;
+  createClient: (clientData: Omit<Client, 'id'>, onProgress?: ProgressCallback) => Promise<void>;
+  updateClient: (clientId: string, clientData: Partial<Client>, onProgress?: ProgressCallback) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   // System mutations
   createSystem: (systemData: Omit<System, 'id'>) => Promise<void>;
   updateSystem: (systemId: string, systemData: Partial<System>) => Promise<void>;
   deleteSystem: (systemId: string) => Promise<void>;
   // Equipment mutations
-  createEquipment: (equipmentData: Omit<Equipment, 'id'>) => Promise<void>;
-  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<void>;
+  createEquipment: (equipmentData: Omit<Equipment, 'id'>, onProgress?: ProgressCallback) => Promise<void>;
+  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>, onProgress?: ProgressCallback) => Promise<void>;
   deleteEquipment: (equipmentId: string) => Promise<void>;
   // Protocol mutations
-  createProtocol: (protocolData: Omit<Protocol, 'id'>) => Promise<void>;
-  updateProtocol: (protocolId: string, protocolData: Partial<Protocol>) => Promise<void>;
+  createProtocol: (protocolData: Omit<Protocol, 'id'>) => Promise<Protocol>;
+  updateProtocol: (protocolId: string, protocolData: Partial<Protocol>) => Promise<Protocol>;
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
-  createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<void>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<void>;
+  createCedula: (cedulaData: Omit<Cedula, 'id'>, onProgress?: ProgressCallback) => Promise<void>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onProgress?: ProgressCallback) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 
@@ -140,7 +141,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return null;
   };
 
-  const value = {
+  const value: DataContextType = {
     users,
     clients,
     systems,
@@ -150,31 +151,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     companySettings,
     loading,
     error,
-    // Auth
     loginUser,
-    // Settings
     updateCompanySettings: updateCompanySettingsService,
-    // Users
     createUser: createUserService,
     updateUser: updateUserService,
     deleteUser: deleteUserService,
-    // Clients
     createClient: createClientService,
     updateClient: updateClientService,
     deleteClient: deleteClientService,
-    // Systems
     createSystem: createSystemService,
     updateSystem: updateSystemService,
     deleteSystem: deleteSystemService,
-    // Equipments
     createEquipment: createEquipmentService,
     updateEquipment: updateEquipmentService,
     deleteEquipment: deleteEquipmentService,
-    // Protocols
     createProtocol: createProtocolService,
     updateProtocol: updateProtocolService,
     deleteProtocol: deleteProtocolService,
-    // Cedulas
     createCedula: createCedulaService,
     updateCedula: updateCedulaService,
     deleteCedula: deleteCedulaService,

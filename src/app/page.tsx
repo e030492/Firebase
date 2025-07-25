@@ -56,8 +56,8 @@ export default function LoginPage() {
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex items-center justify-center">
-              <Image src={companySettings?.logoUrl || "https://placehold.co/360x360.png"} alt="Escuadra Technology Logo" width={360} height={360} data-ai-hint="logo" />
+            <div className="mb-4 flex h-24 w-24 items-center justify-center">
+              <Image src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} alt="Escuadra Technology Logo" width={200} height={200} data-ai-hint="logo" className="object-contain" />
             </div>
             <p className="text-muted-foreground">Control de Mantenimiento de Seguridad</p>
           </div>

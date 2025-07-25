@@ -1,6 +1,6 @@
 
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getStorage, ref, uploadString, getDownloadURL, deleteObject, uploadBytesResumable, type UploadTaskSnapshot } from 'firebase/storage';
 import { db, app } from './firebase';
 import { 
     mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
@@ -17,6 +17,8 @@ export type ProtocolStep = typeof mockProtocols[0]['steps'][0];
 export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] };
 export type Cedula = typeof mockCedulas[0] & { id: string };
 export type CompanySettings = { id: string; logoUrl: string };
+export type ProgressCallback = (progress: number) => void;
+
 
 const collections = {
     users: 'users',
@@ -120,15 +122,47 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 }
 
 // --- File Upload Service ---
-const uploadFile = async (folder: string, fileDataUrl: string | null): Promise<string | null> => {
-    if (!fileDataUrl || !fileDataUrl.startsWith('data:')) {
-        return fileDataUrl; // It's not a new file upload, just return the existing URL or null
-    }
-    const storageRef = ref(storage, `${folder}/${new Date().getTime()}-${Math.random().toString(36).substring(2)}`);
-    const snapshot = await uploadString(storageRef, fileDataUrl, 'data_url');
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    return downloadURL;
+const uploadFile = (
+    folder: string,
+    fileDataUrl: string | null,
+    onProgress?: ProgressCallback
+): Promise<string | null> => {
+    return new Promise((resolve, reject) => {
+        if (!fileDataUrl || !fileDataUrl.startsWith('data:')) {
+            resolve(fileDataUrl); // Not a new file, return existing URL or null
+            return;
+        }
+
+        const storageRef = ref(storage, `${folder}/${new Date().getTime()}-${Math.random().toString(36).substring(2)}`);
+        
+        // Convert data URL to Blob
+        const fetchResponse = fetch(fileDataUrl);
+        fetchResponse
+            .then(res => res.blob())
+            .then(blob => {
+                const uploadTask = uploadBytesResumable(storageRef, blob);
+
+                uploadTask.on('state_changed',
+                    (snapshot: UploadTaskSnapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        if (onProgress) {
+                            onProgress(progress);
+                        }
+                    },
+                    (error) => {
+                        console.error("Upload failed:", error);
+                        reject(error);
+                    },
+                    () => {
+                        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                            resolve(downloadURL);
+                        }).catch(reject);
+                    }
+                );
+            }).catch(reject);
+    });
 };
+
 
 
 // --- Specific Service Functions ---
@@ -149,9 +183,9 @@ export const subscribeToCompanySettings = (setSettings: (settings: CompanySettin
     return unsubscribe;
 };
 
-export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
+export const updateCompanySettings = async (data: Partial<CompanySettings>, onProgress?: ProgressCallback) => {
     if (data.logoUrl) {
-        data.logoUrl = (await uploadFile('company', data.logoUrl)) || '';
+        data.logoUrl = (await uploadFile('company', data.logoUrl, onProgress)) || '';
     }
     const docRef = doc(db, collections.settings, 'companyProfile');
     await setDoc(docRef, data, { merge: true });
@@ -161,86 +195,85 @@ export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
 // USERS
 export const subscribeToUsers = (setUsers: (users: User[]) => void) => subscribeToCollection<User>(collections.users, setUsers);
 
-export const createUser = async (data: Omit<User, 'id'>): Promise<User> => {
-    const photoUrl = await uploadFile('user_photos', data.photoUrl || null);
-    const signatureUrl = await uploadFile('user_signatures', data.signatureUrl || null);
+export const createUser = async (data: Omit<User, 'id'>, onProgress?: ProgressCallback): Promise<void> => {
+    const photoUrl = await uploadFile('user_photos', data.photoUrl || null, onProgress);
+    const signatureUrl = await uploadFile('user_signatures', data.signatureUrl || null, onProgress);
     
     const newUser = {
         ...data,
         photoUrl,
         signatureUrl,
     };
-    return createDocument<User>(collections.users, newUser);
+    await createDocument<User>(collections.users, newUser);
 };
 
-export const updateUser = async (id: string, data: Partial<User>): Promise<User> => {
-    const photoUrl = await uploadFile('user_photos', data.photoUrl || null);
-    const signatureUrl = await uploadFile('user_signatures', data.signatureUrl || null);
+export const updateUser = async (id: string, data: Partial<User>, onProgress?: ProgressCallback): Promise<void> => {
+    const photoUrl = await uploadFile('user_photos', data.photoUrl || null, onProgress);
+    const signatureUrl = await uploadFile('user_signatures', data.signatureUrl || null, onProgress);
     
-    const updatedUser = {
-        ...data,
-        photoUrl,
-        signatureUrl,
-    };
+    const updatedUser: Partial<User> = { ...data, photoUrl, signatureUrl };
+    
+    if (updatedUser.role !== 'Cliente') {
+      delete updatedUser.clientId;
+    }
 
-    return updateDocument<User>(collections.users, id, updatedUser);
+    await updateDocument<User>(collections.users, id, updatedUser);
 };
 export const deleteUser = (id: string): Promise<boolean> => deleteDocument(collections.users, id);
 
 // CLIENTS
 export const subscribeToClients = (setClients: (clients: Client[]) => void) => subscribeToCollection<Client>(collections.clients, setClients);
 
-export const createClient = async (data: Omit<Client, 'id'>): Promise<Client> => {
-    data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl || null);
+export const createClient = async (data: Omit<Client, 'id'>, onProgress?: ProgressCallback): Promise<void> => {
+    data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl || null, onProgress);
     
     if (data.almacenes) {
         for (const almacen of data.almacenes) {
-            almacen.photoUrl = await uploadFile('client_warehouses', almacen.photoUrl || null);
+            almacen.photoUrl = await uploadFile('client_warehouses', almacen.photoUrl || null, onProgress);
             if (almacen.planos) {
                 for (const plano of almacen.planos) {
-                    plano.url = (await uploadFile('client_planos', plano.url)) || '';
+                    plano.url = (await uploadFile('client_planos', plano.url, onProgress)) || '';
                 }
             }
         }
     }
-
-    return createDocument<Client>(collections.clients, data);
+    await createDocument<Client>(collections.clients, data);
 };
-export const updateClient = async (id: string, data: Partial<Client>): Promise<Client> => {
+export const updateClient = async (id: string, data: Partial<Client>, onProgress?: ProgressCallback): Promise<void> => {
     if(data.officePhotoUrl) {
-        data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl || null);
+        data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl || null, onProgress);
     }
     
     if (data.almacenes) {
         for (const almacen of data.almacenes) {
             if(almacen.photoUrl) {
-                almacen.photoUrl = await uploadFile('client_warehouses', almacen.photoUrl || null);
+                almacen.photoUrl = await uploadFile('client_warehouses', almacen.photoUrl || null, onProgress);
             }
             if (almacen.planos) {
                 for (const plano of almacen.planos) {
                     if (plano.url.startsWith('data:')) {
-                         plano.url = (await uploadFile('client_planos', plano.url)) || '';
+                         plano.url = (await uploadFile('client_planos', plano.url, onProgress)) || '';
                     }
                 }
             }
         }
     }
     
-    return updateDocument<Client>(collections.clients, id, data);
+    await updateDocument<Client>(collections.clients, id, data);
 };
 export const deleteClient = (id: string): Promise<boolean> => deleteDocument(collections.clients, id);
 
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
-export const createEquipment = async (data: Omit<Equipment, 'id'>): Promise<Equipment> => {
-    data.imageUrl = await uploadFile('equipments', data.imageUrl || null);
-    return createDocument<Equipment>(collections.equipments, data);
+export const createEquipment = async (data: Omit<Equipment, 'id'>, onProgress?: ProgressCallback): Promise<void> => {
+    data.imageUrl = await uploadFile('equipments', data.imageUrl || null, onProgress);
+    await createDocument<Equipment>(collections.equipments, data);
 };
-export const updateEquipment = async (id: string, data: Partial<Equipment>): Promise<Equipment> => {
+export const updateEquipment = async (id: string, data: Partial<Equipment>, onProgress?: ProgressCallback): Promise<void> => {
     if (data.imageUrl) {
-        data.imageUrl = await uploadFile('equipments', data.imageUrl || null);
+        data.imageUrl = await uploadFile('equipments', data.imageUrl || null, onProgress);
     }
-    return updateDocument<Equipment>(collections.equipments, id, data);
+    await updateDocument<Equipment>(collections.equipments, id, data);
 };
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
@@ -275,22 +308,22 @@ export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<
 
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
-export const createCedula = async (data: Omit<Cedula, 'id'>): Promise<Cedula> => {
+export const createCedula = async (data: Omit<Cedula, 'id'>, onProgress?: ProgressCallback): Promise<void> => {
     if (data.protocolSteps) {
         for(const step of data.protocolSteps) {
-            step.imageUrl = (await uploadFile('cedula_evidence', step.imageUrl)) || '';
+            step.imageUrl = (await uploadFile('cedula_evidence', step.imageUrl, onProgress)) || '';
         }
     }
-    return createDocument<Cedula>(collections.cedulas, data);
+    await createDocument<Cedula>(collections.cedulas, data);
 };
-export const updateCedula = async (id: string, data: Partial<Cedula>): Promise<Cedula> => {
+export const updateCedula = async (id: string, data: Partial<Cedula>, onProgress?: ProgressCallback): Promise<void> => {
     if (data.protocolSteps) {
         for(const step of data.protocolSteps) {
             if (step.imageUrl && step.imageUrl.startsWith('data:')) {
-                step.imageUrl = (await uploadFile('cedula_evidence', step.imageUrl)) || '';
+                step.imageUrl = (await uploadFile('cedula_evidence', step.imageUrl, onProgress)) || '';
             }
         }
     }
-    return updateDocument<Cedula>(collections.cedulas, id, data);
+    await updateDocument<Cedula>(collections.cedulas, id, data);
 };
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
