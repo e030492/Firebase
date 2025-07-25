@@ -16,19 +16,19 @@ export default function DashboardPage() {
 
     const stats = useMemo(() => {
         const totalClients = clients.length;
-        const maintenanceEquipments = equipments.filter(e => e.status === 'En Mantenimiento').length;
+        const totalEquipments = equipments.length;
         const completedCedulas = cedulas.filter(c => c.status === 'Completada').length;
 
         return {
             totalClients,
-            maintenanceEquipments,
+            totalEquipments,
             completedCedulas,
         };
     }, [clients, equipments, cedulas]);
 
     const chartData = [
         { name: 'Clientes', value: stats.totalClients, fill: 'hsl(var(--chart-1))' },
-        { name: 'En Mantenimiento', value: stats.maintenanceEquipments, fill: 'hsl(var(--chart-2))' },
+        { name: 'Equipos', value: stats.totalEquipments, fill: 'hsl(var(--chart-2))' },
         { name: 'Cédulas Completas', value: stats.completedCedulas, fill: 'hsl(var(--chart-3))' },
     ];
     
@@ -82,49 +82,49 @@ export default function DashboardPage() {
                 </CardHeader>
             </Card>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Clientes Totales
-                        </CardTitle>
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalClients}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Número de clientes activos registrados.
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Equipos en Mantenimiento
-                        </CardTitle>
-                        <HardHat className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.maintenanceEquipments}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Equipos con estado "En Mantenimiento".
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Cédulas Completadas
-                        </CardTitle>
-                        <FileCheck className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.completedCedulas}</div>
-                        <p className="text-xs text-muted-foreground">
-                           Cédulas de trabajo finalizadas exitosamente.
-                        </p>
-                    </CardContent>
-                </Card>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Building className="h-5 w-5 text-muted-foreground" />
+                        <h3 className="text-lg font-medium">Clientes Totales</h3>
+                    </div>
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="text-4xl font-bold">{stats.totalClients}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Número de clientes activos registrados.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+                 <div className="flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
+                        <HardHat className="h-5 w-5 text-muted-foreground" />
+                        <h3 className="text-lg font-medium">Equipos Totales</h3>
+                    </div>
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="text-4xl font-bold">{stats.totalEquipments}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Total de equipos registrados en el sistema.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+                 <div className="flex flex-col">
+                    <div className="flex items-center gap-2 mb-2">
+                        <FileCheck className="h-5 w-5 text-muted-foreground" />
+                        <h3 className="text-lg font-medium">Cédulas Completadas</h3>
+                    </div>
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="text-4xl font-bold">{stats.completedCedulas}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                               Cédulas de trabajo finalizadas exitosamente.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
              <Card className="col-span-1 lg:col-span-3">
