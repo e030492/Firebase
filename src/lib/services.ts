@@ -1,7 +1,8 @@
 
 
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { db, storage } from './firebase';
 import { 
     mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
 } from './mock-data';
@@ -97,14 +98,62 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
     return unsubscribe;
 }
 
+// --- Storage Service Function ---
+async function uploadFile(fileDataUrl: string, path: string): Promise<string> {
+    const storageRef = ref(storage, path);
+    const snapshot = await uploadString(storageRef, fileDataUrl, 'data_url');
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+}
+
+// --- Image Processing Utility ---
+async function processImagesInObject(data: any): Promise<any> {
+    const processedData = JSON.parse(JSON.stringify(data)); // Deep copy
+
+    // Helper to check for Base64 data URLs
+    const isDataUrl = (s: any) => typeof s === 'string' && s.startsWith('data:');
+
+    // Process top-level imageUrl
+    if (isDataUrl(processedData.imageUrl)) {
+        processedData.imageUrl = await uploadFile(processedData.imageUrl, `images/${Date.now()}-image`);
+    }
+
+    // Process protocol steps images
+    if (processedData.protocolSteps && Array.isArray(processedData.protocolSteps)) {
+        for (const step of processedData.protocolSteps) {
+            if (isDataUrl(step.imageUrl)) {
+                step.imageUrl = await uploadFile(step.imageUrl, `cedulas/${processedData.folio || Date.now()}/step-${Date.now()}`);
+            }
+        }
+    }
+    
+    // Process user photo and signature
+    if (isDataUrl(processedData.photoUrl)) {
+        processedData.photoUrl = await uploadFile(processedData.photoUrl, `users/${Date.now()}-photo`);
+    }
+    if (isDataUrl(processedData.signatureUrl)) {
+        processedData.signatureUrl = await uploadFile(processedData.signatureUrl, `users/${Date.now()}-signature`);
+    }
+
+    // Process company settings logo
+    if (isDataUrl(processedData.logoUrl)) {
+        processedData.logoUrl = await uploadFile(processedData.logoUrl, `settings/company-logo`);
+    }
+
+    return processedData;
+}
+
+
 async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
-    const docRef = await addDoc(collection(db, collectionName), data);
-    return { ...data, id: docRef.id } as T;
+    const processedData = await processImagesInObject(data);
+    const docRef = await addDoc(collection(db, collectionName), processedData);
+    return { ...processedData, id: docRef.id } as T;
 }
 
 async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
     const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, data);
+    const processedData = await processImagesInObject(data);
+    await updateDoc(docRef, processedData);
     const updatedDoc = await getDoc(docRef);
     return { id: updatedDoc.id, ...updatedDoc.data() } as T;
 }
@@ -136,7 +185,8 @@ export const subscribeToCompanySettings = (setSettings: (settings: CompanySettin
 
 export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
     const docRef = doc(db, collections.settings, 'companyProfile');
-    await setDoc(docRef, data, { merge: true });
+    const processedData = await processImagesInObject(data);
+    await setDoc(docRef, processedData, { merge: true });
 };
 
 
@@ -190,5 +240,9 @@ export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
 export const createCedula = (data: Omit<Cedula, 'id'>) => createDocument<Cedula>(collections.cedulas, data);
-export const updateCedula = (id: string, data: Partial<Cedula>) => updateDocument<Cedula>(collections.cedulas, id, data);
+export const updateCedula = (id: string, data: Partial<Cedula>, onProgress?: (progress: number) => void) => {
+    // This is a placeholder for a more complex implementation that would handle progress reporting.
+    // For now, it just calls the standard update function.
+    return updateDocument<Cedula>(collections.cedulas, id, data);
+};
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

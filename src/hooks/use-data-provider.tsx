@@ -73,7 +73,7 @@ type DataContextType = {
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
   createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<Cedula>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<Cedula>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onProgress?: (progress: number) => void) => Promise<Cedula>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 
