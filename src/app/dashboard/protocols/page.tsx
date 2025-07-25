@@ -421,7 +421,7 @@ export default function ProtocolsPage() {
                                <AccordionTrigger className="flex-1 text-lg font-medium hover:no-underline py-4">
                                   <div className="flex flex-col items-start text-left">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-bold">{equipment.name}</span>
+                                      <span className={cn("font-bold", equipmentProtocolSteps.length === 0 && "text-destructive")}>{equipment.name}</span>
                                       <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span>
                                     </div>
                                     <div className="text-xs text-muted-foreground font-normal flex items-center gap-x-2">
@@ -433,7 +433,7 @@ export default function ProtocolsPage() {
                                     </div>
                                   </div>
                                </AccordionTrigger>
-                               <div className="px-4 flex items-center gap-2">
+                               <div className="px-4 flex items-center gap-2 w-48 justify-end">
                                  <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -563,3 +563,5 @@ export default function ProtocolsPage() {
     </>
   );
 }
+
+    
