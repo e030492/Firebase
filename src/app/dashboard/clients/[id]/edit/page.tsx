@@ -56,8 +56,18 @@ export default function EditClientPage() {
             { nombre: '', direccion: '', planos: [] },
             { nombre: '', direccion: '', planos: [] },
         ];
-        if (clientAlmacenes[0]) displayAlmacenes[0] = { ...clientAlmacenes[0], planos: clientAlmacenes[0].planos || [] };
-        if (clientAlmacenes[1]) displayAlmacenes[1] = { ...clientAlmacenes[1], planos: clientAlmacenes[1].planos || [] };
+        if (clientAlmacenes[0]) {
+            displayAlmacenes[0] = { 
+                ...clientAlmacenes[0], 
+                planos: clientAlmacenes[0].planos?.map(p => ({...p})) || [] 
+            };
+        }
+        if (clientAlmacenes[1]) {
+            displayAlmacenes[1] = { 
+                ...clientAlmacenes[1], 
+                planos: clientAlmacenes[1].planos?.map(p => ({...p})) || []
+            };
+        }
         setAlmacenes(displayAlmacenes);
         setLoading(false);
       } else {
@@ -120,7 +130,13 @@ export default function EditClientPage() {
     setIsSaving(true);
     
     try {
-        const almacenesToSave = almacenes.filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '');
+        const almacenesToSave = almacenes
+            .filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '')
+            .map(a => ({
+                ...a,
+                planos: a.planos.map(p => ({...p})) // Ensure planos are plain objects
+            }));
+
         const updatedData: Partial<Client> = {
             name,
             responsable,

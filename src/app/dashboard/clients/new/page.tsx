@@ -95,7 +95,12 @@ export default function NewClientPage() {
     setLoading(true);
 
     try {
-        const almacenesToSave = almacenes.filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '');
+        const almacenesToSave = almacenes
+            .filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '')
+            .map(a => ({
+                ...a,
+                planos: a.planos.map(p => ({...p})) // Ensure planos are plain objects
+            }));
 
         const newClientData: Omit<Client, 'id'> = {
             name,
@@ -210,4 +215,3 @@ export default function NewClientPage() {
     </form>
   );
 }
-
