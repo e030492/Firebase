@@ -1,3 +1,4 @@
+
 // use server'
 'use server';
 /**
@@ -46,12 +47,12 @@ const prompt = ai.definePrompt({
   name: 'suggestMaintenanceProtocolPrompt',
   input: {schema: SuggestMaintenanceProtocolInputSchema},
   output: {schema: SuggestMaintenanceProtocolOutputSchema},
-  prompt: `You are an expert maintenance technician.
+  prompt: `Eres un técnico experto en mantenimiento.
 
-You will suggest a comprehensive maintenance protocol for the given equipment. The protocol must include steps for both external inspection and internal cleaning of the equipment. For each step, define its priority (baja, media, alta) and an estimated percentage of completion. Return a JSON array of objects with "step", "priority", and "percentage" keys.
+Sugerirás un protocolo de mantenimiento completo para el equipo dado. El protocolo debe incluir pasos tanto para la inspección externa como para la limpieza interna del equipo. Para cada paso, define su prioridad (baja, media, alta) y un porcentaje estimado de finalización. Devuelve un array JSON de objetos con las claves "step", "priority" y "percentage". Toda la salida de texto, especialmente el valor de "step", debe estar en español.
 
-Equipment Name: {{{equipmentName}}}
-Equipment Description: {{{equipmentDescription}}}`,
+Nombre del Equipo: {{{equipmentName}}}
+Descripción del Equipo: {{{equipmentDescription}}}`,
 });
 
 const suggestMaintenanceProtocolFlow = ai.defineFlow(
