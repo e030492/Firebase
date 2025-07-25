@@ -72,9 +72,6 @@ export default function NewCedulaPage() {
   const [supervisors, setSupervisors] = useState<User[]>([]);
   
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
-  const [completionPercentages, setCompletionPercentages] = useState<{ [step: string]: string }>({});
-  const [imageUrls, setImageUrls] = useState<{ [step: string]: string }>({});
-  const [notes, setNotes] = useState<{ [step: string]: string }>({});
   
   const [isSaving, setIsSaving] = useState(false);
   
@@ -143,49 +140,35 @@ export default function NewCedulaPage() {
 
     const equipmentProtocol = protocols.find(p => p.equipmentId === newEquipmentId);
     if (equipmentProtocol) {
-        setProtocolSteps(equipmentProtocol.steps);
-        const initialPercentages = equipmentProtocol.steps.reduce((acc, step) => {
-            acc[step.step] = '0';
-            return acc;
-        }, {} as { [step: string]: string });
-        const initialNotes = equipmentProtocol.steps.reduce((acc, step) => {
-            acc[step.step] = '';
-            return acc;
-        }, {} as { [step: string]: string });
-        setCompletionPercentages(initialPercentages);
-        setImageUrls({});
-        setNotes(initialNotes);
+        const initialSteps = equipmentProtocol.steps.map(step => ({ ...step, completion: 0, notes: '', imageUrl: '' }));
+        setProtocolSteps(initialSteps);
     } else {
         setProtocolSteps([]);
     }
   };
 
-
-  const handlePercentageChange = (step: string, value: string) => {
-    setCompletionPercentages(prev => ({ ...prev, [step]: value }));
+  const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
+    setProtocolSteps(prev => {
+        const newSteps = [...prev];
+        const updatedStep = { ...newSteps[index], [field]: value };
+        newSteps[index] = updatedStep;
+        return newSteps;
+    });
   };
 
-  const handleImageChange = (step: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageUrls(prev => ({ ...prev, [step]: reader.result as string }));
+        handleStepChange(index, 'imageUrl', reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
   
-  const handleImageDelete = (step: string) => {
-    setImageUrls(prev => {
-        const newImageUrls = { ...prev };
-        delete newImageUrls[step];
-        return newImageUrls;
-    });
-  };
-
-  const handleNotesChange = (step: string, value: string) => {
-    setNotes(prev => ({ ...prev, [step]: value }));
+  const handleImageDelete = (index: number) => {
+    handleStepChange(index, 'imageUrl', '');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,9 +203,9 @@ export default function NewCedulaPage() {
       protocolSteps: protocolSteps.map(step => ({
         step: step.step,
         priority: step.priority,
-        completion: Number(completionPercentages[step.step]) || 0,
-        imageUrl: imageUrls[step.step] || null,
-        notes: notes[step.step] || '',
+        completion: Number(step.completion) || 0,
+        imageUrl: step.imageUrl,
+        notes: step.notes || '',
         percentage: step.percentage || 0,
       })),
     };
@@ -486,8 +469,8 @@ export default function NewCedulaPage() {
                                     <Textarea
                                         id={`step-notes-${index}`}
                                         placeholder="Añadir notas sobre el procedimiento..."
-                                        value={notes[step.step] || ''}
-                                        onChange={(e) => handleNotesChange(step.step, e.target.value)}
+                                        value={step.notes || ''}
+                                        onChange={(e) => handleStepChange(index, 'notes', e.target.value)}
                                         className="min-h-24"
                                         disabled={isSaving}
                                     />
@@ -495,8 +478,8 @@ export default function NewCedulaPage() {
                                 <div className="grid gap-3">
                                     <Label htmlFor={`step-percentage-${index}`}>% Ejecutado</Label>
                                     <Select
-                                        value={completionPercentages[step.step] || '0'}
-                                        onValueChange={(value) => handlePercentageChange(step.step, value)}
+                                        value={String(step.completion || '0')}
+                                        onValueChange={(value) => handleStepChange(index, 'completion', Number(value))}
                                         disabled={isSaving}
                                     >
                                         <SelectTrigger id={`step-percentage-${index}`} className="w-48">
@@ -515,8 +498,8 @@ export default function NewCedulaPage() {
                            </div>
                            <div className="grid gap-3">
                                 <Label>Evidencia Fotográfica</Label>
-                                {imageUrls[step.step] ? (
-                                    <Image src={imageUrls[step.step]} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                {step.imageUrl ? (
+                                    <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
                                 ) : (
                                     <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
                                         <Camera className="h-10 w-10 text-muted-foreground" />
@@ -525,22 +508,22 @@ export default function NewCedulaPage() {
                                 <div className="flex items-center gap-2">
                                     <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={isSaving}>
                                         <Camera className="mr-2 h-4 w-4" />
-                                        {imageUrls[step.step] ? 'Cambiar Foto' : 'Tomar o Subir Foto'}
+                                        {step.imageUrl ? 'Cambiar Foto' : 'Tomar o Subir Foto'}
                                     </Button>
-                                    {imageUrls[step.step] && (
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => handleImageDelete(step.step)} disabled={isSaving}>
+                                    {step.imageUrl && (
+                                        <Button type="button" variant="destructive" size="icon" onClick={() => handleImageDelete(index)} disabled={isSaving}>
                                             <Trash2 className="h-4 w-4" />
                                             <span className="sr-only">Eliminar Foto</span>
                                         </Button>
                                     )}
                                 </div>
-                                {uploadProgress !== null && imageUrls[step.step]?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
+                                {uploadProgress !== null && step.imageUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                                 <Input
                                     id={`image-upload-${index}`}
                                     type="file"
                                     accept="image/*"
                                     capture="environment"
-                                    onChange={(e) => handleImageChange(step.step, e)}
+                                    onChange={(e) => handleImageChange(index, e)}
                                     className="hidden"
                                     disabled={isSaving}
                                 />
