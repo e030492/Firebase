@@ -88,10 +88,10 @@ export default function DashboardPage() {
                         <Building className="h-5 w-5 text-muted-foreground" />
                         <h3 className="text-lg font-medium">Clientes Totales</h3>
                     </div>
-                    <Card>
+                    <Card className="group">
                         <CardContent className="pt-6">
                             <div className="text-4xl font-bold">{stats.totalClients}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 Número de clientes activos registrados.
                             </p>
                         </CardContent>
@@ -102,10 +102,10 @@ export default function DashboardPage() {
                         <HardHat className="h-5 w-5 text-muted-foreground" />
                         <h3 className="text-lg font-medium">Equipos Totales</h3>
                     </div>
-                    <Card>
+                    <Card className="group">
                         <CardContent className="pt-6">
                             <div className="text-4xl font-bold">{stats.totalEquipments}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 Total de equipos registrados en el sistema.
                             </p>
                         </CardContent>
@@ -116,10 +116,10 @@ export default function DashboardPage() {
                         <FileCheck className="h-5 w-5 text-muted-foreground" />
                         <h3 className="text-lg font-medium">Cédulas Completadas</h3>
                     </div>
-                    <Card>
+                    <Card className="group">
                         <CardContent className="pt-6">
                             <div className="text-4xl font-bold">{stats.completedCedulas}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                Cédulas de trabajo finalizadas exitosamente.
                             </p>
                         </CardContent>
