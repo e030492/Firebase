@@ -112,8 +112,14 @@ export const mockClients = [
     name: 'Acme Corp',
     responsable: 'Juan Pérez',
     direccion: 'Av. Siempre Viva 123, Springfield',
+    officePhotoUrl: 'https://placehold.co/400x300.png',
     almacenes: [
-      { nombre: 'Almacén Central', direccion: 'Av. Siempre Viva 123, Springfield', planos: [] }
+      { 
+        nombre: 'Almacén Central', 
+        direccion: 'Av. Siempre Viva 123, Springfield', 
+        planos: [], 
+        photoUrl: 'https://placehold.co/400x300.png' 
+      }
     ]
   },
   {
@@ -121,8 +127,14 @@ export const mockClients = [
     name: 'Soluciones Tech',
     responsable: 'María García',
     direccion: 'Calle Falsa 456, Capital City',
+    officePhotoUrl: '',
     almacenes: [
-      { nombre: 'Bodega Principal', direccion: 'Calle Falsa 456, Capital City', planos: [] }
+      { 
+        nombre: 'Bodega Principal', 
+        direccion: 'Calle Falsa 456, Capital City', 
+        planos: [],
+        photoUrl: ''
+      }
     ]
   },
   {
@@ -130,6 +142,7 @@ export const mockClients = [
     name: 'Innovate Co.',
     responsable: 'Carlos Rodriguez',
     direccion: 'Blvd. de los Sueños 789, Metropolis',
+    officePhotoUrl: '',
     almacenes: []
   },
   {
@@ -137,9 +150,20 @@ export const mockClients = [
     name: 'Guardianes Nocturnos Ltda.',
     responsable: 'Ana Martinez',
     direccion: 'Paseo de la Reforma 101, CDMX',
+    officePhotoUrl: '',
     almacenes: [
-        { nombre: 'Almacén Sur', direccion: 'Insurgentes Sur 123, CDMX', planos: [] },
-        { nombre: 'Almacén Norte', direccion: 'Vallejo 456, CDMX', planos: [] }
+        { 
+            nombre: 'Almacén Sur', 
+            direccion: 'Insurgentes Sur 123, CDMX', 
+            planos: [],
+            photoUrl: 'https://placehold.co/400x300.png'
+        },
+        { 
+            nombre: 'Almacén Norte', 
+            direccion: 'Vallejo 456, CDMX', 
+            planos: [],
+            photoUrl: ''
+        }
     ]
   },
 ];

@@ -3,12 +3,14 @@
 
 import { useState, useMemo, useEffect, Fragment } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -35,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, FileText } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, FileText, Camera } from 'lucide-react';
 import { Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -224,47 +226,78 @@ export default function ClientsPage() {
                                     <CardHeader>
                                         <CardTitle>Detalles del Cliente: {client.name}</CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div>
-                                            <Label className="font-semibold">Dirección Principal</Label>
-                                            <p className="text-sm text-muted-foreground mt-1">{client.direccion}</p>
+                                    <CardContent className="space-y-6">
+                                        <div className="grid md:grid-cols-2 gap-6">
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <Label className="font-semibold">Dirección Principal</Label>
+                                                    <p className="text-sm text-muted-foreground mt-1">{client.direccion}</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="font-semibold">Foto de Oficinas</Label>
+                                                {client.officePhotoUrl ? (
+                                                    <Image src={client.officePhotoUrl} alt="Foto de las oficinas" width={400} height={300} data-ai-hint="client office" className="rounded-md object-cover aspect-video border" />
+                                                ) : (
+                                                    <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                                        <div className="text-center text-muted-foreground">
+                                                            <Camera className="h-10 w-10 mx-auto" />
+                                                            <p className="text-sm mt-2">Sin foto</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <Separator/>
                                         <div>
-                                            <Label className="font-semibold">Almacenes Registrados</Label>
+                                            <Label className="font-semibold text-lg">Almacenes Registrados</Label>
                                             {client.almacenes && client.almacenes.length > 0 ? (
-                                                <div className="space-y-3 mt-2">
+                                                <div className="space-y-4 mt-2">
                                                     {client.almacenes.map((almacen, index) => (
-                                                        <div key={index} className="text-sm p-3 border rounded-md bg-background/50">
-                                                            <p className="font-medium">{almacen.nombre}</p>
-                                                            <p className="text-muted-foreground">{almacen.direccion}</p>
-                                                            {almacen.planos && almacen.planos.length > 0 && (
-                                                                <div className="mt-2">
-                                                                    <p className="text-xs font-semibold text-muted-foreground">Planos:</p>
-                                                                    <div className="flex flex-wrap gap-4 mt-1">
-                                                                        {almacen.planos.map((plano, planoIndex) => (
-                                                                            <div key={planoIndex} className="relative group border rounded-md p-2 flex flex-col items-center justify-center text-center w-32">
-                                                                                <FileText className="h-8 w-8 text-muted-foreground" />
-                                                                                <a
-                                                                                    href={plano.url}
-                                                                                    target="_blank"
-                                                                                    rel="noopener noreferrer"
-                                                                                    className="text-xs font-medium text-primary hover:underline mt-1 truncate w-full"
-                                                                                    title={plano.name}
-                                                                                >
-                                                                                    {plano.name}
-                                                                                </a>
-                                                                                <p className="text-xs text-muted-foreground">{formatBytes(plano.size)}</p>
-                                                                            </div>
-                                                                        ))}
+                                                        <div key={index} className="p-4 border rounded-md bg-background/50">
+                                                          <CardTitle className="text-base mb-4">{almacen.nombre}</CardTitle>
+                                                          <div className="grid md:grid-cols-2 gap-6">
+                                                              <div className="space-y-4">
+                                                                  <div>
+                                                                      <Label className="font-semibold">Dirección del Almacén</Label>
+                                                                      <p className="text-sm text-muted-foreground">{almacen.direccion}</p>
+                                                                  </div>
+                                                                   {almacen.planos && almacen.planos.length > 0 && (
+                                                                      <div>
+                                                                        <Label className="font-semibold">Planos</Label>
+                                                                        <div className="flex flex-wrap gap-4 mt-1">
+                                                                            {almacen.planos.map((plano, planoIndex) => (
+                                                                                <div key={planoIndex} className="relative group border rounded-md p-2 flex flex-col items-center justify-center text-center w-32">
+                                                                                    <FileText className="h-8 w-8 text-muted-foreground" />
+                                                                                    <a href={plano.url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary hover:underline mt-1 truncate w-full" title={plano.name}>
+                                                                                        {plano.name}
+                                                                                    </a>
+                                                                                    <p className="text-xs text-muted-foreground">{formatBytes(plano.size)}</p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                      </div>
+                                                                    )}
+                                                              </div>
+                                                              <div className="space-y-2">
+                                                                  <Label className="font-semibold">Foto del Almacén</Label>
+                                                                  {almacen.photoUrl ? (
+                                                                    <Image src={almacen.photoUrl} alt={`Foto de ${almacen.nombre}`} width={400} height={300} data-ai-hint="client warehouse" className="rounded-md object-cover aspect-video border" />
+                                                                  ) : (
+                                                                     <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                                                        <div className="text-center text-muted-foreground">
+                                                                            <Camera className="h-10 w-10 mx-auto" />
+                                                                            <p className="text-sm mt-2">Sin foto</p>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            )}
+                                                                  )}
+                                                              </div>
+                                                          </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-muted-foreground mt-1">Este cliente no tiene almacenes registrados.</p>
+                                                <p className="text-sm text-muted-foreground mt-2">Este cliente no tiene almacenes registrados.</p>
                                             )}
                                         </div>
                                     </CardContent>

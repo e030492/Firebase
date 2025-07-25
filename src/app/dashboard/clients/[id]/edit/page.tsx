@@ -3,6 +3,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Upload, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Trash2, Camera } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Client, Almacen, User } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
@@ -25,6 +26,11 @@ type Plano = {
   url: string;
   name: string;
   size: number;
+};
+
+type AlmacenWithPhotos = Omit<Almacen, 'planos'> & { 
+    planos: Plano[], 
+    photoUrl?: string 
 };
 
 const defaultPermissionsByRole: { [key: string]: User['permissions'] } = {
@@ -44,13 +50,16 @@ export default function EditClientPage() {
   const clientId = params.id as string;
   const { clients, users, createUser, updateUser: updateUserClient, updateClient, loading: dataLoading } = useData();
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const officePhotoInputRef = useRef<HTMLInputElement>(null);
+  const almacenPhotoInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [almacenes, setAlmacenes] = useState<(Omit<Almacen, 'planos'> & { planos: Plano[] })[]>([
-    { nombre: '', direccion: '', planos: [] },
-    { nombre: '', direccion: '', planos: [] }
+  const [officePhotoUrl, setOfficePhotoUrl] = useState<string | null>(null);
+  const [almacenes, setAlmacenes] = useState<AlmacenWithPhotos[]>([
+    { nombre: '', direccion: '', planos: [], photoUrl: '' },
+    { nombre: '', direccion: '', planos: [], photoUrl: '' }
   ]);
   
   const [generateUserAccess, setGenerateUserAccess] = useState(false);
@@ -77,23 +86,26 @@ export default function EditClientPage() {
         setName(foundClient.name);
         setResponsable(foundClient.responsable);
         setDireccion(foundClient.direccion);
+        setOfficePhotoUrl(foundClient.officePhotoUrl || null);
         const clientAlmacenes = foundClient.almacenes || [];
-        const displayAlmacenes: (Omit<Almacen, 'planos'> & { planos: Plano[] })[] = [
-            { nombre: '', direccion: '', planos: [] },
-            { nombre: '', direccion: '', planos: [] },
+        const displayAlmacenes: AlmacenWithPhotos[] = [
+            { nombre: '', direccion: '', planos: [], photoUrl: '' },
+            { nombre: '', direccion: '', planos: [], photoUrl: '' },
         ];
         if (clientAlmacenes[0]) {
             displayAlmacenes[0] = { 
                 nombre: clientAlmacenes[0].nombre,
                 direccion: clientAlmacenes[0].direccion, 
-                planos: clientAlmacenes[0].planos?.map(p => ({...p})) || [] 
+                planos: clientAlmacenes[0].planos?.map(p => ({...p})) || [],
+                photoUrl: clientAlmacenes[0].photoUrl || '',
             };
         }
         if (clientAlmacenes[1]) {
             displayAlmacenes[1] = { 
                 nombre: clientAlmacenes[1].nombre,
                 direccion: clientAlmacenes[1].direccion, 
-                planos: clientAlmacenes[1].planos?.map(p => ({...p})) || []
+                planos: clientAlmacenes[1].planos?.map(p => ({...p})) || [],
+                photoUrl: clientAlmacenes[1].photoUrl || '',
             };
         }
         setAlmacenes(displayAlmacenes);
@@ -105,13 +117,13 @@ export default function EditClientPage() {
     }
   }, [clientId, clients, users, dataLoading]);
 
-  const handleAlmacenChange = (index: number, field: keyof Omit<Almacen, 'planos'>, value: string) => {
+  const handleAlmacenChange = (index: number, field: keyof Omit<Almacen, 'planos' | 'photoUrl'>, value: string) => {
     const newAlmacenes = [...almacenes];
     newAlmacenes[index] = { ...newAlmacenes[index], [field]: value };
     setAlmacenes(newAlmacenes);
   };
   
-  const handleFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePlanoFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const filePromises = Array.from(files).map(file => {
@@ -144,6 +156,30 @@ export default function EditClientPage() {
     setAlmacenes(newAlmacenes);
   };
 
+  const handlePhotoChange = (setter: (url: string | null) => void, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setter(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAlmacenPhotoChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const newAlmacenes = [...almacenes];
+            newAlmacenes[index].photoUrl = reader.result as string;
+            setAlmacenes(newAlmacenes);
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
   const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -167,6 +203,7 @@ export default function EditClientPage() {
             .map(a => ({
                 nombre: a.nombre,
                 direccion: a.direccion,
+                photoUrl: a.photoUrl || '',
                 planos: a.planos.map(p => ({
                     url: p.url,
                     name: p.name,
@@ -178,6 +215,7 @@ export default function EditClientPage() {
             name,
             responsable,
             direccion,
+            officePhotoUrl: officePhotoUrl || '',
             almacenes: almacenesToSave,
         };
 
@@ -254,6 +292,10 @@ export default function EditClientPage() {
                 <div className="grid gap-3">
                     <Label>Dirección Principal</Label>
                     <Skeleton className="h-10 w-full" />
+                </div>
+                 <div className="grid gap-3">
+                    <Label>Foto de las Oficinas</Label>
+                    <Skeleton className="h-40 w-full" />
                 </div>
             </div>
           </CardContent>
@@ -347,6 +389,29 @@ export default function EditClientPage() {
                 <Label htmlFor="direccion">Dirección Principal</Label>
                 <Input id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} required disabled={isSaving}/>
               </div>
+              <div className="grid gap-3">
+                  <Label>Foto de las Oficinas</Label>
+                  {officePhotoUrl ? (
+                      <Image src={officePhotoUrl} alt="Foto de las oficinas" width={400} height={300} data-ai-hint="client office" className="rounded-md object-cover aspect-video" />
+                  ) : (
+                      <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
+                          <Camera className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                  )}
+                  <Input
+                      id="office-photo-upload"
+                      type="file"
+                      accept="image/*"
+                      ref={officePhotoInputRef}
+                      onChange={(e) => handlePhotoChange(setOfficePhotoUrl, e)}
+                      className="hidden"
+                      disabled={isSaving}
+                  />
+                  <Button type="button" variant="outline" onClick={() => officePhotoInputRef.current?.click()} disabled={isSaving}>
+                      <Camera className="mr-2 h-4 w-4" />
+                      {officePhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                  </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -372,12 +437,35 @@ export default function EditClientPage() {
                     </div>
                   </div>
                   <div className="grid gap-3">
+                      <Label>Foto del Almacén {index + 1}</Label>
+                      {almacen.photoUrl ? (
+                          <Image src={almacen.photoUrl} alt={`Foto del almacén ${almacen.nombre}`} width={400} height={300} data-ai-hint="client warehouse" className="rounded-md object-cover aspect-video" />
+                      ) : (
+                          <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
+                              <Camera className="h-10 w-10 text-muted-foreground" />
+                          </div>
+                      )}
+                      <Input
+                          id={`almacen-photo-upload-${index}`}
+                          type="file"
+                          accept="image/*"
+                          ref={almacenPhotoInputRefs[index]}
+                          onChange={(e) => handleAlmacenPhotoChange(index, e)}
+                          className="hidden"
+                          disabled={isSaving}
+                      />
+                      <Button type="button" variant="outline" onClick={() => almacenPhotoInputRefs[index].current?.click()} disabled={isSaving}>
+                          <Camera className="mr-2 h-4 w-4" />
+                          {almacen.photoUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                      </Button>
+                  </div>
+                  <div className="grid gap-3">
                       <Label>Planos del Almacén {index + 1} (PDF)</Label>
                       <Button type="button" variant="outline" onClick={() => fileInputRefs[index].current?.click()} disabled={isSaving}>
                           <Upload className="mr-2 h-4 w-4" />
                           Subir Planos
                       </Button>
-                      <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[index]} onChange={(e) => handleFileChange(index, e)} className="hidden" />
+                      <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[index]} onChange={(e) => handlePlanoFileChange(index, e)} className="hidden" />
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {(almacen.planos || []).map((plano, i) => (
                           <div key={i} className="relative group border rounded-md p-2 flex flex-col items-center justify-center text-center">

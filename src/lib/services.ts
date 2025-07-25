@@ -1,3 +1,4 @@
+
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { 
@@ -6,8 +7,8 @@ import {
 
 // Interfaces based on mock-data structure
 export type Plano = { url: string; name: string; size: number };
-export type Almacen = { nombre: string; direccion: string; planos?: Plano[] };
-export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[] };
+export type Almacen = { nombre: string; direccion: string; planos?: Plano[], photoUrl?: string };
+export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[], officePhotoUrl?: string };
 export type Equipment = typeof mockEquipments[0] & { id: string };
 export type System = typeof mockSystems[0] & { id: string };
 export type User = typeof mockUsers[0] & { id: string; clientId?: string };
@@ -92,13 +93,15 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
 
 async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
     const collectionRef = collection(db, collectionName);
-    const docRef = await addDoc(collectionRef, data);
-    return { ...data, id: docRef.id } as T;
+    const newDocData = { ...data };
+    const docRef = await addDoc(collectionRef, newDocData);
+    return { ...newDocData, id: docRef.id } as T;
 }
 
 async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
     const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, data);
+    const updateData = { ...data };
+    await updateDoc(docRef, updateData);
     const updatedDoc = await getDoc(docRef);
     return { id: updatedDoc.id, ...updatedDoc.data() } as T;
 }
