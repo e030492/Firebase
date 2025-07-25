@@ -9,6 +9,7 @@ import { Building, HardHat, FileCheck, Users, ShieldCheck } from "lucide-react";
 import { useData } from '@/hooks/use-data-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/hooks/use-permissions';
+import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
     const { clients, equipments, cedulas, loading } = useData();
@@ -65,7 +66,7 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+        <div className="grid auto-rows-max items-start gap-8">
             <Card className="w-full bg-gradient-to-r from-primary/10 to-transparent border-primary/20">
                 <CardHeader>
                     <div className="flex items-center gap-4">
@@ -82,50 +83,52 @@ export default function DashboardPage() {
                 </CardHeader>
             </Card>
             
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <div className="flex flex-col">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Building className="h-5 w-5 text-muted-foreground" />
-                        <h3 className="text-lg font-medium">Clientes Totales</h3>
-                    </div>
-                    <Card className="group">
-                        <CardContent className="pt-6">
+            <section>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <Card className="group bg-[--chart-1] text-primary-foreground">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Building className="h-5 w-5" />
+                                <h3 className="text-lg font-medium">Clientes Totales</h3>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
                             <div className="text-4xl font-bold">{stats.totalClients}</div>
-                            <p className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 Número de clientes activos registrados.
                             </p>
                         </CardContent>
                     </Card>
-                </div>
-                 <div className="flex flex-col">
-                    <div className="flex items-center gap-2 mb-2">
-                        <HardHat className="h-5 w-5 text-muted-foreground" />
-                        <h3 className="text-lg font-medium">Equipos Totales</h3>
-                    </div>
-                    <Card className="group">
-                        <CardContent className="pt-6">
+                    <Card className="group bg-[--chart-2] text-primary-foreground">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <HardHat className="h-5 w-5" />
+                                <h3 className="text-lg font-medium">Equipos Totales</h3>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
                             <div className="text-4xl font-bold">{stats.totalEquipments}</div>
-                            <p className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 Total de equipos registrados en el sistema.
                             </p>
                         </CardContent>
                     </Card>
-                </div>
-                 <div className="flex flex-col">
-                    <div className="flex items-center gap-2 mb-2">
-                        <FileCheck className="h-5 w-5 text-muted-foreground" />
-                        <h3 className="text-lg font-medium">Cédulas Completadas</h3>
-                    </div>
-                    <Card className="group">
-                        <CardContent className="pt-6">
+                    <Card className="group bg-[--chart-3] text-primary-foreground">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <FileCheck className="h-5 w-5" />
+                                <h3 className="text-lg font-medium">Cédulas Completadas</h3>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
                             <div className="text-4xl font-bold">{stats.completedCedulas}</div>
-                            <p className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                Cédulas de trabajo finalizadas exitosamente.
                             </p>
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+            </section>
 
              <Card className="col-span-1 lg:col-span-3">
                 <CardHeader>
@@ -143,7 +146,16 @@ export default function DashboardPage() {
                                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                                 <Tooltip
                                     cursor={{ fill: 'hsla(var(--muted), 0.5)' }}
-                                    content={<ChartTooltipContent hideLabel />}
+                                    content={<ChartTooltipContent 
+                                        hideLabel 
+                                        labelClassName="text-lg font-bold"
+                                        formatter={(value, name, props) => {
+                                            return <div className="flex flex-col gap-1 p-1">
+                                                <span className="font-bold text-base" style={{color: props.payload.fill}}>{name}</span>
+                                                <span className="text-muted-foreground">{value}</span>
+                                            </div>
+                                        }}
+                                    />}
                                 />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]} />
                             </BarChart>
