@@ -33,7 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Search } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Search, Edit } from 'lucide-react';
 import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -48,8 +48,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { CopyProtocolDialog, type ProtocolToCopyInfo } from '@/app/dashboard/protocols/page';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 type State = {
@@ -147,6 +149,9 @@ function ProtocolGenerator() {
   const [showNoSimilarFoundAlert, setShowNoSimilarFoundAlert] = useState(false);
 
   const [existingSteps, setExistingSteps] = useState<ProtocolStep[]>([]);
+  const [stepToEdit, setStepToEdit] = useState<ProtocolStep & { index: number } | null>(null);
+  const [editedStepText, setEditedStepText] = useState('');
+  const [editedStepPriority, setEditedStepPriority] = useState<'baja' | 'media' | 'alta'>('baja');
   const [stepToDelete, setStepToDelete] = useState<ProtocolStep | null>(null);
   const [showDeleteAllAlert, setShowDeleteAllAlert] = useState(false);
 
@@ -245,7 +250,37 @@ function ProtocolGenerator() {
     formAction(new FormData()); // Resets the AI form state
     setSelectedSteps([]);
   };
+
+  const openEditDialog = (step: ProtocolStep, index: number) => {
+    setStepToEdit({ ...step, index });
+    setEditedStepText(step.step);
+    setEditedStepPriority(step.priority);
+  };
   
+  const handleSaveEditedStep = async () => {
+    if (!stepToEdit || !selectedEquipment) return;
+
+    const protocolToUpdate = protocols.find(p => p.equipmentId === selectedEquipment.id);
+    if (!protocolToUpdate) return;
+
+    const newSteps = [...protocolToUpdate.steps];
+    const updatedStep = {
+        ...newSteps[stepToEdit.index],
+        step: editedStepText,
+        priority: editedStepPriority,
+    };
+    newSteps[stepToEdit.index] = updatedStep;
+    
+    try {
+        await updateProtocol(protocolToUpdate.id, { steps: newSteps });
+        setExistingSteps(newSteps);
+        setStepToEdit(null);
+    } catch (error) {
+        console.error("Failed to update step:", error);
+        alert("Error al actualizar el paso.");
+    }
+  };
+
   const handleDeleteStep = async () => {
     if (!stepToDelete || !selectedEquipment) return;
     
@@ -467,6 +502,10 @@ function ProtocolGenerator() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(step, index)}>
+                                            <Edit className="h-4 w-4" />
+                                            <span className="sr-only">Editar paso</span>
+                                        </Button>
                                         <Button variant="ghost" size="icon" onClick={() => setStepToDelete(step)}>
                                             <Trash2 className="h-4 w-4 text-destructive" />
                                             <span className="sr-only">Eliminar paso</span>
@@ -589,6 +628,45 @@ function ProtocolGenerator() {
         </>
       )}
     </div>
+
+    <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Editar Paso del Protocolo</DialogTitle>
+                <DialogDescription>
+                    Modifique la descripción y la prioridad de este paso.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="step-text">Descripción del Paso</Label>
+                    <Textarea 
+                        id="step-text"
+                        value={editedStepText}
+                        onChange={(e) => setEditedStepText(e.target.value)}
+                        className="min-h-32"
+                    />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="step-priority">Prioridad</Label>
+                    <Select value={editedStepPriority} onValueChange={(v) => setEditedStepPriority(v as any)}>
+                        <SelectTrigger id="step-priority">
+                            <SelectValue placeholder="Seleccione una prioridad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="baja">Baja</SelectItem>
+                            <SelectItem value="media">Media</SelectItem>
+                            <SelectItem value="alta">Alta</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setStepToEdit(null)}>Cancelar</Button>
+                <Button onClick={handleSaveEditedStep}>Guardar Cambios</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 
     <CopyProtocolDialog 
         protocolToCopy={protocolToCopy} 
