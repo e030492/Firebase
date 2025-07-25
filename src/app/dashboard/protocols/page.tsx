@@ -64,7 +64,9 @@ export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: 
     const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!protocolToCopy) {
+        if (protocolToCopy && protocolToCopy.sourceOptions.length > 0) {
+            setSelectedSourceId(protocolToCopy.sourceOptions[0].equipment.id);
+        } else {
             setSelectedSourceId(null);
         }
     }, [protocolToCopy]);
@@ -78,8 +80,6 @@ export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: 
         }
     };
     
-    const selectedSourceEquipment = protocolToCopy.sourceOptions.find(opt => opt.equipment.id === selectedSourceId)?.equipment;
-
     return (
         <AlertDialog open={!!protocolToCopy} onOpenChange={onOpenChange}>
             <AlertDialogContent className="max-w-4xl">
@@ -153,6 +153,8 @@ export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: 
 }
 
 const levenshtein = (s1: string, s2: string): number => {
+  if (!s1) return s2.length;
+  if (!s2) return s1.length;
   const track = Array(s2.length + 1).fill(null).map(() => Array(s1.length + 1).fill(null));
   for (let i = 0; i <= s1.length; i += 1) {
     track[0][i] = i;
@@ -164,9 +166,9 @@ const levenshtein = (s1: string, s2: string): number => {
     for (let i = 1; i <= s1.length; i += 1) {
       const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
       track[j][i] = Math.min(
-        track[j][i - 1] + 1,
-        track[j - 1][i] + 1,
-        track[j - 1][i - 1] + indicator,
+        track[j][i - 1] + 1, // Deletion
+        track[j - 1][i] + 1, // Insertion
+        track[j - 1][i - 1] + indicator, // Substitution
       );
     }
   }
@@ -260,14 +262,17 @@ export default function ProtocolsPage() {
         alert("Error al eliminar el protocolo completo.");
     }
   };
-
+  
   const handleSearchSimilar = (targetEquipment: Equipment) => {
     const similarEquipmentsWithProtocols = allEquipments
-      .filter(eq => 
-          eq.id !== targetEquipment.id &&
-          eq.type.toLowerCase() === targetEquipment.type.toLowerCase() &&
-          levenshtein(eq.name.toLowerCase(), targetEquipment.name.toLowerCase()) <= 2
-      )
+      .filter(eq => {
+          if (eq.id === targetEquipment.id) return false;
+          
+          const nameDistance = levenshtein(eq.name.toLowerCase(), targetEquipment.name.toLowerCase());
+          const typeDistance = levenshtein(eq.type.toLowerCase(), targetEquipment.type.toLowerCase());
+          
+          return nameDistance <= 4 && typeDistance <= 4;
+      })
       .map(eq => {
           const protocol = protocols.find(p => p.equipmentId === eq.id && p.steps.length > 0);
           return protocol ? { equipment: eq, protocol } : null;
@@ -283,9 +288,18 @@ export default function ProtocolsPage() {
         setShowNoSimilarFoundAlert(true);
     }
   };
+
   
   const handleCopyProtocol = async (selectedSource: { protocol: Protocol; equipment: Equipment }) => {
     if (!protocolToCopy) return;
+
+    const existingProtocol = protocols.find(p => p.equipmentId === protocolToCopy.targetEquipment.id);
+    
+    if (existingProtocol) {
+      alert("Este equipo ya tiene un protocolo. Por favor, elimínelo primero si desea copiar uno nuevo.");
+      setProtocolToCopy(null);
+      return;
+    }
 
     const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
         equipmentId: protocolToCopy.targetEquipment.id,
@@ -549,4 +563,3 @@ export default function ProtocolsPage() {
     </>
   );
 }
-
