@@ -36,6 +36,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Equipment, Client, System } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
+import { Combobox } from '@/components/ui/combobox';
 
 
 export default function EditEquipmentPage() {
@@ -113,6 +114,13 @@ export default function EditEquipmentPage() {
     }
   }, [equipmentId, equipments, clients, systems, dataLoading]);
   
+    const existingOptions = useMemo(() => {
+        const brands = [...new Set(equipments.map(e => e.brand).filter(Boolean))].map(b => ({ value: b, label: b }));
+        const models = [...new Set(equipments.map(e => e.model).filter(Boolean))].map(m => ({ value: m, label: m }));
+        const types = [...new Set(equipments.map(e => e.type).filter(Boolean))].map(t => ({ value: t, label: t }));
+        return { brands, models, types };
+    }, [equipments]);
+
   const nextMaintenanceDate = useMemo(() => {
     if (!maintenanceStartDate || !maintenancePeriodicity) return null;
 
@@ -331,19 +339,43 @@ export default function EditEquipmentPage() {
                 <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required className="min-h-32" disabled={isSaving}/>
               </div>
                <div className="grid md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="brand">Marca</Label>
-                  <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ej. Hikvision" required disabled={isSaving}/>
-                </div>
-                <div className="grid gap-3">
-                  <Label htmlFor="model">Modelo</Label>
-                  <Input id="model" value={model} onChange={e => setModel(e.target.value)} placeholder="Ej. DS-2DE4225IW-DE" required disabled={isSaving}/>
-                </div>
-              </div>
+                 <div className="grid gap-3">
+                    <Label htmlFor="brand">Marca</Label>
+                    <Combobox
+                        value={brand}
+                        onChange={setBrand}
+                        options={existingOptions.brands}
+                        placeholder="Seleccione o escriba una marca..."
+                        searchPlaceholder="Buscar marca..."
+                        emptyPlaceholder="No se encontraron marcas."
+                        disabled={isSaving}
+                    />
+                 </div>
+                 <div className="grid gap-3">
+                    <Label htmlFor="model">Modelo</Label>
+                    <Combobox
+                        value={model}
+                        onChange={setModel}
+                        options={existingOptions.models}
+                        placeholder="Seleccione o escriba un modelo..."
+                        searchPlaceholder="Buscar modelo..."
+                        emptyPlaceholder="No se encontraron modelos."
+                        disabled={isSaving}
+                    />
+                 </div>
+               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
-                  <Label htmlFor="type">Tipo</Label>
-                  <Input id="type" value={type} onChange={e => setType(e.target.value)} placeholder="Ej. Domo PTZ" required disabled={isSaving}/>
+                    <Label htmlFor="type">Tipo</Label>
+                    <Combobox
+                        value={type}
+                        onChange={setType}
+                        options={existingOptions.types}
+                        placeholder="Seleccione o escriba un tipo..."
+                        searchPlaceholder="Buscar tipo..."
+                        emptyPlaceholder="No se encontraron tipos."
+                        disabled={isSaving}
+                    />
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="serial">Número de Serie</Label>
@@ -519,5 +551,3 @@ export default function EditEquipmentPage() {
     </form>
   );
 }
-
-    
