@@ -188,7 +188,7 @@ export default function EditEquipmentPage() {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !description || !clientId || !systemId || !location || !status || !brand || !model || !type || !maintenancePeriodicity) {
+    if (!name || !description || !clientId || !systemId || !location || !status || !brand || !model || !type) {
         alert('Por favor, complete todos los campos obligatorios.');
         return;
     }
@@ -546,7 +546,7 @@ export default function EditEquipmentPage() {
                   </div>
                   <div className="grid gap-3">
                       <Label htmlFor="maintenancePeriodicity">Periodicidad de Mantenimiento</Label>
-                      <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required disabled={isSaving}>
+                      <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} disabled={isSaving}>
                           <SelectTrigger id="maintenancePeriodicity">
                               <SelectValue placeholder="Seleccione una periodicidad" />
                           </SelectTrigger>
