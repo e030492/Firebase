@@ -107,7 +107,7 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
                             <Upload className="mr-2 h-4 w-4" />
                             Subir Logo
                         </Button>
-                        {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
+                        {uploadProgress !== null && logoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                     </div>
                 </div>
                 <SheetFooter>
@@ -165,8 +165,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               href="/dashboard/dashboard"
               className="group flex h-auto items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
             >
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center transition-all p-2">
-                <Image src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} alt="Escuadra Technology Logo" width={200} height={200} data-ai-hint="logo" className="object-contain" />
+              <div className="flex h-36 w-36 shrink-0 items-center justify-center transition-all p-2">
+                <Image src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} alt="Escuadra Technology Logo" width={360} height={360} data-ai-hint="logo" className="object-contain" />
               </div>
             </Link>
           </SidebarHeader>

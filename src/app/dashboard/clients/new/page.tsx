@@ -20,6 +20,7 @@ import { Client, User } from '@/lib/services';
 import type { Almacen } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 
 type Plano = {
   url: string;
@@ -65,6 +66,7 @@ export default function NewClientPage() {
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
   const officePhotoInputRef = useRef<HTMLInputElement>(null);
   const almacenPhotoInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
 
   const handleAlmacenChange = (index: number, field: keyof Omit<Almacen, 'planos' | 'photoUrl'>, value: string) => {
@@ -149,6 +151,7 @@ export default function NewClientPage() {
         return;
     }
     setLoading(true);
+    setUploadProgress(0);
 
     try {
         const almacenesToSave = almacenes
@@ -174,7 +177,7 @@ export default function NewClientPage() {
             almacenes: almacenesToSave,
         };
 
-        const newClient = await createClient(newClientData);
+        const newClient = await createClient(newClientData, setUploadProgress);
         
         if (generateUserAccess && newClient) {
             const newUserForClient: Omit<User, 'id'> = {
@@ -195,7 +198,9 @@ export default function NewClientPage() {
     } catch (error) {
         console.error("Failed to create client:", error);
         alert("Error al crear el cliente.");
+    } finally {
         setLoading(false);
+        setUploadProgress(null);
     }
   };
 
@@ -266,6 +271,7 @@ export default function NewClientPage() {
                       <Camera className="mr-2 h-4 w-4" />
                       {officePhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}
                   </Button>
+                  {uploadProgress !== null && officePhotoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
             </div>
           </CardContent>
@@ -313,6 +319,7 @@ export default function NewClientPage() {
                           <Camera className="mr-2 h-4 w-4" />
                           {almacen.photoUrl ? 'Cambiar Foto' : 'Subir Foto'}
                       </Button>
+                      {uploadProgress !== null && almacen.photoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                   </div>
                   <div className="grid gap-3">
                       <Label>Planos del Almacén {index + 1} (PDF)</Label>
@@ -321,6 +328,7 @@ export default function NewClientPage() {
                           Subir Planos
                       </Button>
                       <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[index]} onChange={(e) => handlePlanoFileChange(index, e)} className="hidden" />
+                      {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {(almacen.planos || []).map((plano, i) => (
                           <div key={i} className="relative group border rounded-md p-2 flex flex-col items-center justify-center text-center">

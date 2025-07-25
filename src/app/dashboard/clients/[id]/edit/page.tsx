@@ -21,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Client, Almacen, User } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 
 type Plano = {
   url: string;
@@ -72,6 +73,7 @@ export default function EditClientPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
     if (!dataLoading && clientId) {
@@ -199,6 +201,7 @@ export default function EditClientPage() {
         return;
     }
     setIsSaving(true);
+    setUploadProgress(0);
     
     try {
         const almacenesToSave = almacenes
@@ -224,7 +227,7 @@ export default function EditClientPage() {
             almacenes: almacenesToSave,
         };
 
-        await updateClient(clientId, updatedData);
+        await updateClient(clientId, updatedData, setUploadProgress);
         
         if (generateUserAccess) {
             if (existingUser) {
@@ -262,6 +265,7 @@ export default function EditClientPage() {
         alert("Error al actualizar el cliente.");
     } finally {
         setIsSaving(false);
+        setUploadProgress(null);
     }
   }
 
@@ -426,6 +430,7 @@ export default function EditClientPage() {
                       <Camera className="mr-2 h-4 w-4" />
                       {officePhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}
                   </Button>
+                  {uploadProgress !== null && officePhotoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
             </div>
           </CardContent>
@@ -473,6 +478,7 @@ export default function EditClientPage() {
                           <Camera className="mr-2 h-4 w-4" />
                           {almacen.photoUrl ? 'Cambiar Foto' : 'Subir Foto'}
                       </Button>
+                      {uploadProgress !== null && almacen.photoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                   </div>
                   <div className="grid gap-3">
                       <Label>Planos del Almacén {index + 1} (PDF)</Label>
@@ -481,6 +487,7 @@ export default function EditClientPage() {
                           Subir Planos
                       </Button>
                       <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[index]} onChange={(e) => handlePlanoFileChange(index, e)} className="hidden" />
+                      {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {(almacen.planos || []).map((plano, i) => (
                           <div key={i} className="relative group border rounded-md p-2 flex flex-col items-center justify-center text-center">

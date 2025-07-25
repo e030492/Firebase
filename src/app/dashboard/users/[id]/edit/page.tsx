@@ -216,8 +216,6 @@ export default function EditUserPage() {
 
         if (role === 'cliente') {
             updatedData.clientId = selectedClientId;
-        } else {
-            updatedData.clientId = undefined;
         }
 
         if (password) {
@@ -424,7 +422,7 @@ export default function EditUserPage() {
                 <CardTitle>Permisos de Acceso</CardTitle>
                 <CardDescription>
                     Seleccione las acciones que este usuario podrá realizar en cada módulo.
-                </CardDescription>
+                </Description>
             </CardHeader>
             <CardContent>
                 <Table>

@@ -1,4 +1,5 @@
 
+
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL, deleteObject, uploadBytesResumable, type UploadTaskSnapshot } from 'firebase/storage';
 import { db, app } from './firebase';
@@ -215,7 +216,11 @@ export const updateUser = async (id: string, data: Partial<User>, onProgress?: P
     
     if (updatedUser.role !== 'Cliente') {
       delete updatedUser.clientId;
+    } else if (updatedUser.clientId === undefined) {
+      const existingUser = (await getDoc(doc(db, collections.users, id))).data() as User | undefined;
+      updatedUser.clientId = existingUser?.clientId;
     }
+
 
     await updateDocument<User>(collections.users, id, updatedUser);
 };
@@ -224,7 +229,7 @@ export const deleteUser = (id: string): Promise<boolean> => deleteDocument(colle
 // CLIENTS
 export const subscribeToClients = (setClients: (clients: Client[]) => void) => subscribeToCollection<Client>(collections.clients, setClients);
 
-export const createClient = async (data: Omit<Client, 'id'>, onProgress?: ProgressCallback): Promise<void> => {
+export const createClient = async (data: Omit<Client, 'id'>, onProgress?: ProgressCallback): Promise<Client> => {
     data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl || null, onProgress);
     
     if (data.almacenes) {
@@ -237,7 +242,7 @@ export const createClient = async (data: Omit<Client, 'id'>, onProgress?: Progre
             }
         }
     }
-    await createDocument<Client>(collections.clients, data);
+    return await createDocument<Client>(collections.clients, data);
 };
 export const updateClient = async (id: string, data: Partial<Client>, onProgress?: ProgressCallback): Promise<void> => {
     if(data.officePhotoUrl) {
