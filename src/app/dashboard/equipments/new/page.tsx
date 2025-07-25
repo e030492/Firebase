@@ -72,7 +72,10 @@ export default function NewEquipmentPage() {
         const brands = [...new Set(equipments.map(e => e.brand).filter(Boolean))].map(b => ({ value: b, label: b }));
         const models = [...new Set(equipments.map(e => e.model).filter(Boolean))].map(m => ({ value: m, label: m }));
         const types = [...new Set(equipments.map(e => e.type).filter(Boolean))].map(t => ({ value: t, label: t }));
-        return { names, aliases, brands, models, types };
+        const ipAddresses = [...new Set(equipments.map(e => e.ipAddress).filter(Boolean))].map(ip => ({ value: ip, label: ip }));
+        const configUsers = [...new Set(equipments.map(e => e.configUser).filter(Boolean))].map(u => ({ value: u, label: u }));
+        const configPasswords = [...new Set(equipments.map(e => e.configPassword).filter(Boolean))].map(p => ({ value: p, label: p }));
+        return { names, aliases, brands, models, types, ipAddresses, configUsers, configPasswords };
     }, [equipments]);
 
   useEffect(() => {
@@ -352,15 +355,39 @@ export default function NewEquipmentPage() {
                     <div className="grid md:grid-cols-3 gap-4">
                         <div className="grid gap-3">
                             <Label htmlFor="ipAddress">Dirección IP de Configuración</Label>
-                            <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} placeholder="Ej. 192.168.1.100" disabled={isSaving} />
+                             <Combobox
+                                value={ipAddress}
+                                onChange={setIpAddress}
+                                options={existingOptions.ipAddresses}
+                                placeholder="Escriba o seleccione una IP..."
+                                searchPlaceholder="Buscar IP..."
+                                emptyPlaceholder="No se encontraron IPs."
+                                disabled={isSaving}
+                            />
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="configUser">Usuario de Configuración</Label>
-                            <Input id="configUser" value={configUser} onChange={e => setConfigUser(e.target.value)} placeholder="Ej. admin" disabled={isSaving} />
+                             <Combobox
+                                value={configUser}
+                                onChange={setConfigUser}
+                                options={existingOptions.configUsers}
+                                placeholder="Escriba o seleccione un usuario..."
+                                searchPlaceholder="Buscar usuario..."
+                                emptyPlaceholder="No se encontraron usuarios."
+                                disabled={isSaving}
+                            />
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="configPassword">Contraseña</Label>
-                            <Input id="configPassword" value={configPassword} onChange={e => setConfigPassword(e.target.value)} placeholder="Contraseña de acceso" disabled={isSaving} />
+                             <Combobox
+                                value={configPassword}
+                                onChange={setConfigPassword}
+                                options={existingOptions.configPasswords}
+                                placeholder="Escriba o seleccione una contraseña..."
+                                searchPlaceholder="Buscar contraseña..."
+                                emptyPlaceholder="No se encontraron contraseñas."
+                                disabled={isSaving}
+                            />
                         </div>
                     </div>
                 </div>
@@ -444,4 +471,3 @@ export default function NewEquipmentPage() {
     </form>
   );
 }
-
