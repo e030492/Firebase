@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CopyProtocolDialog, type ProtocolToCopyInfo } from '@/app/dashboard/protocols/page';
+import { Textarea } from '@/components/ui/textarea';
 
 
 type State = {
@@ -104,6 +105,8 @@ function SubmitButton() {
 const levenshtein = (s1: string, s2: string): number => {
   if (!s1) return s2.length;
   if (!s2) return s1.length;
+  s1 = s1.toLowerCase();
+  s2 = s2.toLowerCase();
   const track = Array(s2.length + 1).fill(null).map(() => Array(s1.length + 1).fill(null));
   for (let i = 0; i <= s1.length; i += 1) {
     track[0][i] = i;
@@ -276,8 +279,8 @@ function ProtocolGenerator() {
       .filter(eq => {
           if (eq.id === selectedEquipment.id) return false;
           
-          const nameDistance = levenshtein(eq.name.toLowerCase(), selectedEquipment.name.toLowerCase());
-          const typeDistance = levenshtein(eq.type.toLowerCase(), selectedEquipment.type.toLowerCase());
+          const nameDistance = levenshtein(eq.name, selectedEquipment.name);
+          const typeDistance = levenshtein(eq.type, selectedEquipment.type);
           
           return nameDistance <= 4 && typeDistance <= 4;
       })
@@ -379,24 +382,38 @@ function ProtocolGenerator() {
             </CardHeader>
             <CardContent>
                  <div className="grid md:grid-cols-2 gap-6 items-start">
-                    <div className="grid gap-4">
-                        <div className="grid gap-3">
-                            <Label>Equipo</Label>
-                            <Input value={selectedEquipment.name} readOnly />
-                        </div>
+                    <div className="space-y-4">
                         <div className="grid md:grid-cols-2 gap-4">
+                            <div className="grid gap-3">
+                                <Label>Nombre del Equipo</Label>
+                                <Input value={selectedEquipment.name} readOnly />
+                            </div>
                             <div className="grid gap-3">
                                 <Label>Alias</Label>
                                 <Input value={selectedEquipment.alias || 'N/A'} readOnly />
                             </div>
+                        </div>
+                         <div className="grid md:grid-cols-3 gap-4">
+                            <div className="grid gap-3">
+                                <Label>Marca</Label>
+                                <Input value={selectedEquipment.brand || 'N/A'} readOnly />
+                            </div>
                             <div className="grid gap-3">
                                 <Label>Modelo</Label>
-                                <Input value={selectedEquipment.model} readOnly />
+                                <Input value={selectedEquipment.model || 'N/A'} readOnly />
+                            </div>
+                            <div className="grid gap-3">
+                                <Label>Tipo</Label>
+                                <Input value={selectedEquipment.type || 'N/A'} readOnly />
                             </div>
                         </div>
                         <div className="grid gap-3">
                             <Label>No. Serie</Label>
                             <Input value={selectedEquipment.serial} readOnly />
+                        </div>
+                         <div className="grid gap-3">
+                            <Label>Descripción</Label>
+                            <Textarea value={selectedEquipment.description} readOnly className="h-24"/>
                         </div>
                     </div>
                     <div className="grid gap-3">
@@ -664,3 +681,5 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
+
+    
