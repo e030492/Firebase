@@ -72,7 +72,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               className="group flex h-9 items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center transition-all">
-                <Image src="/logo.png" alt="Escuadra Technology Logo" width={40} height={40} data-ai-hint="logo" />
+                <Image src="https://placehold.co/40x40.png" alt="Escuadra Technology Logo" width={40} height={40} data-ai-hint="logo" />
               </div>
             </Link>
           </SidebarHeader>
