@@ -139,6 +139,7 @@ function ProtocolGenerator() {
 
   const [existingSteps, setExistingSteps] = useState<ProtocolStep[]>([]);
   const [stepToDelete, setStepToDelete] = useState<ProtocolStep | null>(null);
+  const [showDeleteAllAlert, setShowDeleteAllAlert] = useState(false);
 
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   const [isModificationMode, setIsModificationMode] = useState(false);
@@ -151,7 +152,7 @@ function ProtocolGenerator() {
     const isModifying = !!equipmentIdFromQuery;
     setIsModificationMode(isModifying);
 
-    if (isModifying && allEquipments.length > 0 && protocols) {
+    if (isModifying && allEquipments.length > 0) {
         const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
         if (equipment) {
             setSelectedEquipmentId(equipment.id);
@@ -333,6 +334,20 @@ function ProtocolGenerator() {
     }
   };
 
+  const handleDeleteAllSteps = async () => {
+    const protocolToUpdate = protocols.find(p => p.equipmentId === selectedEquipmentId);
+    if (!protocolToUpdate) return;
+    
+    try {
+        await updateProtocol(protocolToUpdate.id, { steps: [] });
+        setExistingSteps([]);
+        setShowDeleteAllAlert(false);
+    } catch (error) {
+        console.error("Failed to delete all steps:", error);
+        alert("Error al eliminar todos los pasos.");
+    }
+  };
+
   const handleCopyProtocol = async () => {
     if (!protocolToCopy || !selectedEquipmentId) return;
 
@@ -433,9 +448,15 @@ function ProtocolGenerator() {
       
       {isModificationMode && existingSteps.length > 0 && (
         <Card>
-            <CardHeader>
-                <CardTitle>Pasos del Protocolo Existente</CardTitle>
-                <CardDescription>Estos son los pasos actualmente guardados para este equipo. Puede eliminarlos si es necesario.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Pasos del Protocolo Existente</CardTitle>
+                    <CardDescription>Estos son los pasos actualmente guardados para este equipo.</CardDescription>
+                </div>
+                <Button variant="destructive" size="icon" onClick={() => setShowDeleteAllAlert(true)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Eliminar Todos los Pasos</span>
+                </Button>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -653,6 +674,21 @@ function ProtocolGenerator() {
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    
+    <AlertDialog open={showDeleteAllAlert} onOpenChange={setShowDeleteAllAlert}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar todos los pasos?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta acción no se puede deshacer. Se eliminarán permanentemente todos los pasos de este protocolo, pero podrá generar nuevos.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAllSteps} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Sí, eliminar todo</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
