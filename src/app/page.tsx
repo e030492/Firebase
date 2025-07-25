@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -56,7 +55,7 @@ export default function LoginPage() {
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-60 w-60 items-center justify-center">
+            <div className="mb-4 flex h-72 w-72 items-center justify-center">
               <Image src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} alt="Escuadra Technology Logo" width={200} height={200} data-ai-hint="logo" className="object-contain" />
             </div>
             <p className="text-muted-foreground">Control de Mantenimiento de Seguridad</p>
