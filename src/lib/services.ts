@@ -10,14 +10,14 @@ import {
 // Interfaces based on mock-data structure
 export type Plano = { url: string; name: string; size: number };
 export type Almacen = { nombre: string; direccion: string; planos?: Plano[], photoUrl?: string };
-export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[], officePhotoUrl?: string, phone1?: string, phone2?: string };
-export type Equipment = typeof mockEquipments[0] & { id: string };
+export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[], officePhotoUrl?: string | null, phone1?: string, phone2?: string };
+export type Equipment = typeof mockEquipments[0] & { id: string, imageUrl?: string | null };
 export type System = typeof mockSystems[0] & { id: string };
-export type User = typeof mockUsers[0] & { id: string; clientId?: string };
-export type ProtocolStep = typeof mockProtocols[0]['steps'][0];
+export type User = typeof mockUsers[0] & { id: string; clientId?: string, photoUrl?: string | null, signatureUrl?: string | null };
+export type ProtocolStep = typeof mockProtocols[0]['steps'][0] & { imageUrl?: string | null };
 export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] };
 export type Cedula = typeof mockCedulas[0] & { id: string };
-export type CompanySettings = { id: string; logoUrl: string };
+export type CompanySettings = { id: string; logoUrl: string | null };
 export type ProgressCallback = (progress: number) => void;
 
 
@@ -136,9 +136,8 @@ const uploadFile = (
 
         const storageRef = ref(storage, `${folder}/${new Date().getTime()}-${Math.random().toString(36).substring(2)}`);
         
-        // Convert data URL to Blob
-        const fetchResponse = fetch(fileDataUrl);
-        fetchResponse
+        // Convert data URL to Blob asynchronously
+        fetch(fileDataUrl)
             .then(res => res.blob())
             .then(blob => {
                 const uploadTask = uploadBytesResumable(storageRef, blob);
@@ -186,7 +185,7 @@ export const subscribeToCompanySettings = (setSettings: (settings: CompanySettin
 
 export const updateCompanySettings = async (data: Partial<CompanySettings>, onProgress?: ProgressCallback) => {
     if (data.logoUrl) {
-        data.logoUrl = (await uploadFile('company', data.logoUrl, onProgress)) || '';
+        data.logoUrl = (await uploadFile('company', data.logoUrl, onProgress));
     }
     const docRef = doc(db, collections.settings, 'companyProfile');
     await setDoc(docRef, data, { merge: true });
@@ -197,8 +196,8 @@ export const updateCompanySettings = async (data: Partial<CompanySettings>, onPr
 export const subscribeToUsers = (setUsers: (users: User[]) => void) => subscribeToCollection<User>(collections.users, setUsers);
 
 export const createUser = async (data: Omit<User, 'id'>, onProgress?: ProgressCallback): Promise<void> => {
-    const photoUrl = await uploadFile('user_photos', data.photoUrl || null, onProgress);
-    const signatureUrl = await uploadFile('user_signatures', data.signatureUrl || null, onProgress);
+    const photoUrl = await uploadFile('user_photos', data.photoUrl, onProgress);
+    const signatureUrl = await uploadFile('user_signatures', data.signatureUrl, onProgress);
     
     const newUser = {
         ...data,
@@ -209,18 +208,15 @@ export const createUser = async (data: Omit<User, 'id'>, onProgress?: ProgressCa
 };
 
 export const updateUser = async (id: string, data: Partial<User>, onProgress?: ProgressCallback): Promise<void> => {
-    const photoUrl = await uploadFile('user_photos', data.photoUrl || null, onProgress);
-    const signatureUrl = await uploadFile('user_signatures', data.signatureUrl || null, onProgress);
+    const photoUrl = await uploadFile('user_photos', data.photoUrl, onProgress);
+    const signatureUrl = await uploadFile('user_signatures', data.signatureUrl, onProgress);
     
     const updatedUser: Partial<User> = { ...data, photoUrl, signatureUrl };
     
+    // Ensure clientId is not set to undefined for non-client roles
     if (updatedUser.role !== 'Cliente') {
       delete updatedUser.clientId;
-    } else if (updatedUser.clientId === undefined) {
-      const existingUser = (await getDoc(doc(db, collections.users, id))).data() as User | undefined;
-      updatedUser.clientId = existingUser?.clientId;
     }
-
 
     await updateDocument<User>(collections.users, id, updatedUser);
 };
@@ -230,11 +226,11 @@ export const deleteUser = (id: string): Promise<boolean> => deleteDocument(colle
 export const subscribeToClients = (setClients: (clients: Client[]) => void) => subscribeToCollection<Client>(collections.clients, setClients);
 
 export const createClient = async (data: Omit<Client, 'id'>, onProgress?: ProgressCallback): Promise<Client> => {
-    data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl || null, onProgress);
+    data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl, onProgress);
     
     if (data.almacenes) {
         for (const almacen of data.almacenes) {
-            almacen.photoUrl = await uploadFile('client_warehouses', almacen.photoUrl || null, onProgress);
+            almacen.photoUrl = await uploadFile('client_warehouses', almacen.photoUrl, onProgress);
             if (almacen.planos) {
                 for (const plano of almacen.planos) {
                     plano.url = (await uploadFile('client_planos', plano.url, onProgress)) || '';
@@ -246,13 +242,13 @@ export const createClient = async (data: Omit<Client, 'id'>, onProgress?: Progre
 };
 export const updateClient = async (id: string, data: Partial<Client>, onProgress?: ProgressCallback): Promise<void> => {
     if(data.officePhotoUrl) {
-        data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl || null, onProgress);
+        data.officePhotoUrl = await uploadFile('client_offices', data.officePhotoUrl, onProgress);
     }
     
     if (data.almacenes) {
         for (const almacen of data.almacenes) {
             if(almacen.photoUrl) {
-                almacen.photoUrl = await uploadFile('client_warehouses', almacen.photoUrl || null, onProgress);
+                almacen.photoUrl = await uploadFile('client_warehouses', almacen.photoUrl, onProgress);
             }
             if (almacen.planos) {
                 for (const plano of almacen.planos) {
@@ -271,12 +267,12 @@ export const deleteClient = (id: string): Promise<boolean> => deleteDocument(col
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
 export const createEquipment = async (data: Omit<Equipment, 'id'>, onProgress?: ProgressCallback): Promise<void> => {
-    data.imageUrl = await uploadFile('equipments', data.imageUrl || null, onProgress);
+    data.imageUrl = await uploadFile('equipments', data.imageUrl, onProgress);
     await createDocument<Equipment>(collections.equipments, data);
 };
 export const updateEquipment = async (id: string, data: Partial<Equipment>, onProgress?: ProgressCallback): Promise<void> => {
     if (data.imageUrl) {
-        data.imageUrl = await uploadFile('equipments', data.imageUrl || null, onProgress);
+        data.imageUrl = await uploadFile('equipments', data.imageUrl, onProgress);
     }
     await updateDocument<Equipment>(collections.equipments, id, data);
 };
@@ -316,7 +312,7 @@ export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => s
 export const createCedula = async (data: Omit<Cedula, 'id'>, onProgress?: ProgressCallback): Promise<void> => {
     if (data.protocolSteps) {
         for(const step of data.protocolSteps) {
-            step.imageUrl = (await uploadFile('cedula_evidence', step.imageUrl, onProgress)) || '';
+            step.imageUrl = (await uploadFile('cedula_evidence', step.imageUrl, onProgress));
         }
     }
     await createDocument<Cedula>(collections.cedulas, data);
@@ -325,7 +321,7 @@ export const updateCedula = async (id: string, data: Partial<Cedula>, onProgress
     if (data.protocolSteps) {
         for(const step of data.protocolSteps) {
             if (step.imageUrl && step.imageUrl.startsWith('data:')) {
-                step.imageUrl = (await uploadFile('cedula_evidence', step.imageUrl, onProgress)) || '';
+                step.imageUrl = (await uploadFile('cedula_evidence', step.imageUrl, onProgress));
             }
         }
     }

@@ -263,7 +263,7 @@ export default function EditEquipmentPage() {
           status: status as Equipment['status'],
           maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
           maintenancePeriodicity: maintenancePeriodicity,
-          imageUrl: imageUrl || '',
+          imageUrl: imageUrl,
           ipAddress,
           configUser,
           configPassword,

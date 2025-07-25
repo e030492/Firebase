@@ -219,7 +219,7 @@ export default function NewEquipmentPage() {
           status: status as Equipment['status'],
           maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
           maintenancePeriodicity: maintenancePeriodicity,
-          imageUrl: imageUrl || '',
+          imageUrl: imageUrl,
           ipAddress,
           configUser,
           configPassword,
@@ -485,7 +485,7 @@ export default function NewEquipmentPage() {
                     <Camera className="mr-2 h-4 w-4" />
                     {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
                 </Button>
-                 {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
+                 {uploadProgress !== null && imageUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
                <Separator />
                <div className="grid md:grid-cols-2 gap-4">

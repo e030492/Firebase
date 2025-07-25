@@ -209,7 +209,7 @@ export default function EditClientPage() {
             .map(a => ({
                 nombre: a.nombre,
                 direccion: a.direccion,
-                photoUrl: a.photoUrl || '',
+                photoUrl: a.photoUrl,
                 planos: (a.planos || []).map(p => ({
                     url: p.url,
                     name: p.name,
@@ -223,7 +223,7 @@ export default function EditClientPage() {
             direccion,
             phone1,
             phone2,
-            officePhotoUrl: officePhotoUrl || '',
+            officePhotoUrl: officePhotoUrl,
             almacenes: almacenesToSave,
         };
 
@@ -251,8 +251,8 @@ export default function EditClientPage() {
                     role: 'Cliente',
                     permissions: defaultPermissionsByRole.cliente,
                     clientId: clientId,
-                    photoUrl: '',
-                    signatureUrl: ''
+                    photoUrl: null,
+                    signatureUrl: null
                 };
                 await createUser(newUserForClient);
             }

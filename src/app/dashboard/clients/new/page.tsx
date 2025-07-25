@@ -159,7 +159,7 @@ export default function NewClientPage() {
             .map(a => ({
                 nombre: a.nombre,
                 direccion: a.direccion,
-                photoUrl: a.photoUrl || '',
+                photoUrl: a.photoUrl,
                 planos: (a.planos || []).map(p => ({
                     url: p.url,
                     name: p.name,
@@ -173,7 +173,7 @@ export default function NewClientPage() {
             direccion,
             phone1,
             phone2,
-            officePhotoUrl: officePhotoUrl || '',
+            officePhotoUrl: officePhotoUrl,
             almacenes: almacenesToSave,
         };
 
