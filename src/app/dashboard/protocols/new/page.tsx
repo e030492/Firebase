@@ -107,7 +107,6 @@ function ProtocolGenerator() {
   const searchParams = useSearchParams();
   const { clients, systems, equipments: allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
-  const dataLoadedRef = useRef(false);
 
   // Data states
   const [filteredEquipments, setFilteredEquipments] = useState<EquipmentWithProtocolStatus[]>([]);
@@ -130,27 +129,32 @@ function ProtocolGenerator() {
   
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
-    const equipmentIdParam = searchParams.get('equipmentId');
-    if (equipmentIdParam && !loading && !dataLoadedRef.current) {
-        const equipment = allEquipments.find(e => e.id === equipmentIdParam);
-        if (equipment) {
-            const client = clients.find(c => c.name === equipment.client);
-            const system = systems.find(s => s.name === equipment.system);
-            
-            if (client) setClientId(client.id);
-            if (system) setSystemId(system.id);
-            
-            setSelectedEquipmentId(equipment.id);
-            setEquipmentName(equipment.name);
-            setEquipmentDescription(equipment.description);
-            setEquipmentAlias(equipment.alias || '');
-            setEquipmentModel(equipment.model);
-            setEquipmentSerial(equipment.serial);
-            setEquipmentImageUrl(equipment.imageUrl || '');
-            
-            setIsModificationMode(true);
-            dataLoadedRef.current = true;
-        }
+    const equipmentIdFromQuery = searchParams.get('equipmentId');
+
+    if (equipmentIdFromQuery && !loading) {
+      const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
+      
+      if (equipment) {
+        const client = clients.find(c => c.name === equipment.client);
+        const system = systems.find(s => s.name === equipment.system);
+        
+        if (client) setClientId(client.id);
+        if (system) setSystemId(system.id);
+        
+        setSelectedEquipmentId(equipment.id);
+        setEquipmentName(equipment.name);
+        setEquipmentDescription(equipment.description);
+        setEquipmentAlias(equipment.alias || '');
+        setEquipmentModel(equipment.model);
+        setEquipmentSerial(equipment.serial);
+        setEquipmentImageUrl(equipment.imageUrl || '');
+        
+        setIsModificationMode(true);
+      } else {
+         setIsModificationMode(false);
+      }
+    } else {
+        setIsModificationMode(false);
     }
   }, [searchParams, allEquipments, clients, systems, loading]);
 
@@ -614,3 +618,6 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
+
+
+    
