@@ -87,13 +87,8 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
             <div className="report-header print:block hidden">
                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <Image src="/logo.png" alt="Escuadra Technology Logo" width={56} height={56} data-ai-hint="logo" />
-                        <div>
-                            <h2 className="text-3xl font-bold">Reporte de Servicio</h2>
-                            <p className="text-sm opacity-90">{firstCedula.system}</p>
-                        </div>
+                        <Image src="/logo.png" alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
                     </div>
-                    <p className="text-sm opacity-90">Escuadra Tecnology</p>
                 </div>
             </div>
 
@@ -111,13 +106,8 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                              <header className="border-b-2 border-gray-900 overflow-hidden print:hidden">
                                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                                     <div className="flex items-center gap-4">
-                                        <Image src="/logo.png" alt="Escuadra Technology Logo" width={56} height={56} data-ai-hint="logo" />
-                                        <div>
-                                            <h2 className="text-3xl font-bold">Reporte de Servicio</h2>
-                                            <p className="text-sm opacity-90">{cedula.system}</p>
-                                        </div>
+                                        <Image src="/logo.png" alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
                                     </div>
-                                    <p className="text-sm opacity-90">Escuadra Tecnology</p>
                                 </div>
                                 <div className="bg-white p-4 flex items-start justify-between">
                                     <div className="text-left">
@@ -742,4 +732,5 @@ export default function ReportsPage() {
         </div>
     );
 }
+
 

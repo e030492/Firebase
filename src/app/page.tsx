@@ -56,12 +56,9 @@ export default function LoginPage() {
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Image src="/logo.png" alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
+            <div className="mb-4 flex items-center justify-center">
+              <Image src="/logo.png" alt="Escuadra Technology Logo" width={120} height={120} data-ai-hint="logo" />
             </div>
-            <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground">
-              Escuadra Tecnology
-            </h1>
             <p className="text-muted-foreground">Control de Mantenimiento de Seguridad</p>
           </div>
           <Card className="shadow-lg">
