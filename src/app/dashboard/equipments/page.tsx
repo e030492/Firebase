@@ -45,6 +45,7 @@ import { Equipment, Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { addMonths, addYears } from 'date-fns';
 
 type SortableKey = keyof Equipment;
 
@@ -157,6 +158,24 @@ export default function EquipmentsPage() {
     setExpandedEquipmentId(prevId => prevId === equipmentId ? null : equipmentId);
   };
   
+  const getNextMaintenanceDate = (equipment: Equipment): string => {
+    if (!equipment.maintenanceStartDate || !equipment.maintenancePeriodicity) return 'No especificado';
+    try {
+        const startDate = new Date(equipment.maintenanceStartDate + 'T00:00:00');
+        let nextDate;
+        switch (equipment.maintenancePeriodicity) {
+            case 'Mensual': nextDate = addMonths(startDate, 1); break;
+            case 'Trimestral': nextDate = addMonths(startDate, 3); break;
+            case 'Semestral': nextDate = addMonths(startDate, 6); break;
+            case 'Anual': nextDate = addYears(startDate, 1); break;
+            default: return 'Cálculo pendiente';
+        }
+        return nextDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+    } catch {
+        return 'Fecha inválida';
+    }
+  };
+
   if (loading) {
       return (
           <div className="grid auto-rows-max items-start gap-4 md:gap-8">
@@ -374,6 +393,10 @@ export default function EquipmentsPage() {
                                                 <Label className="font-semibold">Periodicidad</Label>
                                                 <p className="text-sm text-muted-foreground">{equipment.maintenancePeriodicity}</p>
                                             </div>
+                                            <div>
+                                                <Label className="font-semibold">Próximo Mantenimiento</Label>
+                                                <p className="text-sm text-muted-foreground">{getNextMaintenanceDate(equipment)}</p>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -407,3 +430,5 @@ export default function EquipmentsPage() {
     </>
   );
 }
+
+    

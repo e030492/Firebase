@@ -2,9 +2,9 @@
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
-import { format } from 'date-fns';
+import { format, addMonths, addYears } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, ArrowLeft, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -113,6 +113,35 @@ export default function EditEquipmentPage() {
     }
   }, [equipmentId, equipments, clients, systems, dataLoading]);
   
+  const nextMaintenanceDate = useMemo(() => {
+    if (!maintenanceStartDate || !maintenancePeriodicity) return null;
+
+    try {
+        let nextDate;
+        const startDate = new Date(maintenanceStartDate);
+        switch (maintenancePeriodicity) {
+            case 'Mensual':
+                nextDate = addMonths(startDate, 1);
+                break;
+            case 'Trimestral':
+                nextDate = addMonths(startDate, 3);
+                break;
+            case 'Semestral':
+                nextDate = addMonths(startDate, 6);
+                break;
+            case 'Anual':
+                nextDate = addYears(startDate, 1);
+                break;
+            default:
+                return null;
+        }
+        return format(nextDate, "PPP", { locale: es });
+    } catch (error) {
+        console.error("Error calculating next maintenance date:", error);
+        return null;
+    }
+  }, [maintenanceStartDate, maintenancePeriodicity]);
+
   const handleClientChange = (newClientId: string) => {
     setClientId(newClientId);
     const selectedClient = clients.find(c => c.id === newClientId);
@@ -430,48 +459,54 @@ export default function EditEquipmentPage() {
                 </div>
                <Separator />
                <div className="grid md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                    <Label htmlFor="maintenanceStartDate">Fecha de Inicio de Mantenimiento</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !maintenanceStartDate && "text-muted-foreground"
-                                )}
-                                disabled={isSaving}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {maintenanceStartDate ? format(maintenanceStartDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={maintenanceStartDate}
-                                onSelect={setMaintenanceStartDate}
-                                initialFocus
-                                locale={es}
-                            />
-                        </PopoverContent>
-                    </Popover>
+                  <div className="grid gap-3">
+                      <Label htmlFor="maintenanceStartDate">Fecha de Inicio de Mantenimiento</Label>
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !maintenanceStartDate && "text-muted-foreground"
+                                  )}
+                                  disabled={isSaving}
+                              >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {maintenanceStartDate ? format(maintenanceStartDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                              </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                  mode="single"
+                                  selected={maintenanceStartDate}
+                                  onSelect={setMaintenanceStartDate}
+                                  initialFocus
+                                  locale={es}
+                              />
+                          </PopoverContent>
+                      </Popover>
+                  </div>
+                  <div className="grid gap-3">
+                      <Label htmlFor="maintenancePeriodicity">Periodicidad de Mantenimiento</Label>
+                      <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required disabled={isSaving}>
+                          <SelectTrigger id="maintenancePeriodicity">
+                              <SelectValue placeholder="Seleccione una periodicidad" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="Mensual">Mensual</SelectItem>
+                              <SelectItem value="Trimestral">Trimestral</SelectItem>
+                              <SelectItem value="Semestral">Semestral</SelectItem>
+                              <SelectItem value="Anual">Anual</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
                 </div>
-                <div className="grid gap-3">
-                    <Label htmlFor="maintenancePeriodicity">Mantenimiento Recomendado</Label>
-                    <Select value={maintenancePeriodicity} onValueChange={setMaintenancePeriodicity} required disabled={isSaving}>
-                        <SelectTrigger id="maintenancePeriodicity">
-                            <SelectValue placeholder="Seleccione una periodicidad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Mensual">Mensual</SelectItem>
-                            <SelectItem value="Trimestral">Trimestral</SelectItem>
-                            <SelectItem value="Semestral">Semestral</SelectItem>
-                            <SelectItem value="Anual">Anual</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-              </div>
+                {nextMaintenanceDate && (
+                    <div className="grid gap-3">
+                        <Label>Próximo Mantenimiento Recomendado</Label>
+                        <Input value={nextMaintenanceDate} readOnly disabled />
+                    </div>
+                )}
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
@@ -484,3 +519,5 @@ export default function EditEquipmentPage() {
     </form>
   );
 }
+
+    
