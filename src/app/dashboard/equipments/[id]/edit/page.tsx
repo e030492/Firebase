@@ -188,6 +188,10 @@ export default function EditEquipmentPage() {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !description || !clientId || !systemId || !location || !status || !brand || !model || !type || !maintenancePeriodicity) {
+        alert('Por favor, complete todos los campos obligatorios.');
+        return;
+    }
     setIsSaving(true);
 
     const clientName = clients.find(c => c.id === clientId)?.name || '';
