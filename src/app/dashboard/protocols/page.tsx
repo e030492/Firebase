@@ -428,22 +428,44 @@ export default function ProtocolsPage() {
                     <Copy className="h-6 w-6 text-primary" />
                     <AlertDialogTitle>Protocolo Similar Encontrado</AlertDialogTitle>
                 </div>
-                 <AlertDialogDescription>
-                    ¿Desea copiar los pasos del siguiente equipo de origen al equipo de destino?
-                    <div className="grid grid-cols-2 gap-4 my-4 text-sm text-foreground">
-                        <div className="bg-muted p-3 rounded-md">
-                            <h4 className="font-semibold mb-1">Origen:</h4>
-                            <p>{protocolToCopy?.sourceEquipment.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                                {`Modelo: ${protocolToCopy?.sourceEquipment.model}, N/S: ${protocolToCopy?.sourceEquipment.serial}, Cliente: ${protocolToCopy?.sourceEquipment.client}`}
-                            </p>
-                        </div>
-                         <div className="bg-muted p-3 rounded-md">
-                            <h4 className="font-semibold mb-1">Destino:</h4>
-                            <p>{protocolToCopy?.targetEquipment.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                                {`Modelo: ${protocolToCopy?.targetEquipment.model}, N/S: ${protocolToCopy?.targetEquipment.serial}, Cliente: ${protocolToCopy?.targetEquipment.client}`}
-                            </p>
+                 <AlertDialogDescription asChild>
+                    <div className="space-y-4">
+                        <p>Se encontró un protocolo para un equipo similar. ¿Desea copiar sus pasos?</p>
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Source Equipment */}
+                            <div className="bg-muted p-3 rounded-md space-y-2">
+                                <h4 className="font-semibold mb-1 text-foreground">Origen</h4>
+                                {protocolToCopy?.sourceEquipment.imageUrl ? (
+                                    <Image src={protocolToCopy.sourceEquipment.imageUrl} alt={protocolToCopy.sourceEquipment.name} width={200} height={150} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
+                                ) : (
+                                    <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
+                                )}
+                                <p className="font-semibold text-sm">{protocolToCopy?.sourceEquipment.name}</p>
+                                <div className="text-xs text-muted-foreground space-y-1">
+                                    {protocolToCopy?.sourceEquipment.alias && <p>Alias: {protocolToCopy.sourceEquipment.alias}</p>}
+                                    <p>Tipo: {protocolToCopy?.sourceEquipment.type}</p>
+                                    <p>Modelo: {protocolToCopy?.sourceEquipment.model}</p>
+                                    <p>N/S: {protocolToCopy?.sourceEquipment.serial}</p>
+                                    <p>Cliente: {protocolToCopy?.sourceEquipment.client}</p>
+                                </div>
+                            </div>
+                            {/* Target Equipment */}
+                            <div className="bg-muted p-3 rounded-md space-y-2">
+                                <h4 className="font-semibold mb-1 text-foreground">Destino</h4>
+                                 {protocolToCopy?.targetEquipment.imageUrl ? (
+                                    <Image src={protocolToCopy.targetEquipment.imageUrl} alt={protocolToCopy.targetEquipment.name} width={200} height={150} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
+                                ) : (
+                                    <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
+                                )}
+                                <p className="font-semibold text-sm">{protocolToCopy?.targetEquipment.name}</p>
+                                <div className="text-xs text-muted-foreground space-y-1">
+                                    {protocolToCopy?.targetEquipment.alias && <p>Alias: {protocolToCopy.targetEquipment.alias}</p>}
+                                    <p>Tipo: {protocolToCopy?.targetEquipment.type}</p>
+                                    <p>Modelo: {protocolToCopy?.targetEquipment.model}</p>
+                                    <p>N/S: {protocolToCopy?.targetEquipment.serial}</p>
+                                    <p>Cliente: {protocolToCopy?.targetEquipment.client}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </AlertDialogDescription>
@@ -504,4 +526,3 @@ export default function ProtocolsPage() {
   );
 }
 
-    
