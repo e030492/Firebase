@@ -404,7 +404,7 @@ export default function NewEquipmentPage() {
                 </div>
               </div>
               <div className="relative" ref={aliasInputRef}>
-                <Label htmlFor="alias">Alias del Equipo (Opcional)</Label>
+                <Label htmlFor="alias">Alias del equipo o Ubicacion en el Plano (Opcional)</Label>
                 <Input id="alias" value={alias} onChange={e => setAlias(e.target.value)} disabled={isSaving} onFocus={() => setShowAliasSuggestions(true)} autoComplete="off"/>
                 {showAliasSuggestions && aliasSuggestions.length > 0 && (
                     <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto"><CardContent className="p-2">
@@ -543,5 +543,3 @@ export default function NewEquipmentPage() {
     </form>
   );
 }
-
-    
