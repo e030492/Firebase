@@ -208,7 +208,7 @@ export default function EditClientPage() {
                 nombre: a.nombre,
                 direccion: a.direccion,
                 photoUrl: a.photoUrl || '',
-                planos: a.planos.map(p => ({
+                planos: (a.planos || []).map(p => ({
                     url: p.url,
                     name: p.name,
                     size: p.size
