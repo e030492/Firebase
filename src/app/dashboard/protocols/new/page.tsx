@@ -130,17 +130,12 @@ function ProtocolGenerator() {
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
     const equipmentIdFromQuery = searchParams.get('equipmentId');
+    setIsModificationMode(!!equipmentIdFromQuery);
 
-    if (equipmentIdFromQuery && !loading) {
+    if (equipmentIdFromQuery && !loading && allEquipments.length > 0) {
       const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
       
       if (equipment) {
-        const client = clients.find(c => c.name === equipment.client);
-        const system = systems.find(s => s.name === equipment.system);
-        
-        if (client) setClientId(client.id);
-        if (system) setSystemId(system.id);
-        
         setSelectedEquipmentId(equipment.id);
         setEquipmentName(equipment.name);
         setEquipmentDescription(equipment.description);
@@ -148,15 +143,9 @@ function ProtocolGenerator() {
         setEquipmentModel(equipment.model);
         setEquipmentSerial(equipment.serial);
         setEquipmentImageUrl(equipment.imageUrl || '');
-        
-        setIsModificationMode(true);
-      } else {
-         setIsModificationMode(false);
       }
-    } else {
-        setIsModificationMode(false);
     }
-  }, [searchParams, allEquipments, clients, systems, loading]);
+  }, [searchParams, allEquipments, loading]);
 
 
   // Filter equipments when client or system changes
@@ -371,60 +360,66 @@ function ProtocolGenerator() {
         <form action={formAction}>
           <CardHeader>
             <CardTitle>Detalles del Equipo</CardTitle>
-            <CardDescription>{isModificationMode ? 'Los detalles del equipo no se pueden cambiar en modo de modificación.' : 'Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.'}</CardDescription>
+            <CardDescription>{isModificationMode ? 'Los detalles del equipo se muestran a continuación.' : 'Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.'}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
-            {/* Filters */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-               <div className="grid gap-3">
-                 <Label htmlFor="client">Cliente</Label>
-                 <Select onValueChange={handleClientChange} value={clientId} disabled={isModificationMode}>
-                   <SelectTrigger>
-                     <SelectValue placeholder="Seleccione un cliente" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     {clients.map(client => (
-                       <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
-               <div className="grid gap-3">
-                 <Label htmlFor="system">Sistema</Label>
-                 <Select onValueChange={handleSystemChange} value={systemId} disabled={!clientId || isModificationMode}>
-                   <SelectTrigger>
-                     <SelectValue placeholder="Seleccione un sistema" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     {systems.map(system => (
-                       <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
-               <div className="grid gap-3">
-                 <Label htmlFor="equipment">Seleccionar Equipo (Opcional)</Label>
-                 <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId || isModificationMode}>
-                   <SelectTrigger>
-                     <SelectValue placeholder="Seleccione un equipo..." />
-                   </SelectTrigger>
-                   <SelectContent>
-                     {filteredEquipments.map(eq => (
-                        <SelectItem key={eq.id} value={eq.id} className={!eq.hasProtocol ? 'text-destructive' : ''}>
-                          {eq.name}
-                          {eq.alias && ` (${eq.alias})`}
-                          {` - N/S: ${eq.serial}`}
-                        </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
-            </div>
+            {!isModificationMode && (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid gap-3">
+                    <Label htmlFor="client">Cliente</Label>
+                    <Select onValueChange={handleClientChange} value={clientId}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {clients.map(client => (
+                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-3">
+                    <Label htmlFor="system">Sistema</Label>
+                    <Select onValueChange={handleSystemChange} value={systemId} disabled={!clientId}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un sistema" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {systems.map(system => (
+                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-3">
+                    <Label htmlFor="equipment">Seleccionar Equipo (Opcional)</Label>
+                    <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un equipo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {filteredEquipments.map(eq => (
+                            <SelectItem key={eq.id} value={eq.id} className={!eq.hasProtocol ? 'text-destructive' : ''}>
+                            {eq.name}
+                            {eq.alias && ` (${eq.alias})`}
+                            {` - N/S: ${eq.serial}`}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
+              </div>
+            )}
+            
             {isModificationMode && (
                 <>
                 <Separator/>
                 <div className="grid md:grid-cols-2 gap-6 items-start">
                     <div className="grid gap-4">
+                        <div className="grid gap-3">
+                            <Label>Equipo</Label>
+                            <Input value={equipmentName} readOnly />
+                        </div>
                         <div className="grid md:grid-cols-2 gap-4">
                             <div className="grid gap-3">
                                 <Label>Alias</Label>
@@ -454,8 +449,10 @@ function ProtocolGenerator() {
                         )}
                     </div>
                 </div>
+                <Separator/>
                 </>
             )}
+            
             {/* Manual input */}
             <div className="grid gap-3">
               <Label htmlFor="equipmentName">Nombre del Equipo</Label>
@@ -466,7 +463,7 @@ function ProtocolGenerator() {
                 onChange={e => setEquipmentName(e.target.value)}
                 placeholder="Ej. Cámara IP Domo PTZ"
                 required
-                readOnly={isModificationMode || !!selectedEquipmentId}
+                readOnly={!!selectedEquipmentId}
               />
             </div>
             <div className="grid gap-3">
@@ -479,7 +476,7 @@ function ProtocolGenerator() {
                 placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
                 required
                 className="min-h-32"
-                readOnly={isModificationMode || !!selectedEquipmentId}
+                readOnly={!!selectedEquipmentId}
               />
             </div>
           </CardContent>
@@ -618,6 +615,3 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
-
-
-    
