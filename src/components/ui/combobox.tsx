@@ -6,18 +6,11 @@ import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Input } from "@/components/ui/input"
 
 interface ComboboxProps {
   options: { label: string; value: string }[];
@@ -39,77 +32,73 @@ export function Combobox({
     disabled = false
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [internalValue, setInternalValue] = React.useState("")
+  const [inputValue, setInputValue] = React.useState(value || "");
 
   React.useEffect(() => {
-    if (value) {
-      setInternalValue(value);
-    } else {
-      setInternalValue("");
-    }
+    setInputValue(value || "");
   }, [value]);
 
-  const handleSelect = (currentValue: string) => {
-    const newValue = currentValue === internalValue ? "" : currentValue;
-    setInternalValue(newValue);
+  const filteredOptions = React.useMemo(() => {
+    if (!inputValue) return options;
+    return options.filter(option =>
+      option.label.toLowerCase().includes(inputValue.toLowerCase())
+    );
+  }, [inputValue, options]);
+
+  const handleSelect = (optionValue: string) => {
+    const newValue = optionValue === value ? "" : optionValue;
     onChange(newValue);
+    setInputValue(newValue);
     setOpen(false);
   }
-  
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen)
-    if (!isOpen) {
-      onChange(internalValue);
-    } else {
-      // When opening, ensure the internal value matches the external one
-      setInternalValue(value || "");
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setInputValue(text);
+    onChange(text); // Update form state in real-time
+    if (!open) {
+      setOpen(true);
     }
   }
 
-  const selectedOptionLabel = options.find((option) => option.value.toLowerCase() === value?.toLowerCase())?.label || value || placeholder;
+  const handleBlur = () => {
+    setOpen(false);
+    // The value is already up-to-date due to handleInputChange
+  };
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between font-normal"
-            disabled={disabled}
-        >
-            <span className="truncate">{selectedOptionLabel}</span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        <div className="relative">
+            <Input
+                value={inputValue}
+                onChange={handleInputChange}
+                onFocus={() => setOpen(true)}
+                onBlur={handleBlur}
+                placeholder={placeholder}
+                disabled={disabled}
+                className="pr-8"
+            />
+            <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
+        </div>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" style={{ minWidth: "var(--radix-popover-trigger-width)" }}>
-        <Command>
-            <CommandInput
-                placeholder={searchPlaceholder}
-                value={internalValue}
-                onValueChange={setInternalValue}
-            />
-          <CommandList>
-            <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  onSelect={handleSelect}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value && option.value.toLowerCase() === value.toLowerCase() ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+        {open && filteredOptions.length > 0 && (
+          <ul className="max-h-60 overflow-auto py-1">
+            {filteredOptions.map((option) => (
+              <li
+                key={option.value}
+                onMouseDown={(e) => { // Use onMouseDown to prevent onBlur from firing first
+                    e.preventDefault();
+                    handleSelect(option.value);
+                }}
+                className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent"
+              >
+                <span className="truncate">{option.label}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </PopoverContent>
     </Popover>
   )
