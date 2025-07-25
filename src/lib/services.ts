@@ -1,7 +1,7 @@
 
 
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from './firebase';
 import { 
     mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
@@ -9,7 +9,7 @@ import {
 
 // Interfaces based on mock-data structure
 export type Plano = { url: string; name: string; size: number };
-export type Almacen = { nombre: string; direccion: string; planos?: Plano[], photoUrl?: string };
+export type Almacen = { nombre: string; direccion: string; };
 export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[], officePhotoUrl?: string | null, phone1?: string, phone2?: string };
 export type Equipment = typeof mockEquipments[0] & { id: string, imageUrl?: string | null };
 export type System = typeof mockSystems[0] & { id: string };
@@ -53,71 +53,36 @@ export const connectionTest = async () => {
 }
 
 // --- Helper Functions ---
-async function uploadFile(fileDataUrl: string, path: string): Promise<string> {
-    if (!fileDataUrl || !fileDataUrl.startsWith('data:')) {
-        return fileDataUrl; // It's already a URL or empty
-    }
-
-    try {
-        const response = await fetch(fileDataUrl);
-        const blob = await response.blob();
-        
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, blob);
-        const downloadURL = await getDownloadURL(storageRef);
-        return downloadURL;
-
-    } catch (error) {
-        console.error("Upload failed:", error);
-        throw error;
-    }
-};
-
-const processImagesInObject = async (data: any, basePath: string): Promise<any> => {
+const processImagesInObject = async (data: any): Promise<any> => {
     const dataWithUrls = { ...data };
-    
+
     if (data.imageUrl && data.imageUrl.startsWith('data:')) {
-        const path = `${basePath}/image-${Date.now()}`;
-        dataWithUrls.imageUrl = await uploadFile(data.imageUrl, path);
+        const storageRef = ref(storage, `equipments/${Date.now()}`);
+        const uploadResult = await uploadString(storageRef, data.imageUrl, 'data_url');
+        dataWithUrls.imageUrl = await getDownloadURL(uploadResult.ref);
     }
-    if (data.officePhotoUrl && data.officePhotoUrl.startsWith('data:')) {
-        const path = `${basePath}/officePhoto-${Date.now()}`;
-        dataWithUrls.officePhotoUrl = await uploadFile(data.officePhotoUrl, path);
-    }
-    if (data.photoUrl && data.photoUrl.startsWith('data:')) {
-        const path = `${basePath}/photo-${Date.now()}`;
-        dataWithUrls.photoUrl = await uploadFile(data.photoUrl, path);
+     if (data.photoUrl && data.photoUrl.startsWith('data:')) {
+        const storageRef = ref(storage, `users/photos/${Date.now()}`);
+        const uploadResult = await uploadString(storageRef, data.photoUrl, 'data_url');
+        dataWithUrls.photoUrl = await getDownloadURL(uploadResult.ref);
     }
     if (data.signatureUrl && data.signatureUrl.startsWith('data:')) {
-        const path = `${basePath}/signature-${Date.now()}`;
-        dataWithUrls.signatureUrl = await uploadFile(data.signatureUrl, path);
+        const storageRef = ref(storage, `users/signatures/${Date.now()}`);
+        const uploadResult = await uploadString(storageRef, data.signatureUrl, 'data_url');
+        dataWithUrls.signatureUrl = await getDownloadURL(uploadResult.ref);
+    }
+    if (data.logoUrl && data.logoUrl.startsWith('data:')) {
+        const storageRef = ref(storage, `settings/logo`);
+        const uploadResult = await uploadString(storageRef, data.logoUrl, 'data_url');
+        dataWithUrls.logoUrl = await getDownloadURL(uploadResult.ref);
     }
 
-    if (Array.isArray(data.almacenes)) {
-        dataWithUrls.almacenes = await Promise.all(data.almacenes.map(async (almacen: any, index: number) => {
-            let processedAlmacen = {...almacen};
-            if(almacen.photoUrl && almacen.photoUrl.startsWith('data:')) {
-                const path = `${basePath}/almacen-${index}-photo-${Date.now()}`;
-                processedAlmacen.photoUrl = await uploadFile(almacen.photoUrl, path);
-            }
-            if (Array.isArray(almacen.planos)) {
-                processedAlmacen.planos = await Promise.all(almacen.planos.map(async (plano: any, planoIndex: number) => {
-                    if (plano.url && plano.url.startsWith('data:')) {
-                        const path = `${basePath}/almacen-${index}-plano-${planoIndex}-${Date.now()}`;
-                        return { ...plano, url: await uploadFile(plano.url, path) };
-                    }
-                    return plano;
-                }));
-            }
-            return processedAlmacen;
-        }));
-    }
-    
     if (Array.isArray(data.protocolSteps)) {
-        dataWithUrls.protocolSteps = await Promise.all(data.protocolSteps.map(async (step: any, index: number) => {
+        dataWithUrls.protocolSteps = await Promise.all(data.protocolSteps.map(async (step: any) => {
             if(step.imageUrl && step.imageUrl.startsWith('data:')) {
-                const path = `${basePath}/protocolStep-${index}-image-${Date.now()}`;
-                return { ...step, imageUrl: await uploadFile(step.imageUrl, path) };
+                const storageRef = ref(storage, `cedulas/steps/${Date.now()}`);
+                const uploadResult = await uploadString(storageRef, step.imageUrl, 'data_url');
+                return { ...step, imageUrl: await getDownloadURL(uploadResult.ref) };
             }
             return step;
         }));
@@ -173,15 +138,14 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
     return unsubscribe;
 }
 
-async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
-    const docRef = doc(collection(db, collectionName));
-    const processedData = await processImagesInObject(data, `${collectionName}/${docRef.id}`);
-    await setDoc(docRef, processedData);
+async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>, onProgress?: (progress: number) => void): Promise<T> {
+    const processedData = await processImagesInObject(data);
+    const docRef = await addDoc(collection(db, collectionName), processedData);
     return { ...processedData, id: docRef.id } as T;
 }
 
-async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
-    const processedData = await processImagesInObject(data, `${collectionName}/${id}`);
+async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>, onProgress?: (progress: number) => void): Promise<T> {
+    const processedData = await processImagesInObject(data);
     const docRef = doc(db, collectionName, id);
     await updateDoc(docRef, processedData);
     const updatedDoc = await getDoc(docRef);
@@ -214,7 +178,7 @@ export const subscribeToCompanySettings = (setSettings: (settings: CompanySettin
 };
 
 export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
-    const processedData = await processImagesInObject(data, 'settings');
+    const processedData = await processImagesInObject(data);
     const docRef = doc(db, collections.settings, 'companyProfile');
     await setDoc(docRef, processedData, { merge: true });
 };
@@ -222,8 +186,8 @@ export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
 
 // USERS
 export const subscribeToUsers = (setUsers: (users: User[]) => void) => subscribeToCollection<User>(collections.users, setUsers);
-export const createUser = (data: Omit<User, 'id'>) => createDocument<User>(collections.users, data);
-export const updateUser = (id: string, data: Partial<User>) => updateDocument<User>(collections.users, id, data);
+export const createUser = (data: Omit<User, 'id'>, onProgress?: (progress: number) => void) => createDocument<User>(collections.users, data, onProgress);
+export const updateUser = (id: string, data: Partial<User>, onProgress?: (progress: number) => void) => updateDocument<User>(collections.users, id, data, onProgress);
 export const deleteUser = (id: string): Promise<boolean> => deleteDocument(collections.users, id);
 
 // CLIENTS
@@ -234,8 +198,8 @@ export const deleteClient = (id: string): Promise<boolean> => deleteDocument(col
 
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
-export const createEquipment = (data: Omit<Equipment, 'id'>) => createDocument<Equipment>(collections.equipments, data);
-export const updateEquipment = (id: string, data: Partial<Equipment>) => updateDocument<Equipment>(collections.equipments, id, data);
+export const createEquipment = (data: Omit<Equipment, 'id'>, onProgress?: (progress: number) => void) => createDocument<Equipment>(collections.equipments, data, onProgress);
+export const updateEquipment = (id: string, data: Partial<Equipment>, onProgress?: (progress: number) => void) => updateDocument<Equipment>(collections.equipments, id, data, onProgress);
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
 // SYSTEMS
@@ -269,6 +233,6 @@ export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<
 
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
-export const createCedula = (data: Omit<Cedula, 'id'>) => createDocument<Cedula>(collections.cedulas, data);
-export const updateCedula = (id: string, data: Partial<Cedula>) => updateDocument<Cedula>(collections.cedulas, id, data);
+export const createCedula = (data: Omit<Cedula, 'id'>, onProgress?: (progress: number) => void) => createDocument<Cedula>(collections.cedulas, data, onProgress);
+export const updateCedula = (id: string, data: Partial<Cedula>, onProgress?: (progress: number) => void) => updateDocument<Cedula>(collections.cedulas, id, data, onProgress);
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

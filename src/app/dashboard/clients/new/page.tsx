@@ -1,8 +1,7 @@
 
 "use client";
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,22 +14,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Upload, FileText, Trash2, Camera } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Client, User } from '@/lib/services';
 import type { Almacen } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Switch } from '@/components/ui/switch';
-
-type Plano = {
-  url: string;
-  name: string;
-  size: number;
-};
-
-type AlmacenWithPhotos = Omit<Almacen, 'planos' | 'photoUrl'> & { 
-    planos: Plano[], 
-    photoUrl?: string 
-};
 
 const defaultPermissionsByRole: { [key: string]: User['permissions'] } = {
   cliente: {
@@ -51,10 +39,9 @@ export default function NewClientPage() {
   const [direccion, setDireccion] = useState('');
   const [phone1, setPhone1] = useState('');
   const [phone2, setPhone2] = useState('');
-  const [officePhotoUrl, setOfficePhotoUrl] = useState<string | null>(null);
-  const [almacenes, setAlmacenes] = useState<AlmacenWithPhotos[]>([
-    { nombre: '', direccion: '', planos: [], photoUrl: '' },
-    { nombre: '', direccion: '', planos: [], photoUrl: '' }
+  const [almacenes, setAlmacenes] = useState<Almacen[]>([
+    { nombre: '', direccion: '' },
+    { nombre: '', direccion: '' }
   ]);
   
   const [generateUserAccess, setGenerateUserAccess] = useState(false);
@@ -62,82 +49,13 @@ export default function NewClientPage() {
   const [userPassword, setUserPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
-  const officePhotoInputRef = useRef<HTMLInputElement>(null);
-  const almacenPhotoInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
-
-  const handleAlmacenChange = (index: number, field: keyof Omit<Almacen, 'planos' | 'photoUrl'>, value: string) => {
+  const handleAlmacenChange = (index: number, field: keyof Almacen, value: string) => {
     const newAlmacenes = [...almacenes];
-    newAlmacenes[index] = { ...newAlmacenes[index], [field]: value };
+    (newAlmacenes[index] as any)[field] = value;
     setAlmacenes(newAlmacenes);
   };
   
-  const handlePlanoFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const filePromises = Array.from(files).map(file => {
-        return new Promise<Plano>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve({
-              url: reader.result as string,
-              name: file.name,
-              size: file.size,
-            });
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      });
-
-      Promise.all(filePromises).then(newPlanos => {
-        const newAlmacenes = [...almacenes];
-        newAlmacenes[index].planos = [...(newAlmacenes[index].planos || []), ...newPlanos];
-        setAlmacenes(newAlmacenes);
-      });
-    }
-  };
-  
-  const removePlano = (almacenIndex: number, planoIndex: number) => {
-    const newAlmacenes = [...almacenes];
-    newAlmacenes[almacenIndex].planos?.splice(planoIndex, 1);
-    setAlmacenes(newAlmacenes);
-  };
-
-  const handlePhotoChange = (setter: (url: string | null) => void, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setter(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAlmacenPhotoChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const newAlmacenes = [...almacenes];
-            newAlmacenes[index].photoUrl = reader.result as string;
-            setAlmacenes(newAlmacenes);
-        };
-        reader.readAsDataURL(file);
-    }
-  };
-
-  const formatBytes = (bytes: number, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !responsable || !direccion) {
@@ -157,18 +75,11 @@ export default function NewClientPage() {
             direccion,
             phone1,
             phone2,
-            officePhotoUrl,
             almacenes: almacenes
               .filter(a => a.nombre.trim() !== '')
               .map(a => ({
                   nombre: a.nombre,
                   direccion: a.direccion,
-                  photoUrl: a.photoUrl,
-                  planos: (a.planos || []).map(p => ({
-                      url: p.url,
-                      name: p.name,
-                      size: p.size,
-                  }))
               })),
         };
 
@@ -243,29 +154,6 @@ export default function NewClientPage() {
                     <Input id="phone2" value={phone2} onChange={e => setPhone2(e.target.value)} placeholder="Ej. 55-8765-4321" disabled={loading}/>
                 </div>
               </div>
-               <div className="grid gap-3">
-                  <Label>Foto de las Oficinas</Label>
-                  {officePhotoUrl ? (
-                      <Image src={officePhotoUrl} alt="Foto de las oficinas" width={400} height={300} data-ai-hint="client office" className="rounded-md object-cover aspect-video" />
-                  ) : (
-                      <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
-                          <Camera className="h-10 w-10 text-muted-foreground" />
-                      </div>
-                  )}
-                  <Input
-                      id="office-photo-upload"
-                      type="file"
-                      accept="image/*"
-                      ref={officePhotoInputRef}
-                      onChange={(e) => handlePhotoChange(setOfficePhotoUrl, e)}
-                      className="hidden"
-                      disabled={loading}
-                  />
-                  <Button type="button" variant="outline" onClick={() => officePhotoInputRef.current?.click()} disabled={loading}>
-                      <Camera className="mr-2 h-4 w-4" />
-                      {officePhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}
-                  </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -289,51 +177,6 @@ export default function NewClientPage() {
                       <Label htmlFor={`direccion_almacen${index + 1}`}>Dirección Almacén {index + 1}</Label>
                       <Input id={`direccion_almacen${index + 1}`} value={almacen.direccion} onChange={(e) => handleAlmacenChange(index, 'direccion', e.target.value)} placeholder="Dirección completa del almacén" disabled={loading} />
                     </div>
-                  </div>
-                  <div className="grid gap-3">
-                      <Label>Foto del Almacén {index + 1}</Label>
-                      {almacen.photoUrl ? (
-                          <Image src={almacen.photoUrl} alt={`Foto del almacén ${almacen.nombre}`} width={400} height={300} data-ai-hint="client warehouse" className="rounded-md object-cover aspect-video" />
-                      ) : (
-                          <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
-                              <Camera className="h-10 w-10 text-muted-foreground" />
-                          </div>
-                      )}
-                      <Input
-                          id={`almacen-photo-upload-${index}`}
-                          type="file"
-                          accept="image/*"
-                          ref={almacenPhotoInputRefs[index]}
-                          onChange={(e) => handleAlmacenPhotoChange(index, e)}
-                          className="hidden"
-                          disabled={loading}
-                      />
-                      <Button type="button" variant="outline" onClick={() => almacenPhotoInputRefs[index].current?.click()} disabled={loading}>
-                          <Camera className="mr-2 h-4 w-4" />
-                          {almacen.photoUrl ? 'Cambiar Foto' : 'Subir Foto'}
-                      </Button>
-                  </div>
-                  <div className="grid gap-3">
-                      <Label>Planos del Almacén {index + 1} (PDF)</Label>
-                      <Button type="button" variant="outline" onClick={() => fileInputRefs[index].current?.click()} disabled={loading}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Subir Planos
-                      </Button>
-                      <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[index]} onChange={(e) => handlePlanoFileChange(index, e)} className="hidden" />
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {(almacen.planos || []).map((plano, i) => (
-                          <div key={i} className="relative group border rounded-md p-2 flex flex-col items-center justify-center text-center">
-                            <FileText className="h-10 w-10 text-muted-foreground" />
-                            <a href={plano.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline mt-2 truncate w-full" title={plano.name}>
-                              {plano.name}
-                            </a>
-                             <p className="text-xs text-muted-foreground">{formatBytes(plano.size)}</p>
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6" onClick={() => removePlano(index, i)} disabled={loading}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
                   </div>
                 </div>
                  {index < almacenes.length - 1 && <Separator className="mt-6"/>}
