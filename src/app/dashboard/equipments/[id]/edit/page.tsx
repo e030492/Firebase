@@ -70,9 +70,38 @@ export default function EditEquipmentPage() {
   const [notFound, setNotFound] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  // --- Autocomplete States ---
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  
+  const [aliasSuggestions, setAliasSuggestions] = useState<string[]>([]);
+  const [showAliasSuggestions, setShowAliasSuggestions] = useState(false);
+  const aliasInputRef = useRef<HTMLInputElement>(null);
+
+  const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
+  const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
+  const brandInputRef = useRef<HTMLInputElement>(null);
+
+  const [modelSuggestions, setModelSuggestions] = useState<string[]>([]);
+  const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+  const modelInputRef = useRef<HTMLInputElement>(null);
+
+  const [typeSuggestions, setTypeSuggestions] = useState<string[]>([]);
+  const [showTypeSuggestions, setShowTypeSuggestions] = useState(false);
+  const typeInputRef = useRef<HTMLInputElement>(null);
+  
+  const [ipAddressSuggestions, setIpAddressSuggestions] = useState<string[]>([]);
+  const [showIpAddressSuggestions, setShowIpAddressSuggestions] = useState(false);
+  const ipAddressInputRef = useRef<HTMLInputElement>(null);
+
+  const [configUserSuggestions, setConfigUserSuggestions] = useState<string[]>([]);
+  const [showConfigUserSuggestions, setShowConfigUserSuggestions] = useState(false);
+  const configUserInputRef = useRef<HTMLInputElement>(null);
+
+  const [configPasswordSuggestions, setConfigPasswordSuggestions] = useState<string[]>([]);
+  const [showConfigPasswordSuggestions, setShowConfigPasswordSuggestions] = useState(false);
+  const configPasswordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!dataLoading && equipmentId) {
@@ -116,28 +145,47 @@ export default function EditEquipmentPage() {
     }
   }, [equipmentId, equipments, clients, systems, dataLoading]);
   
-  const equipmentUniqueNames = useMemo(() => {
-    return Array.from(new Set(equipments.map(eq => eq.name)));
-  }, [equipments]);
-
-  useEffect(() => {
-    if (name) {
-      const filtered = equipmentUniqueNames.filter(n => n.toLowerCase().includes(name.toLowerCase()));
-      setNameSuggestions(filtered);
-    } else {
-      setNameSuggestions([]);
-    }
-  }, [name, equipmentUniqueNames]);
   
-  useEffect(() => {
+    // --- Autocomplete Logic ---
+  const createAutocompleteLogic = (value: string, setter: (suggestions: string[]) => void, sourceKey: keyof Equipment) => {
+    const uniqueValues = Array.from(new Set(equipments.map(eq => eq[sourceKey]).filter(Boolean)));
+    if (value) {
+      const filtered = uniqueValues.filter(v => v.toLowerCase().includes(value.toLowerCase()));
+      setter(filtered as string[]);
+    } else {
+      setter([]);
+    }
+  };
+
+  useEffect(() => createAutocompleteLogic(name, setNameSuggestions, 'name'), [name, equipments]);
+  useEffect(() => createAutocompleteLogic(alias, setAliasSuggestions, 'alias'), [alias, equipments]);
+  useEffect(() => createAutocompleteLogic(brand, setBrandSuggestions, 'brand'), [brand, equipments]);
+  useEffect(() => createAutocompleteLogic(model, setModelSuggestions, 'model'), [model, equipments]);
+  useEffect(() => createAutocompleteLogic(type, setTypeSuggestions, 'type'), [type, equipments]);
+  useEffect(() => createAutocompleteLogic(ipAddress, setIpAddressSuggestions, 'ipAddress'), [ipAddress, equipments]);
+  useEffect(() => createAutocompleteLogic(configUser, setConfigUserSuggestions, 'configUser'), [configUser, equipments]);
+  useEffect(() => createAutocompleteLogic(configPassword, setConfigPasswordSuggestions, 'configPassword'), [configPassword, equipments]);
+
+
+  const createClickOutsideHandler = (setter: (show: boolean) => void, ref: React.RefObject<HTMLInputElement>) => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (nameInputRef.current && !nameInputRef.current.contains(event.target as Node)) {
-        setShowNameSuggestions(false);
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setter(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  };
+  
+  useEffect(() => createClickOutsideHandler(setShowNameSuggestions, nameInputRef), []);
+  useEffect(() => createClickOutsideHandler(setShowAliasSuggestions, aliasInputRef), []);
+  useEffect(() => createClickOutsideHandler(setShowBrandSuggestions, brandInputRef), []);
+  useEffect(() => createClickOutsideHandler(setShowModelSuggestions, modelInputRef), []);
+  useEffect(() => createClickOutsideHandler(setShowTypeSuggestions, typeInputRef), []);
+  useEffect(() => createClickOutsideHandler(setShowIpAddressSuggestions, ipAddressInputRef), []);
+  useEffect(() => createClickOutsideHandler(setShowConfigUserSuggestions, configUserInputRef), []);
+  useEffect(() => createClickOutsideHandler(setShowConfigPasswordSuggestions, configPasswordInputRef), []);
+
 
   const nextMaintenanceDate = useMemo(() => {
     if (!maintenanceStartDate || !maintenancePeriodicity) return null;
@@ -440,28 +488,56 @@ export default function EditEquipmentPage() {
                 )}
               </div>
                <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
+                 <div className="relative" ref={brandInputRef}>
                     <Label htmlFor="brand">Marca</Label>
-                    <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} required disabled={isSaving}/>
+                    <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} required disabled={isSaving} onFocus={() => setShowBrandSuggestions(true)} autoComplete="off" />
+                     {showBrandSuggestions && brandSuggestions.length > 0 && (
+                        <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto"><CardContent className="p-2">
+                            {brandSuggestions.map((suggestion, index) => (
+                            <div key={index} className="p-2 hover:bg-muted rounded-md cursor-pointer" onClick={() => { setBrand(suggestion); setShowBrandSuggestions(false); }}>{suggestion}</div>
+                            ))}
+                        </CardContent></Card>
+                    )}
                  </div>
-                 <div className="grid gap-3">
+                 <div className="relative" ref={modelInputRef}>
                     <Label htmlFor="model">Modelo</Label>
-                    <Input id="model" value={model} onChange={e => setModel(e.target.value)} required disabled={isSaving}/>
+                    <Input id="model" value={model} onChange={e => setModel(e.target.value)} required disabled={isSaving} onFocus={() => setShowModelSuggestions(true)} autoComplete="off" />
+                    {showModelSuggestions && modelSuggestions.length > 0 && (
+                        <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto"><CardContent className="p-2">
+                            {modelSuggestions.map((suggestion, index) => (
+                            <div key={index} className="p-2 hover:bg-muted rounded-md cursor-pointer" onClick={() => { setModel(suggestion); setShowModelSuggestions(false); }}>{suggestion}</div>
+                            ))}
+                        </CardContent></Card>
+                    )}
                  </div>
                </div>
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
+                <div className="relative" ref={typeInputRef}>
                     <Label htmlFor="type">Tipo</Label>
-                    <Input id="type" value={type} onChange={e => setType(e.target.value)} required disabled={isSaving}/>
+                    <Input id="type" value={type} onChange={e => setType(e.target.value)} required disabled={isSaving} onFocus={() => setShowTypeSuggestions(true)} autoComplete="off" />
+                    {showTypeSuggestions && typeSuggestions.length > 0 && (
+                        <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto"><CardContent className="p-2">
+                            {typeSuggestions.map((suggestion, index) => (
+                            <div key={index} className="p-2 hover:bg-muted rounded-md cursor-pointer" onClick={() => { setType(suggestion); setShowTypeSuggestions(false); }}>{suggestion}</div>
+                            ))}
+                        </CardContent></Card>
+                    )}
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="serial">Número de Serie (Opcional)</Label>
                   <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" disabled={isSaving}/>
                 </div>
               </div>
-              <div className="grid gap-3">
+              <div className="relative" ref={aliasInputRef}>
                 <Label htmlFor="alias">Alias del Equipo (Opcional)</Label>
-                <Input id="alias" value={alias} onChange={e => setAlias(e.target.value)} disabled={isSaving}/>
+                <Input id="alias" value={alias} onChange={e => setAlias(e.target.value)} disabled={isSaving} onFocus={() => setShowAliasSuggestions(true)} autoComplete="off" />
+                {showAliasSuggestions && aliasSuggestions.length > 0 && (
+                    <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto"><CardContent className="p-2">
+                        {aliasSuggestions.map((suggestion, index) => (
+                        <div key={index} className="p-2 hover:bg-muted rounded-md cursor-pointer" onClick={() => { setAlias(suggestion); setShowAliasSuggestions(false); }}>{suggestion}</div>
+                        ))}
+                    </CardContent></Card>
+                )}
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
@@ -477,17 +553,38 @@ export default function EditEquipmentPage() {
                         </p>
                     </div>
                     <div className="grid md:grid-cols-3 gap-4">
-                        <div className="grid gap-3">
+                        <div className="relative" ref={ipAddressInputRef}>
                             <Label htmlFor="ipAddress">Dirección IP de Configuración</Label>
-                            <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} disabled={isSaving}/>
+                            <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} disabled={isSaving} onFocus={() => setShowIpAddressSuggestions(true)} autoComplete="off" />
+                             {showIpAddressSuggestions && ipAddressSuggestions.length > 0 && (
+                                <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto"><CardContent className="p-2">
+                                    {ipAddressSuggestions.map((suggestion, index) => (
+                                    <div key={index} className="p-2 hover:bg-muted rounded-md cursor-pointer" onClick={() => { setIpAddress(suggestion); setShowIpAddressSuggestions(false); }}>{suggestion}</div>
+                                    ))}
+                                </CardContent></Card>
+                            )}
                         </div>
-                        <div className="grid gap-3">
+                        <div className="relative" ref={configUserInputRef}>
                             <Label htmlFor="configUser">Usuario de Configuración</Label>
-                            <Input id="configUser" value={configUser} onChange={e => setConfigUser(e.target.value)} disabled={isSaving}/>
+                            <Input id="configUser" value={configUser} onChange={e => setConfigUser(e.target.value)} disabled={isSaving} onFocus={() => setShowConfigUserSuggestions(true)} autoComplete="off" />
+                             {showConfigUserSuggestions && configUserSuggestions.length > 0 && (
+                                <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto"><CardContent className="p-2">
+                                    {configUserSuggestions.map((suggestion, index) => (
+                                    <div key={index} className="p-2 hover:bg-muted rounded-md cursor-pointer" onClick={() => { setConfigUser(suggestion); setShowConfigUserSuggestions(false); }}>{suggestion}</div>
+                                    ))}
+                                </CardContent></Card>
+                            )}
                         </div>
-                        <div className="grid gap-3">
+                        <div className="relative" ref={configPasswordInputRef}>
                             <Label htmlFor="configPassword">Contraseña</Label>
-                            <Input id="configPassword" value={configPassword} onChange={e => setConfigPassword(e.target.value)} disabled={isSaving}/>
+                            <Input id="configPassword" value={configPassword} onChange={e => setConfigPassword(e.target.value)} disabled={isSaving} onFocus={() => setShowConfigPasswordSuggestions(true)} autoComplete="off" />
+                            {showConfigPasswordSuggestions && configPasswordSuggestions.length > 0 && (
+                                <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto"><CardContent className="p-2">
+                                    {configPasswordSuggestions.map((suggestion, index) => (
+                                    <div key={index} className="p-2 hover:bg-muted rounded-md cursor-pointer" onClick={() => { setConfigPassword(suggestion); setShowConfigPasswordSuggestions(false); }}>{suggestion}</div>
+                                    ))}
+                                </CardContent></Card>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -577,3 +674,5 @@ export default function EditEquipmentPage() {
     </form>
   );
 }
+
+    
