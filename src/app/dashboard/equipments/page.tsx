@@ -154,7 +154,7 @@ export default function EquipmentsPage() {
   };
   
   const handleToggleDetails = (equipmentId: string) => {
-    setExpandedEquipmentId(prevId => prevId === equipmentId ? null : prevId);
+    setExpandedEquipmentId(prevId => prevId === equipmentId ? null : equipmentId);
   };
   
   if (loading) {
@@ -285,7 +285,7 @@ export default function EquipmentsPage() {
               <TableBody>
                 {sortedEquipments.map((equipment) => (
                   <Fragment key={equipment.id}>
-                    <TableRow>
+                    <TableRow onClick={() => handleToggleDetails(equipment.id)} className="cursor-pointer">
                         <TableCell className="hidden sm:table-cell">
                             {equipment.imageUrl ? (
                                 <Image src={equipment.imageUrl} alt={equipment.name} width={64} height={64} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-square" />
@@ -308,7 +308,7 @@ export default function EquipmentsPage() {
                         <TableCell>
                         <Badge variant={getStatusBadgeVariant(equipment.status)}>{equipment.status}</Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                             <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -330,7 +330,7 @@ export default function EquipmentsPage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                         </TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(equipment.id)}>
                                 <ChevronDown className={cn("h-4 w-4 transition-transform", expandedEquipmentId === equipment.id && "rotate-180")} />
                                 <span className="sr-only">Ver detalles</span>
@@ -402,4 +402,5 @@ export default function EquipmentsPage() {
   );
 }
     
+
 
