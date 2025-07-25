@@ -118,7 +118,7 @@ function SubmitButton() {
 function ProtocolGenerator() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
+  const { equipments: allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
 
   // Data states
@@ -138,7 +138,7 @@ function ProtocolGenerator() {
   
   useEffect(() => {
     const equipmentIdFromQuery = searchParams.get('equipmentId');
-    if (equipmentIdFromQuery && allEquipments.length > 0) {
+    if (equipmentIdFromQuery && !loading) {
       const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
       if (equipment) {
         setSelectedEquipmentId(equipment.id);
@@ -153,7 +153,7 @@ function ProtocolGenerator() {
         setExistingSteps(existingProtocol?.steps || []);
       }
     }
-  }, [searchParams, allEquipments, protocols]);
+  }, [searchParams, allEquipments, protocols, loading]);
 
 
   useEffect(() => {
@@ -569,3 +569,5 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
+
+    
