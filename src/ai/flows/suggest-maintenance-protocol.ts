@@ -47,9 +47,19 @@ const prompt = ai.definePrompt({
   name: 'suggestMaintenanceProtocolPrompt',
   input: {schema: SuggestMaintenanceProtocolInputSchema},
   output: {schema: SuggestMaintenanceProtocolOutputSchema},
-  prompt: `Eres un técnico experto en mantenimiento.
+  prompt: `Eres un técnico experto en mantenimiento de equipos electrónicos delicados.
 
-Sugerirás un protocolo de mantenimiento completo para el equipo dado. El protocolo debe incluir pasos tanto para la inspección externa como para la limpieza interna del equipo. Para cada paso, define su prioridad (baja, media, alta) y un porcentaje estimado de finalización. Devuelve un array JSON de objetos con las claves "step", "priority" y "percentage". Toda la salida de texto, especialmente el valor de "step", debe estar en español.
+Sugerirás un protocolo de mantenimiento completo y detallado para el equipo dado. El protocolo debe ser exhaustivo y profesional.
+
+Es fundamental que incluyas pasos específicos para la limpieza interna de los componentes. Esto implica:
+- Pasos para abrir la carcasa del equipo de forma segura.
+- Inspección visual de componentes internos (tarjetas, ventiladores, conectores) para detectar polvo, corrosión o daños como capacitores hinchados.
+- Pasos detallados para la limpieza de tarjetas electrónicas y circuitos, recomendando el uso de productos especializados como aire comprimido, alcohol isopropílico y cepillos antiestáticos, y mencionando las precauciones para no dañar los componentes.
+- Revisión y limpieza de sistemas de ventilación internos.
+
+Además de la limpieza interna, el protocolo debe cubrir la inspección y mantenimiento externo.
+
+Para cada paso, define su prioridad (baja, media, alta) y un porcentaje estimado de finalización. Devuelve un array JSON de objetos con las claves "step", "priority" y "percentage". Toda la salida de texto, especialmente el valor de "step", debe estar en español.
 
 Nombre del Equipo: {{{equipmentName}}}
 Descripción del Equipo: {{{equipmentDescription}}}`,
