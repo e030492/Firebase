@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -11,12 +11,6 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   Table,
   TableBody,
   TableCell,
@@ -25,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera, Search, Copy } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera, Search, Copy, ChevronDown } from 'lucide-react';
 import { suggestMaintenanceProtocol } from '@/ai/flows/suggest-maintenance-protocol';
 import {
   AlertDialog,
@@ -155,6 +149,8 @@ export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: 
 const levenshtein = (s1: string, s2: string): number => {
   if (!s1) return s2.length;
   if (!s2) return s1.length;
+  s1 = s1.toLowerCase();
+  s2 = s2.toLowerCase();
   const track = Array(s2.length + 1).fill(null).map(() => Array(s1.length + 1).fill(null));
   for (let i = 0; i <= s1.length; i += 1) {
     track[0][i] = i;
@@ -190,6 +186,7 @@ export default function ProtocolsPage() {
   const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
   const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
   const [showNoSimilarFoundAlert, setShowNoSimilarFoundAlert] = useState(false);
+  const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(null);
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
@@ -264,24 +261,25 @@ export default function ProtocolsPage() {
   };
   
   const handleSearchSimilar = (targetEquipment: Equipment) => {
-    const similarEquipmentsWithProtocols = allEquipments
-      .filter(eq => {
-          if (eq.id === targetEquipment.id) return false;
-          
-          const nameDistance = levenshtein(eq.name.toLowerCase(), targetEquipment.name.toLowerCase());
-          const typeDistance = levenshtein(eq.type.toLowerCase(), targetEquipment.type.toLowerCase());
-          
-          return nameDistance <= 4 && typeDistance <= 4;
-      })
-      .map(eq => {
-          const protocol = protocols.find(p => p.equipmentId === eq.id && p.steps.length > 0);
-          return protocol ? { equipment: eq, protocol } : null;
-      })
-      .filter((item): item is { equipment: Equipment; protocol: Protocol } => item !== null);
+    const similarEquipments = allEquipments.filter(eq => {
+      if (eq.id === targetEquipment.id) return false;
       
-    if (similarEquipmentsWithProtocols.length > 0) {
+      const nameDistance = levenshtein(eq.name, targetEquipment.name);
+      const typeDistance = levenshtein(eq.type, targetEquipment.type);
+      
+      return nameDistance <= 4 && typeDistance <= 4;
+    });
+
+    const similarWithProtocols = similarEquipments
+        .map(eq => ({
+            equipment: eq,
+            protocol: protocols.find(p => p.equipmentId === eq.id && p.steps.length > 0)
+        }))
+        .filter((item): item is { equipment: Equipment; protocol: Protocol } => !!item.protocol);
+
+    if (similarWithProtocols.length > 0) {
         setProtocolToCopy({
-            sourceOptions: similarEquipmentsWithProtocols,
+            sourceOptions: similarWithProtocols,
             targetEquipment,
         });
     } else {
@@ -314,6 +312,9 @@ export default function ProtocolsPage() {
         console.error("Failed to copy protocol:", error);
         alert("Error al copiar el protocolo.");
     }
+  };
+   const handleToggleDetails = (equipmentId: string) => {
+    setExpandedEquipmentId(prevId => (prevId === equipmentId ? null : prevId));
   };
   
   if(loading) {
@@ -407,113 +408,130 @@ export default function ProtocolsPage() {
             <Separator className="mb-6"/>
             
             <RadioGroup value={selectedEquipmentForModification} onValueChange={setSelectedEquipmentForModification}>
-                <Accordion type="single" collapsible className="w-full">
-                {filteredEquipments.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12"></TableHead>
+                    <TableHead>Equipo</TableHead>
+                    <TableHead className="hidden md:table-cell">Cliente</TableHead>
+                    <TableHead className="hidden lg:table-cell">Sistema</TableHead>
+                    <TableHead className="text-right w-48">Pasos</TableHead>
+                    <TableHead className="text-right w-24">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredEquipments.length > 0 ? (
                     filteredEquipments.map(equipment => {
-                    const equipmentProtocol = getProtocolForEquipment(equipment.id);
-                    const equipmentProtocolSteps = equipmentProtocol?.steps || [];
-                    const isSelected = selectedEquipmentForModification === equipment.id;
-
-                    return (
-                        <AccordionItem value={equipment.id} key={equipment.id} className={cn(isSelected && "bg-primary/5 border-primary/20 rounded-md")}>
-                            <div className="flex items-center w-full px-4">
-                                <RadioGroupItem value={equipment.id} id={`radio-${equipment.id}`} className="mr-4" />
-                               <AccordionTrigger className="flex-1 text-lg font-medium hover:no-underline py-4">
-                                  <div className="flex flex-col items-start text-left">
-                                    <div className="flex items-center gap-2">
-                                      <span className={cn("font-bold", equipmentProtocolSteps.length === 0 && "text-destructive")}>{equipment.name}</span>
-                                      <span className="text-sm text-muted-foreground font-normal">({equipment.client})</span>
-                                    </div>
-                                    <div className="text-xs text-muted-foreground font-normal flex items-center gap-x-2">
-                                      {equipment.alias && <span>Alias: {equipment.alias}</span>}
-                                      {equipment.alias && <span>&bull;</span>}
-                                      <span>Modelo: {equipment.model}</span>
-                                      <span>&bull;</span>
-                                      <span>N/S: {equipment.serial}</span>
-                                    </div>
-                                  </div>
-                               </AccordionTrigger>
-                               <div className="px-4 flex items-center gap-2 w-48 justify-end">
-                                 <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                                            <MoreVertical className="h-4 w-4" />
-                                            <span className="sr-only">Más acciones</span>
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {equipmentProtocol && equipmentProtocol.steps.length > 0 ? (
-                                            <>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        <span>Modificar Protocolo</span>
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    className="text-destructive focus:text-destructive"
-                                                    onSelect={() => setProtocolToDelete(equipmentProtocol)}
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    <span>Eliminar protocolo</span>
-                                                </DropdownMenuItem>
-                                            </>
-                                        ) : (
-                                            <>
-                                            <DropdownMenuItem onSelect={() => handleSearchSimilar(equipment)}>
-                                                <Search className="mr-2 h-4 w-4" />
-                                                <span>Buscar Similares</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
-                                                    <Wand2 className="mr-2 h-4 w-4" />
-                                                    <span>Generar con IA</span>
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            </>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                               </div>
-                            </div>
-                          <AccordionContent>
-                            {equipmentProtocolSteps.length > 0 ? (
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="w-[50%]">Paso del Protocolo</TableHead>
-                                    <TableHead>Prioridad</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {equipmentProtocolSteps.map((protocolStep, index) => (
-                                    <TableRow key={index}>
-                                      <TableCell>{protocolStep.step}</TableCell>
-                                      <TableCell>
-                                        <Badge variant={getPriorityBadgeVariant(protocolStep.priority)} className="capitalize">
-                                          {protocolStep.priority}
-                                        </Badge>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            ) : (
-                              <div className="text-muted-foreground px-4 py-8 flex flex-col items-center justify-center text-center gap-2">
-                                <p>No hay un protocolo de mantenimiento definido para este equipo.</p>
-                                <p className="text-sm">Usa el menú de acciones para buscar uno similar o generar uno con IA.</p>
+                      const equipmentProtocol = getProtocolForEquipment(equipment.id);
+                      const equipmentProtocolSteps = equipmentProtocol?.steps || [];
+                      return (
+                        <Fragment key={equipment.id}>
+                          <TableRow>
+                            <TableCell>
+                              <RadioGroupItem value={equipment.id} id={`radio-${equipment.id}`} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium">
+                                <span className={cn(equipmentProtocolSteps.length === 0 && "text-destructive")}>{equipment.name}</span>
                               </div>
-                            )}
-                          </AccordionContent>
-                        </AccordionItem>
-                    )
+                              <div className="text-xs text-muted-foreground">
+                                {equipment.alias && `Alias: ${equipment.alias} • `}
+                                Modelo: {equipment.model} • N/S: {equipment.serial}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">{equipment.client}</TableCell>
+                            <TableCell className="hidden lg:table-cell">{equipment.system}</TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="sm" onClick={() => handleToggleDetails(equipment.id)} disabled={equipmentProtocolSteps.length === 0}>
+                                    <Badge variant="outline">{equipmentProtocolSteps.length} {equipmentProtocolSteps.length === 1 ? 'paso' : 'pasos'}</Badge>
+                                    {equipmentProtocolSteps.length > 0 && <ChevronDown className="ml-2 h-4 w-4" />}
+                                </Button>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                    <span className="sr-only">Más acciones</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {equipmentProtocol && equipmentProtocol.steps.length > 0 ? (
+                                    <>
+                                      <DropdownMenuItem asChild>
+                                        <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                          <Edit className="mr-2 h-4 w-4" />
+                                          <span>Modificar Protocolo</span>
+                                        </Link>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onSelect={() => setProtocolToDelete(equipmentProtocol)}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Eliminar protocolo</span>
+                                      </DropdownMenuItem>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <DropdownMenuItem onSelect={() => handleSearchSimilar(equipment)}>
+                                        <Search className="mr-2 h-4 w-4" />
+                                        <span>Buscar Similares</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem asChild>
+                                        <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                          <Wand2 className="mr-2 h-4 w-4" />
+                                          <span>Generar con IA</span>
+                                        </Link>
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                          {expandedEquipmentId === equipment.id && equipmentProtocolSteps.length > 0 && (
+                            <TableRow>
+                                <TableCell colSpan={6} className="p-0">
+                                    <div className="p-4 bg-muted/50">
+                                        <h4 className="font-semibold px-4 pb-2">Pasos del Protocolo</h4>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-[60%]">Paso</TableHead>
+                                                    <TableHead>Prioridad</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {equipmentProtocolSteps.map((step, index) => (
+                                                    <TableRow key={index} className="bg-muted/50">
+                                                        <TableCell>{step.step}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">
+                                                                {step.priority}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
+                      )
                     })
-                ) : (
-                    <p className="text-center text-muted-foreground py-4">No se encontraron equipos que coincidan con los filtros seleccionados.</p>
-                )}
-                </Accordion>
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        No se encontraron equipos que coincidan con los filtros seleccionados.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </RadioGroup>
 
           </CardContent>
@@ -563,5 +581,3 @@ export default function ProtocolsPage() {
     </>
   );
 }
-
-    
