@@ -147,8 +147,7 @@ export default function EditClientPage() {
 
       Promise.all(filePromises).then(newPlanos => {
         const newAlmacenes = [...almacenes];
-        const currentPlanos = newAlmacenes[index].planos || [];
-        newAlmacenes[index].planos = [...currentPlanos, ...newPlanos];
+        newAlmacenes[index].planos = [...(newAlmacenes[index].planos || []), ...newPlanos];
         setAlmacenes(newAlmacenes);
       });
     }
