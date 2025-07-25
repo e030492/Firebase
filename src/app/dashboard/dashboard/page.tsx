@@ -52,15 +52,15 @@ export default function DashboardPage() {
               <Card><CardHeader className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-8 w-16" /><Skeleton className="h-4 w-48" /></CardHeader></Card>
               <Card><CardHeader className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-8 w-16" /><Skeleton className="h-4 w-48" /></CardHeader></Card>
             </div>
-            <Card className="col-span-1 lg:col-span-3">
-              <CardHeader>
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-4 w-64" />
-              </CardHeader>
-              <CardContent className="pl-2">
+            <div className="col-span-1 lg:col-span-3">
+              <div className="text-center mb-4">
+                <Skeleton className="h-6 w-48 mx-auto" />
+                <Skeleton className="h-4 w-64 mx-auto mt-2" />
+              </div>
+              <div className="mx-auto w-1/2">
                 <Skeleton className="h-80 w-full" />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )
     }
@@ -80,85 +80,81 @@ export default function DashboardPage() {
             </Card>
             
             <main className="grid w-full auto-rows-max items-start gap-8">
-                <section className="w-full max-w-4xl mx-auto">
-                    <div className="flex justify-center">
-                        <div className="grid gap-6 md:grid-cols-3">
-                            <Card className="group bg-[hsl(var(--chart-1))] text-primary-foreground w-40">
-                                <CardHeader className="py-3">
-                                    <div className="flex items-center gap-2">
-                                        <Building className="h-5 w-5" />
-                                        <h3 className="text-lg font-medium">Clientes Totales</h3>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="py-3">
-                                    <div className="text-4xl font-bold">{stats.totalClients}</div>
-                                    <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        Número de clientes activos registrados.
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card className="group bg-[hsl(var(--chart-2))] text-primary-foreground w-40">
-                                <CardHeader className="py-3">
-                                    <div className="flex items-center gap-2">
-                                        <HardHat className="h-5 w-5" />
-                                        <h3 className="text-lg font-medium">Equipos Totales</h3>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="py-3">
-                                    <div className="text-4xl font-bold">{stats.totalEquipments}</div>
-                                    <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        Total de equipos registrados en el sistema.
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card className="group bg-[hsl(var(--chart-3))] text-primary-foreground w-40">
-                                <CardHeader className="py-3">
-                                    <div className="flex items-center gap-2">
-                                        <FileCheck className="h-5 w-5" />
-                                        <h3 className="text-lg font-medium">Cédulas Completadas</h3>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="py-3">
-                                    <div className="text-4xl font-bold">{stats.completedCedulas}</div>
-                                    <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    Cédulas de trabajo finalizadas exitosamente.
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </div>
+                <section className="w-full max-w-2xl mx-auto">
+                    <div className="grid gap-6 md:grid-cols-3 justify-center">
+                        <Card className="group bg-[hsl(var(--chart-1))] text-primary-foreground">
+                            <CardHeader className="py-3">
+                                <div className="flex items-center gap-2">
+                                    <Building className="h-5 w-5" />
+                                    <h3 className="text-base font-medium">Clientes Totales</h3>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="py-3">
+                                <div className="text-2xl font-bold">{stats.totalClients}</div>
+                                <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    Número de clientes activos registrados.
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card className="group bg-[hsl(var(--chart-2))] text-primary-foreground">
+                            <CardHeader className="py-3">
+                                <div className="flex items-center gap-2">
+                                    <HardHat className="h-5 w-5" />
+                                    <h3 className="text-base font-medium">Equipos Totales</h3>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="py-3">
+                                <div className="text-2xl font-bold">{stats.totalEquipments}</div>
+                                <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    Total de equipos registrados en el sistema.
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card className="group bg-[hsl(var(--chart-3))] text-primary-foreground">
+                            <CardHeader className="py-3">
+                                <div className="flex items-center gap-2">
+                                    <FileCheck className="h-5 w-5" />
+                                    <h3 className="text-base font-medium">Cédulas Completadas</h3>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="py-3">
+                                <div className="text-2xl font-bold">{stats.completedCedulas}</div>
+                                <p className="text-xs text-primary-foreground/80 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                Cédulas de trabajo finalizadas exitosamente.
+                                </p>
+                            </CardContent>
+                        </Card>
                     </div>
                 </section>
 
-                <div className="col-span-1 lg:col-span-3 w-full max-w-4xl mx-auto">
+                <div className="w-full max-w-2xl mx-auto">
                     <div className="text-center mb-4">
                         <h2 className="text-2xl font-bold">Resumen General</h2>
                         <p className="text-muted-foreground">Una vista general de los indicadores clave del sistema.</p>
                     </div>
-                    <div className="mx-auto w-1/2">
-                        <ChartContainer config={{}} className="h-80 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                                    <Tooltip
-                                        cursor={{ fill: 'hsla(var(--muted), 0.5)' }}
-                                        content={<ChartTooltipContent 
-                                            hideLabel 
-                                            labelClassName="text-lg font-bold"
-                                            formatter={(value, name, props) => {
-                                                return <div className="flex flex-col gap-1 p-1">
-                                                    <span className="font-bold text-base" style={{color: props.payload.fill}}>{name}</span>
-                                                    <span className="text-muted-foreground">{value}</span>
-                                                </div>
-                                            }}
-                                        />}
-                                    />
-                                    <Bar dataKey="value" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                    </div>
+                    <ChartContainer config={{}} className="h-80 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                                <Tooltip
+                                    cursor={{ fill: 'hsla(var(--muted), 0.5)' }}
+                                    content={<ChartTooltipContent 
+                                        hideLabel 
+                                        labelClassName="text-lg font-bold"
+                                        formatter={(value, name, props) => {
+                                            return <div className="flex flex-col gap-1 p-1">
+                                                <span className="font-bold text-base" style={{color: props.payload.fill}}>{name}</span>
+                                                <span className="text-muted-foreground">{value}</span>
+                                            </div>
+                                        }}
+                                    />}
+                                />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
                 </div>
             </main>
         </div>
