@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Copy, Trash2, MoreVertical, Wand2 } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Copy, Trash2, MoreVertical, Wand2, Search } from 'lucide-react';
 import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -70,6 +70,11 @@ type State = {
 };
 
 type EquipmentWithProtocolStatus = Equipment & { hasProtocol: boolean };
+
+type ProtocolToCopyInfo = {
+    protocol: Protocol;
+    sourceEquipmentName: string;
+}
 
 // Server Action
 async function generateProtocolAction(prevState: State, formData: FormData): Promise<State> {
@@ -144,28 +149,27 @@ function ProtocolGenerator() {
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   const [isModificationMode, setIsModificationMode] = useState(false);
   
-  const [protocolToCopy, setProtocolToCopy] = useState<Protocol | null>(null);
+  const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
+  const [showNotFoundAlert, setShowNotFoundAlert] = useState(false);
   
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
     const equipmentIdFromQuery = searchParams.get('equipmentId');
-    const isModifying = !!equipmentIdFromQuery;
-    setIsModificationMode(isModifying);
-
-    if (isModifying && allEquipments.length > 0 && protocols) {
-        const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
-        if (equipment) {
-            setSelectedEquipmentId(equipment.id);
-            setEquipmentName(equipment.name);
-            setEquipmentDescription(equipment.description);
-            setEquipmentAlias(equipment.alias || '');
-            setEquipmentModel(equipment.model);
-            setEquipmentSerial(equipment.serial);
-            setEquipmentImageUrl(equipment.imageUrl || '');
-            
-            const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
-            setExistingSteps(existingProtocol?.steps || []);
-        }
+    if (equipmentIdFromQuery && allEquipments.length > 0 && protocols) {
+      setIsModificationMode(true);
+      const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
+      if (equipment) {
+        setSelectedEquipmentId(equipment.id);
+        setEquipmentName(equipment.name);
+        setEquipmentDescription(equipment.description);
+        setEquipmentAlias(equipment.alias || '');
+        setEquipmentModel(equipment.model);
+        setEquipmentSerial(equipment.serial);
+        setEquipmentImageUrl(equipment.imageUrl || '');
+        
+        const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
+        setExistingSteps(existingProtocol?.steps || []);
+      }
     }
   }, [searchParams, allEquipments, protocols]);
 
@@ -216,14 +220,14 @@ function ProtocolGenerator() {
   const handleEquipmentChange = (equipmentId: string) => {
     const selected = allEquipments.find(e => e.id === equipmentId);
     if (!selected) {
-      setEquipmentName('');
-      setEquipmentDescription('');
-      setEquipmentAlias('');
-      setEquipmentModel('');
-      setEquipmentSerial('');
-      setEquipmentImageUrl('');
-      setSelectedEquipmentId('');
-      return;
+        setSelectedEquipmentId('');
+        setEquipmentName('');
+        setEquipmentDescription('');
+        setEquipmentAlias('');
+        setEquipmentModel('');
+        setEquipmentSerial('');
+        setEquipmentImageUrl('');
+        return;
     }
     
     setSelectedEquipmentId(equipmentId);
@@ -236,23 +240,24 @@ function ProtocolGenerator() {
     
     const existingProtocol = protocols.find(p => p.equipmentId === equipmentId);
     if (existingProtocol) {
-      // If a protocol already exists, we are in modification mode implicitly.
-      setIsModificationMode(true);
-      setExistingSteps(existingProtocol.steps);
-      return; // Stop here
+      router.push(`/dashboard/protocols/new?equipmentId=${equipmentId}`);
+      return; 
     }
     
-    // If no protocol exists for the selected equipment, check for similar ones.
-    const similarEquipment = allEquipments.find(
-      eq => eq.id !== selected.id && eq.name === selected.name && eq.type === selected.type
+    const similarEquipmentWithProtocol = allEquipments.find(
+      eq => eq.id !== selected.id && eq.name === selected.name && eq.type === selected.type && protocols.some(p => p.equipmentId === eq.id)
     );
     
-    if (similarEquipment) {
-        const protocolOfSimilar = protocols.find(p => p.equipmentId === similarEquipment.id);
+    if (similarEquipmentWithProtocol) {
+        const protocolOfSimilar = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
         if (protocolOfSimilar) {
-            setProtocolToCopy(protocolOfSimilar);
+            setProtocolToCopy({ protocol: protocolOfSimilar, sourceEquipmentName: similarEquipmentWithProtocol.name });
+            return;
         }
     }
+    
+    // If we reach here, no protocol was found for the current or similar equipment.
+    setShowNotFoundAlert(true);
   };
 
   const handleSelectStep = (step: SuggestMaintenanceProtocolOutput[0], checked: boolean) => {
@@ -283,7 +288,6 @@ function ProtocolGenerator() {
        return;
     }
     
-    // Do not save if no new steps are selected and no existing steps were modified
     if (selectedSteps.length === 0) {
        alert("Por favor, seleccione al menos un paso sugerido para añadir al protocolo.");
        return;
@@ -326,7 +330,6 @@ function ProtocolGenerator() {
 
     alert('Protocolo guardado con éxito.');
     if(isModificationMode) {
-       // Reset suggested steps form if in modification mode
        setState({ result: null, error: null });
        setSelectedSteps([]);
     } else {
@@ -371,7 +374,7 @@ function ProtocolGenerator() {
 
     const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
         equipmentId: selectedEquipmentId,
-        steps: protocolToCopy.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
+        steps: protocolToCopy.protocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
     };
     
     try {
@@ -666,18 +669,34 @@ function ProtocolGenerator() {
             <AlertDialogHeader>
                 <div className="flex items-center gap-2">
                     <Copy className="h-6 w-6 text-primary" />
-                    <AlertDialogTitle>Protocolo Encontrado</AlertDialogTitle>
+                    <AlertDialogTitle>Protocolo Similar Encontrado</AlertDialogTitle>
                 </div>
                 <AlertDialogDescription>
-                    Hemos encontrado un protocolo existente para un equipo con el mismo nombre y tipo.
-                    ¿Desea copiar este protocolo al equipo actual? Esto le ahorrará tiempo.
+                    Se encontró un protocolo para un equipo similar ("{protocolToCopy?.sourceEquipmentName}"). ¿Desea copiar sus pasos a este equipo?
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setProtocolToCopy(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => { setProtocolToCopy(null); setShowNotFoundAlert(true); }}>No, generar uno nuevo</AlertDialogCancel>
                 <AlertDialogAction onClick={handleCopyProtocol}>
                     Sí, Copiar Protocolo
                 </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={showNotFoundAlert} onOpenChange={setShowNotFoundAlert}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <div className="flex items-center gap-2">
+                    <Search className="h-6 w-6 text-muted-foreground" />
+                    <AlertDialogTitle>Búsqueda Completada</AlertDialogTitle>
+                </div>
+                <AlertDialogDescription>
+                    No se encontró un protocolo para un equipo similar. Puede generar uno nuevo utilizando la IA.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogAction onClick={() => setShowNotFoundAlert(false)}>Aceptar</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
