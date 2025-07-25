@@ -67,10 +67,12 @@ export default function NewEquipmentPage() {
   const [isSaving, setIsSaving] = useState(false);
 
     const existingOptions = useMemo(() => {
+        const names = [...new Set(equipments.map(e => e.name).filter(Boolean))].map(n => ({ value: n, label: n }));
+        const aliases = [...new Set(equipments.map(e => e.alias).filter(Boolean))].map(a => ({ value: a, label: a }));
         const brands = [...new Set(equipments.map(e => e.brand).filter(Boolean))].map(b => ({ value: b, label: b }));
         const models = [...new Set(equipments.map(e => e.model).filter(Boolean))].map(m => ({ value: m, label: m }));
         const types = [...new Set(equipments.map(e => e.type).filter(Boolean))].map(t => ({ value: t, label: t }));
-        return { brands, models, types };
+        return { names, aliases, brands, models, types };
     }, [equipments]);
 
   useEffect(() => {
@@ -207,11 +209,27 @@ export default function NewEquipmentPage() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
-                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Cámara IP" required disabled={isSaving}/>
+                <Combobox
+                    value={name}
+                    onChange={setName}
+                    options={existingOptions.names}
+                    placeholder="Escriba o seleccione un nombre..."
+                    searchPlaceholder="Buscar nombre..."
+                    emptyPlaceholder="No se encontraron nombres."
+                    disabled={isSaving}
+                />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="alias">Alias del Equipo (Opcional)</Label>
-                <Input id="alias" value={alias} onChange={e => setAlias(e.target.value)} placeholder="Ej. Cámara de Entrada" disabled={isSaving}/>
+                <Combobox
+                    value={alias}
+                    onChange={setAlias}
+                    options={existingOptions.aliases}
+                    placeholder="Escriba o seleccione un alias..."
+                    searchPlaceholder="Buscar alias..."
+                    emptyPlaceholder="No se encontraron alias."
+                    disabled={isSaving}
+                />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
@@ -424,3 +442,5 @@ export default function NewEquipmentPage() {
     </form>
   );
 }
+
+    
