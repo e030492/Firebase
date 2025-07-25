@@ -221,7 +221,7 @@ export default function NewUserPage() {
                 <Label>Foto de Perfil</Label>
                 <div className="flex items-center gap-4">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={photoUrl || ''} alt={name} data-ai-hint="user photo" />
+                    <AvatarImage src={photoUrl || undefined} alt={name} data-ai-hint="user photo" />
                     <AvatarFallback><UserIcon className="h-10 w-10" /></AvatarFallback>
                   </Avatar>
                   <Button type="button" variant="outline" onClick={() => photoInputRef.current?.click()} disabled={loading}>
