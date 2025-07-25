@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useActionState, useState, useEffect, Suspense, useRef } from 'react';
+import { useActionState, useState, useEffect, Suspense, useRef, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -141,6 +141,8 @@ function ProtocolGenerator() {
   const searchParams = useSearchParams();
   const { equipments: allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
   const [aiState, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
+  const [isPending, startTransition] = useTransition();
+
 
   // Data states
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
@@ -247,7 +249,9 @@ function ProtocolGenerator() {
     }
 
     alert('Protocolo guardado con éxito.');
-    formAction(new FormData()); // Resets the AI form state
+    startTransition(() => {
+        formAction(new FormData()); // Resets the AI form state
+    });
     setSelectedSteps([]);
   };
 
