@@ -263,14 +263,14 @@ export default function EditClientPage() {
                       Subir Planos
                   </Button>
                   <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[0]} onChange={(e) => handleFileChange(0, e)} className="hidden" />
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {(almacenes[0].planosUrl || []).map((url, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 border rounded-md">
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                          <FileText className="h-4 w-4" />
-                          Plano {i + 1}
+                      <div key={i} className="relative group border rounded-md p-2">
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center gap-2 text-sm text-center text-primary hover:underline">
+                          <FileText className="h-10 w-10" />
+                          <span className="truncate w-full">Plano {i + 1}</span>
                         </a>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removePlano(0, i)} disabled={isSaving}>
+                        <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6" onClick={() => removePlano(0, i)} disabled={isSaving}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -298,14 +298,14 @@ export default function EditClientPage() {
                       Subir Planos
                   </Button>
                   <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[1]} onChange={(e) => handleFileChange(1, e)} className="hidden" />
-                   <div className="space-y-2">
+                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {(almacenes[1].planosUrl || []).map((url, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 border rounded-md">
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                          <FileText className="h-4 w-4" />
-                          Plano {i + 1}
+                      <div key={i} className="relative group border rounded-md p-2">
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center gap-2 text-sm text-center text-primary hover:underline">
+                          <FileText className="h-10 w-10" />
+                           <span className="truncate w-full">Plano {i + 1}</span>
                         </a>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removePlano(1, i)} disabled={isSaving}>
+                        <Button type="button" variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6" onClick={() => removePlano(1, i)} disabled={isSaving}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>

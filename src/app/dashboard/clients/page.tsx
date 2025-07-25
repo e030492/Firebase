@@ -232,17 +232,17 @@ export default function ClientsPage() {
                                                             {almacen.planosUrl && almacen.planosUrl.length > 0 && (
                                                                 <div className="mt-2">
                                                                     <p className="text-xs font-semibold text-muted-foreground">Planos:</p>
-                                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                                    <div className="flex flex-wrap gap-4 mt-1">
                                                                         {almacen.planosUrl.map((planoUrl, planoIndex) => (
                                                                             <a
                                                                                 key={planoIndex}
                                                                                 href={planoUrl}
                                                                                 target="_blank"
                                                                                 rel="noopener noreferrer"
-                                                                                className="flex items-center gap-1 text-primary hover:underline"
+                                                                                className="flex flex-col items-center justify-center gap-2 text-sm text-center text-primary hover:underline p-2 border rounded-md w-24"
                                                                             >
-                                                                                <FileText className="h-3 w-3" />
-                                                                                <span>Plano {planoIndex + 1}</span>
+                                                                                <FileText className="h-8 w-8" />
+                                                                                <span className="truncate w-full">Plano {planoIndex + 1}</span>
                                                                             </a>
                                                                         ))}
                                                                     </div>
