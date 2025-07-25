@@ -295,7 +295,7 @@ export default function EditUserPage() {
             Volver
          </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -422,7 +422,7 @@ export default function EditUserPage() {
                 <CardTitle>Permisos de Acceso</CardTitle>
                 <CardDescription>
                     Seleccione las acciones que este usuario podrá realizar en cada módulo.
-                </Description>
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
