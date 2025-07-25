@@ -41,11 +41,17 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Copy } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Copy, Trash2, MoreVertical, Wand2 } from 'lucide-react';
 import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,8 +101,17 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Generar Protocolo
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <span>Generando...</span>
+        </>
+      ) : (
+        <>
+            <Wand2 className="mr-2 h-4 w-4" />
+            <span>Sugerir Pasos Adicionales</span>
+        </>
+      )}
     </Button>
   );
 }
@@ -122,6 +137,9 @@ function ProtocolGenerator() {
   const [equipmentSerial, setEquipmentSerial] = useState('');
   const [equipmentImageUrl, setEquipmentImageUrl] = useState('');
 
+  const [existingSteps, setExistingSteps] = useState<ProtocolStep[]>([]);
+  const [stepToDelete, setStepToDelete] = useState<ProtocolStep | null>(null);
+
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   const [isModificationMode, setIsModificationMode] = useState(false);
   
@@ -130,22 +148,25 @@ function ProtocolGenerator() {
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
     const equipmentIdFromQuery = searchParams.get('equipmentId');
-    setIsModificationMode(!!equipmentIdFromQuery);
+    const isModifying = !!equipmentIdFromQuery;
+    setIsModificationMode(isModifying);
 
-    if (equipmentIdFromQuery && !loading && allEquipments.length > 0) {
-      const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
-      
-      if (equipment) {
-        setSelectedEquipmentId(equipment.id);
-        setEquipmentName(equipment.name);
-        setEquipmentDescription(equipment.description);
-        setEquipmentAlias(equipment.alias || '');
-        setEquipmentModel(equipment.model);
-        setEquipmentSerial(equipment.serial);
-        setEquipmentImageUrl(equipment.imageUrl || '');
-      }
+    if (isModifying && allEquipments.length > 0 && protocols) {
+        const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
+        if (equipment) {
+            setSelectedEquipmentId(equipment.id);
+            setEquipmentName(equipment.name);
+            setEquipmentDescription(equipment.description);
+            setEquipmentAlias(equipment.alias || '');
+            setEquipmentModel(equipment.model);
+            setEquipmentSerial(equipment.serial);
+            setEquipmentImageUrl(equipment.imageUrl || '');
+            
+            const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
+            setExistingSteps(existingProtocol?.steps || []);
+        }
     }
-  }, [searchParams, allEquipments, loading]);
+  }, [searchParams, allEquipments, protocols]);
 
 
   // Filter equipments when client or system changes
@@ -212,9 +233,8 @@ function ProtocolGenerator() {
     setEquipmentSerial(selected.serial);
     setEquipmentImageUrl(selected.imageUrl || '');
     
-    // Check if an identical equipment already has a protocol
     const existingProtocol = protocols.find(p => p.equipmentId === equipmentId);
-    if (existingProtocol) return; // Don't offer to copy if it already has one
+    if (existingProtocol) return;
 
     const similarEquipment = allEquipments.find(
       eq => eq.id !== selected.id && eq.name === selected.name && eq.type === selected.type
@@ -228,7 +248,6 @@ function ProtocolGenerator() {
     }
   };
 
-  // Handlers for step selection
   const handleSelectStep = (step: SuggestMaintenanceProtocolOutput[0], checked: boolean) => {
     setSelectedSteps(prev => {
       if (checked) {
@@ -251,7 +270,6 @@ function ProtocolGenerator() {
     return selectedSteps.some(s => s.step === step.step);
   };
   
-  // Save protocol logic
   const handleSaveProtocol = async () => {
     if (!selectedEquipmentId || selectedSteps.length === 0) {
       alert("Por favor, seleccione un equipo y al menos un paso del protocolo antes de guardar.");
@@ -261,7 +279,6 @@ function ProtocolGenerator() {
     const existingProtocol = protocols.find(p => p.equipmentId === selectedEquipmentId);
     
     if (existingProtocol) {
-      // Merge new steps with existing ones, avoiding duplicates
       const stepMap = new Map(existingProtocol.steps.map(item => [item.step, item]));
       selectedSteps.forEach(newStep => {
           const formattedNewStep: ProtocolStep = {
@@ -281,7 +298,6 @@ function ProtocolGenerator() {
         return;
       }
     } else {
-      // Create new protocol
       const newProtocol: Omit<Protocol, 'id'> = {
         equipmentId: selectedEquipmentId,
         steps: selectedSteps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
@@ -299,6 +315,24 @@ function ProtocolGenerator() {
     router.push('/dashboard/protocols');
   };
   
+  const handleDeleteStep = async () => {
+    if (!stepToDelete) return;
+    
+    const protocolToUpdate = protocols.find(p => p.equipmentId === selectedEquipmentId);
+    if (!protocolToUpdate) return;
+    
+    const newSteps = protocolToUpdate.steps.filter(s => s.step !== stepToDelete.step);
+
+    try {
+        await updateProtocol(protocolToUpdate.id, { steps: newSteps });
+        setExistingSteps(newSteps); // Update local state to reflect deletion
+        setStepToDelete(null); // Close dialog
+    } catch (error) {
+        console.error("Failed to delete step:", error);
+        alert("Error al eliminar el paso.");
+    }
+  };
+
   const handleCopyProtocol = async () => {
     if (!protocolToCopy || !selectedEquipmentId) return;
 
@@ -310,7 +344,7 @@ function ProtocolGenerator() {
     try {
         await createProtocol(newProtocolForCurrentEquipment);
         alert('Protocolo copiado y guardado con éxito.');
-        setProtocolToCopy(null); // Close the dialog
+        setProtocolToCopy(null);
         router.push('/dashboard/protocols');
     } catch (error) {
         console.error("Failed to copy protocol:", error);
@@ -318,7 +352,6 @@ function ProtocolGenerator() {
     }
   };
 
-  // Badge variant for priority
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
       case 'alta':
@@ -334,36 +367,117 @@ function ProtocolGenerator() {
 
   const areAllStepsSelected = state.result ? selectedSteps.length === state.result.length && state.result.length > 0 : false;
 
-  // JSX
   return (
     <>
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
-      {/* Page Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
           <span className="sr-only">Atrás</span>
         </Button>
         <div className="grid gap-0.5">
-            <h1 className="font-headline text-2xl font-bold">{isModificationMode ? 'Modificar Protocolo (IA)' : 'Generador de Protocolos (IA)'}</h1>
+            <h1 className="font-headline text-2xl font-bold">{isModificationMode ? 'Modificar Protocolo' : 'Generador de Protocolos (IA)'}</h1>
             <p className="text-muted-foreground">
             {isModificationMode 
-                ? 'La IA sugerirá pasos adicionales para el equipo seleccionado. Puede agregarlos al protocolo existente.' 
+                ? 'Vea los pasos existentes y use la IA para sugerir pasos adicionales para el equipo.' 
                 : 'Filtre por equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.'
             }
             </p>
         </div>
       </div>
 
-      {/* Form Card */}
+      {isModificationMode && (
+          <Card>
+            <CardHeader>
+                <CardTitle>Información del Equipo Seleccionado</CardTitle>
+            </CardHeader>
+            <CardContent>
+                 <div className="grid md:grid-cols-2 gap-6 items-start">
+                    <div className="grid gap-4">
+                        <div className="grid gap-3">
+                            <Label>Equipo</Label>
+                            <Input value={equipmentName} readOnly />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div className="grid gap-3">
+                                <Label>Alias</Label>
+                                <Input value={equipmentAlias || 'N/A'} readOnly />
+                            </div>
+                            <div className="grid gap-3">
+                                <Label>Modelo</Label>
+                                <Input value={equipmentModel} readOnly />
+                            </div>
+                        </div>
+                        <div className="grid gap-3">
+                            <Label>No. Serie</Label>
+                            <Input value={equipmentSerial} readOnly />
+                        </div>
+                    </div>
+                    <div className="grid gap-3">
+                        <Label>Fotografía del Equipo</Label>
+                        {equipmentImageUrl ? (
+                            <Image src={equipmentImageUrl} alt={`Foto de ${equipmentName}`} width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video border" />
+                        ) : (
+                            <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                <div className="text-center text-muted-foreground">
+                                    <Camera className="h-10 w-10 mx-auto" />
+                                    <p className="text-sm mt-2">Sin imagen</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </CardContent>
+          </Card>
+      )}
+      
+      {isModificationMode && existingSteps.length > 0 && (
+        <Card>
+            <CardHeader>
+                <CardTitle>Pasos del Protocolo Existente</CardTitle>
+                <CardDescription>Estos son los pasos actualmente guardados para este equipo. Puede eliminarlos si es necesario.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[80%]">Paso del Protocolo</TableHead>
+                            <TableHead>Prioridad</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {existingSteps.map((step, index) => (
+                            <TableRow key={index}>
+                                <TableCell>{step.step}</TableCell>
+                                <TableCell>
+                                    <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">
+                                        {step.priority}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                     <Button variant="ghost" size="icon" onClick={() => setStepToDelete(step)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                        <span className="sr-only">Eliminar paso</span>
+                                     </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+      )}
+
       <Card>
         <form action={formAction}>
           <CardHeader>
-            <CardTitle>Detalles del Equipo</CardTitle>
-            <CardDescription>{isModificationMode ? 'Los detalles del equipo se muestran a continuación.' : 'Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.'}</CardDescription>
+            <CardTitle>{isModificationMode ? 'Añadir Nuevos Pasos con IA' : 'Detalles del Equipo'}</CardTitle>
+            <CardDescription>{isModificationMode ? 'La IA sugerirá pasos adicionales basados en la información del equipo.' : 'Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.'}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
             {!isModificationMode && (
+              <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="grid gap-3">
                     <Label htmlFor="client">Cliente</Label>
@@ -409,51 +523,10 @@ function ProtocolGenerator() {
                     </Select>
                 </div>
               </div>
+              <Separator/>
+              </>
             )}
             
-            {isModificationMode && (
-                <>
-                <Separator/>
-                <div className="grid md:grid-cols-2 gap-6 items-start">
-                    <div className="grid gap-4">
-                        <div className="grid gap-3">
-                            <Label>Equipo</Label>
-                            <Input value={equipmentName} readOnly />
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className="grid gap-3">
-                                <Label>Alias</Label>
-                                <Input value={equipmentAlias} readOnly />
-                            </div>
-                            <div className="grid gap-3">
-                                <Label>Modelo</Label>
-                                <Input value={equipmentModel} readOnly />
-                            </div>
-                        </div>
-                        <div className="grid gap-3">
-                            <Label>No. Serie</Label>
-                            <Input value={equipmentSerial} readOnly />
-                        </div>
-                    </div>
-                    <div className="grid gap-3">
-                        <Label>Fotografía del Equipo</Label>
-                        {equipmentImageUrl ? (
-                            <Image src={equipmentImageUrl} alt={`Foto de ${equipmentName}`} width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video border" />
-                        ) : (
-                            <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
-                                <div className="text-center text-muted-foreground">
-                                    <Camera className="h-10 w-10 mx-auto" />
-                                    <p className="text-sm mt-2">Sin imagen</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <Separator/>
-                </>
-            )}
-            
-            {/* Manual input */}
             <div className="grid gap-3">
               <Label htmlFor="equipmentName">Nombre del Equipo</Label>
               <Input
@@ -486,7 +559,6 @@ function ProtocolGenerator() {
         </form>
       </Card>
 
-      {/* Error Alert */}
       {state.error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
@@ -495,12 +567,11 @@ function ProtocolGenerator() {
         </Alert>
       )}
 
-      {/* Results Card */}
       {state.result && (
         <Card>
           <CardHeader>
             <CardTitle>Protocolo Sugerido</CardTitle>
-            <CardDescription>Seleccione los pasos que desea guardar para el equipo.</CardDescription>
+            <CardDescription>Seleccione los pasos que desea añadir al protocolo del equipo.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -567,6 +638,21 @@ function ProtocolGenerator() {
                 <AlertDialogAction onClick={handleCopyProtocol}>
                     Sí, Copiar Protocolo
                 </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={!!stepToDelete} onOpenChange={() => setStepToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Está seguro de eliminar este paso?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta acción no se puede deshacer. El paso "{stepToDelete?.step}" será eliminado permanentemente del protocolo.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
