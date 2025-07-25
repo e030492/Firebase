@@ -42,24 +42,33 @@ export function Combobox({
   const [inputValue, setInputValue] = React.useState(value)
 
   React.useEffect(() => {
-    setInputValue(value)
-  }, [value])
+      if (!open) {
+        setInputValue(value)
+      }
+  }, [value, open])
+  
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen)
+    if (!isOpen) {
+      onChange(inputValue)
+    }
+  }
 
   const handleSelect = (currentValue: string) => {
     const newValue = currentValue === value ? "" : currentValue;
+    setInputValue(newValue)
     onChange(newValue);
     setOpen(false);
   }
   
   const handleInputChange = (search: string) => {
     setInputValue(search)
-    onChange(search)
   }
 
   const selectedOptionLabel = options.find((option) => option.value.toLowerCase() === value?.toLowerCase())?.label || value || placeholder;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
             variant="outline"
