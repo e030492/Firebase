@@ -69,7 +69,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
         <div className="report-container">
             <header className="flex items-center justify-between mb-8 print:hidden">
                 <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-6 w-6 text-primary"/>
+                    <Image src="/logo.png" alt="Escuadra Technology Logo" width={24} height={24} data-ai-hint="logo"/>
                     <h1 className="text-xl font-bold">Vista Previa del Reporte</h1>
                 </div>
                 <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
             <div className="report-header print:block hidden">
                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <ShieldCheck className="h-14 w-14" />
+                        <Image src="/logo.png" alt="Escuadra Technology Logo" width={56} height={56} data-ai-hint="logo" />
                         <div>
                             <h2 className="text-3xl font-bold">Reporte de Servicio</h2>
                             <p className="text-sm opacity-90">{firstCedula.system}</p>
@@ -111,7 +111,7 @@ function ReportView({ data, onBack }: { data: EnrichedCedula[], onBack: () => vo
                              <header className="border-b-2 border-gray-900 overflow-hidden print:hidden">
                                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                                     <div className="flex items-center gap-4">
-                                        <ShieldCheck className="h-14 w-14" />
+                                        <Image src="/logo.png" alt="Escuadra Technology Logo" width={56} height={56} data-ai-hint="logo" />
                                         <div>
                                             <h2 className="text-3xl font-bold">Reporte de Servicio</h2>
                                             <p className="text-sm opacity-90">{cedula.system}</p>

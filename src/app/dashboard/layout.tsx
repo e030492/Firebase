@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -71,7 +72,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               className="group flex h-9 items-center gap-3 rounded-lg px-2 text-lg font-semibold text-primary"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-all group-hover:bg-primary/20">
-                <ShieldCheck className="h-6 w-6" />
+                <Image src="/logo.png" alt="Escuadra Technology Logo" width={32} height={32} data-ai-hint="logo" />
               </div>
               <span className="font-headline text-foreground group-data-[collapsible=icon]:hidden">
                 Escuadra Tecnology

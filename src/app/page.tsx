@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,7 +57,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
             <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <ShieldCheck className="h-10 w-10" />
+              <Image src="/logo.png" alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
             </div>
             <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground">
               Escuadra Tecnology
