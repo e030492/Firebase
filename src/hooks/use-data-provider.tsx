@@ -52,28 +52,28 @@ type DataContextType = {
   // Settings
   updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;
   // User mutations
-  createUser: (userData: Omit<User, 'id'>, onProgress?: (progress: number) => void) => Promise<void>;
+  createUser: (userData: Omit<User, 'id'>) => Promise<User>;
   deleteUser: (userId: string) => Promise<void>;
-  updateUser: (userId: string, userData: Partial<User>, onProgress?: (progress: number) => void) => Promise<void>;
+  updateUser: (userId: string, userData: Partial<User>) => Promise<User>;
   // Client mutations
-  createClient: (clientData: Omit<Client, 'id'>, onProgress?: (progress: number) => void) => Promise<Client>;
-  updateClient: (clientId: string, clientData: Partial<Client>, onProgress?: (progress: number) => void) => Promise<void>;
+  createClient: (clientData: Omit<Client, 'id'>) => Promise<Client>;
+  updateClient: (clientId: string, clientData: Partial<Client>) => Promise<Client>;
   deleteClient: (clientId: string) => Promise<void>;
   // System mutations
   createSystem: (systemData: Omit<System, 'id'>) => Promise<System>;
   updateSystem: (systemId: string, systemData: Partial<System>) => Promise<System>;
   deleteSystem: (systemId: string) => Promise<void>;
   // Equipment mutations
-  createEquipment: (equipmentData: Omit<Equipment, 'id'>, onProgress?: (progress: number) => void) => Promise<void>;
-  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>, onProgress?: (progress: number) => void) => Promise<void>;
+  createEquipment: (equipmentData: Omit<Equipment, 'id'>) => Promise<Equipment>;
+  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<Equipment>;
   deleteEquipment: (equipmentId: string) => Promise<void>;
   // Protocol mutations
   createProtocol: (protocolData: Omit<Protocol, 'id'>) => Promise<Protocol>;
   updateProtocol: (protocolId: string, protocolData: Partial<Protocol>) => Promise<Protocol>;
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
-  createCedula: (cedulaData: Omit<Cedula, 'id'>, onProgress?: (progress: number) => void) => Promise<void>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onProgress?: (progress: number) => void) => Promise<void>;
+  createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<Cedula>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<Cedula>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 
@@ -154,22 +154,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateCompanySettings: updateCompanySettingsService,
     createUser: createUserService,
     updateUser: updateUserService,
-    deleteUser: deleteUserService,
+    deleteUser: async (id) => { await deleteUserService(id); },
     createClient: createClientService,
     updateClient: updateClientService,
-    deleteClient: deleteClientService,
+    deleteClient: async (id) => { await deleteClientService(id); },
     createSystem: createSystemService,
     updateSystem: updateSystemService,
-    deleteSystem: deleteSystemService,
+    deleteSystem: async (id) => { await deleteSystemService(id); },
     createEquipment: createEquipmentService,
     updateEquipment: updateEquipmentService,
-    deleteEquipment: deleteEquipmentService,
+    deleteEquipment: async (id) => { 
+        await deleteProtocolByEquipmentId(id);
+        await deleteEquipmentService(id);
+    },
     createProtocol: createProtocolService,
     updateProtocol: updateProtocolService,
-    deleteProtocol: deleteProtocolService,
+    deleteProtocol: async (id) => { await deleteProtocolService(id); },
     createCedula: createCedulaService,
     updateCedula: updateCedulaService,
-    deleteCedula: deleteCedulaService,
+    deleteCedula: async (id) => { await deleteCedulaService(id); },
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
