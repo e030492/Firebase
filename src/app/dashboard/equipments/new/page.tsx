@@ -36,6 +36,7 @@ import { Equipment, Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 
 export default function NewEquipmentPage() {
   const router = useRouter();
@@ -74,6 +75,11 @@ export default function NewEquipmentPage() {
     }
     setLocation(''); // Reset location when client changes
   }, [clientId, clients]);
+
+  const equipmentNameOptions = useMemo((): ComboboxOption[] => {
+    const uniqueNames = new Set(equipments.map(eq => eq.name));
+    return Array.from(uniqueNames).map(name => ({ value: name, label: name }));
+  }, [equipments]);
 
   const nextMaintenanceDate = useMemo(() => {
     if (!maintenanceStartDate || !maintenancePeriodicity) return null;
@@ -260,7 +266,15 @@ export default function NewEquipmentPage() {
                 <Separator/>
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
-                <Input id="name" value={name} onChange={e => setName(e.target.value)} required disabled={isSaving}/>
+                <Combobox
+                  options={equipmentNameOptions}
+                  value={name}
+                  onChange={setName}
+                  placeholder="Seleccione o escriba un nombre"
+                  searchPlaceholder="Buscar nombre..."
+                  emptyResult="No se encontró el nombre."
+                  disabled={isSaving}
+                />
               </div>
                <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
