@@ -1,12 +1,14 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -33,11 +35,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 type SortableKey = 'name' | 'responsable' | 'direccion';
 
@@ -45,6 +50,7 @@ export default function ClientsPage() {
   const { clients, loading, deleteClient: deleteClientFromProvider } = useData();
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
+  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
   const sortedClients = useMemo(() => {
     let sortableItems = [...clients];
@@ -91,6 +97,10 @@ export default function ClientsPage() {
         setClientToDelete(null);
       }
     }
+  };
+
+  const handleToggleDetails = (clientId: string) => {
+    setExpandedClientId(prevId => (prevId === clientId ? null : clientId));
   };
   
   if (loading) {
@@ -151,59 +161,88 @@ export default function ClientsPage() {
                     </Button>
                   </TableHead>
                   <TableHead className="hidden lg:table-cell">
-                    <Button variant="ghost" onClick={() => requestSort('direccion')}>
                         Dirección
-                        {getSortIcon('direccion')}
-                    </Button>
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    Almacenes
                   </TableHead>
                   <TableHead>
                     <span className="sr-only">Acciones</span>
+                  </TableHead>
+                   <TableHead>
+                    <span className="sr-only">Detalles</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sortedClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.responsable}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{client.direccion}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {client.almacenes && client.almacenes.length > 0 ? (
-                        <div className="flex flex-col gap-1">
-                          {client.almacenes.map((almacen, index) => (
-                            <Badge key={index} variant="secondary">{almacen.nombre}</Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                             <Link href={`/dashboard/clients/${client.id}/edit`}>Editar</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onSelect={() => setClientToDelete(client)}
-                          >
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                  <Fragment key={client.id}>
+                    <TableRow onClick={() => handleToggleDetails(client.id)} className="cursor-pointer">
+                        <TableCell className="font-medium">{client.name}</TableCell>
+                        <TableCell className="hidden md:table-cell">{client.responsable}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{client.direccion}</TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                                <Link href={`/dashboard/clients/${client.id}/edit`}>Editar</Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={() => setClientToDelete(client)}
+                            >
+                                Eliminar
+                            </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" onClick={() => handleToggleDetails(client.id)}>
+                                <ChevronDown className={cn("h-4 w-4 transition-transform", expandedClientId === client.id && "rotate-180")} />
+                                <span className="sr-only">Ver detalles</span>
+                            </Button>
+                        </TableCell>
+                    </TableRow>
+                     {expandedClientId === client.id && (
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell colSpan={5} className="p-0">
+                                <div className="p-4">
+                                <Card className="shadow-inner">
+                                    <CardHeader>
+                                        <CardTitle>Detalles del Cliente: {client.name}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div>
+                                            <Label className="font-semibold">Dirección Principal</Label>
+                                            <p className="text-sm text-muted-foreground mt-1">{client.direccion}</p>
+                                        </div>
+                                        <Separator/>
+                                        <div>
+                                            <Label className="font-semibold">Almacenes Registrados</Label>
+                                            {client.almacenes && client.almacenes.length > 0 ? (
+                                                <div className="space-y-3 mt-2">
+                                                    {client.almacenes.map((almacen, index) => (
+                                                        <div key={index} className="text-sm p-3 border rounded-md bg-background/50">
+                                                            <p className="font-medium">{almacen.nombre}</p>
+                                                            <p className="text-muted-foreground">{almacen.direccion}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground mt-1">Este cliente no tiene almacenes registrados.</p>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                     )}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
