@@ -138,7 +138,7 @@ function ProtocolGenerator() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { equipments: allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
-  const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
+  const [aiState, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
 
   // Data states
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
@@ -153,8 +153,9 @@ function ProtocolGenerator() {
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   
   useEffect(() => {
+    if (loading) return;
     const equipmentIdFromQuery = searchParams.get('equipmentId');
-    if (equipmentIdFromQuery && !loading) {
+    if (equipmentIdFromQuery && allEquipments.length > 0) {
       const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
       if (equipment) {
         setSelectedEquipment(equipment);
@@ -166,10 +167,10 @@ function ProtocolGenerator() {
 
 
   useEffect(() => {
-    if (state.result) {
+    if (aiState.result) {
       setSelectedSteps([]);
     }
-  }, [state.result]);
+  }, [aiState.result]);
 
   const handleSelectStep = (step: SuggestMaintenanceProtocolOutput[0], checked: boolean) => {
     setSelectedSteps(prev => {
@@ -182,8 +183,8 @@ function ProtocolGenerator() {
   };
 
   const handleSelectAllSteps = (checked: boolean) => {
-    if (checked && state.result) {
-      setSelectedSteps(state.result);
+    if (checked && aiState.result) {
+      setSelectedSteps(aiState.result);
     } else {
       setSelectedSteps([]);
     }
@@ -241,7 +242,7 @@ function ProtocolGenerator() {
     }
 
     alert('Protocolo guardado con éxito.');
-    setState({ result: null, error: null });
+    formAction(new FormData()); // Resets the AI form state
     setSelectedSteps([]);
   };
   
@@ -347,7 +348,7 @@ function ProtocolGenerator() {
     }
   };
 
-  const areAllStepsSelected = state.result ? selectedSteps.length === state.result.length && state.result.length > 0 : false;
+  const areAllStepsSelected = aiState.result ? selectedSteps.length === aiState.result.length && aiState.result.length > 0 : false;
 
   return (
     <>
@@ -503,9 +504,9 @@ function ProtocolGenerator() {
             <CardContent className="grid gap-6">
                 <Input name="name" value={selectedEquipment.name} type="hidden" />
                 <Input name="description" value={selectedEquipment.description} type="hidden" />
-                <Input name="brand" value={selectedEquipment.brand} type="hidden" />
-                <Input name="model" value={selectedEquipment.model} type="hidden" />
-                <Input name="type" value={selectedEquipment.type} type="hidden" />
+                <Input name="brand" value={selectedEquipment.brand || ''} type="hidden" />
+                <Input name="model" value={selectedEquipment.model || ''} type="hidden" />
+                <Input name="type" value={selectedEquipment.type || ''} type="hidden" />
                  <p className="text-sm text-muted-foreground">
                     Se generarán sugerencias para: <span className="font-semibold text-foreground">{selectedEquipment.name}</span>.
                 </p>
@@ -525,15 +526,15 @@ function ProtocolGenerator() {
             </form>
         </Card>
 
-          {state.error && (
+          {aiState.error && (
             <Alert variant="destructive">
               <Terminal className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{state.error}</AlertDescription>
+              <AlertDescription>{aiState.error}</AlertDescription>
             </Alert>
           )}
 
-          {state.result && (
+          {aiState.result && (
             <Card>
               <CardHeader>
                 <CardTitle>Protocolo Sugerido por IA</CardTitle>
@@ -556,7 +557,7 @@ function ProtocolGenerator() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {state.result.map((item, index) => (
+                    {aiState.result.map((item, index) => (
                       <TableRow key={index} data-state={isStepSelected(item) ? "selected" : ""}>
                         <TableCell>
                           <Checkbox
