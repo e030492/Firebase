@@ -89,6 +89,7 @@ export default function ProtocolsPage() {
       loading,
       createProtocol,
       deleteProtocol,
+      updateProtocol
   } = useData();
   
   const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
@@ -171,8 +172,9 @@ export default function ProtocolsPage() {
     const similarEquipmentWithProtocol = allEquipments.find(
       (eq) =>
         eq.id !== targetEquipment.id &&
+        eq.name === targetEquipment.name &&
         eq.type === targetEquipment.type &&
-        protocols.some((p) => p.equipmentId === eq.id)
+        protocols.some((p) => p.equipmentId === eq.id && p.steps.length > 0)
     );
   
     if (similarEquipmentWithProtocol) {
@@ -337,7 +339,7 @@ export default function ProtocolsPage() {
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        {equipmentProtocol ? (
+                                        {equipmentProtocol && equipmentProtocol.steps.length > 0 ? (
                                             <>
                                                 <DropdownMenuItem asChild>
                                                     <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
