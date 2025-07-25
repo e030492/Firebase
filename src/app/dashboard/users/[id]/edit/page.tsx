@@ -207,8 +207,12 @@ export default function EditUserPage() {
             permissions,
             signatureUrl: signatureUrl || '',
             photoUrl: photoUrl || '',
-            clientId: role === 'cliente' ? selectedClientId : undefined,
         };
+
+        if (role === 'cliente') {
+            updatedData.clientId = selectedClientId;
+        }
+
         if (password) {
             updatedData.password = password;
         }
@@ -464,3 +468,5 @@ export default function EditUserPage() {
     </form>
   );
 }
+
+    
