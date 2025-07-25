@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, User as UserIcon } from 'lucide-react';
 import { DashboardNav } from '@/components/dashboard-nav';
 import {
   SidebarProvider,
@@ -27,34 +27,38 @@ import {
 } from '@/components/ui/sidebar';
 import type { User } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
-import { PermissionsProvider } from '@/hooks/use-permissions';
+import { PermissionsProvider, usePermissions } from '@/hooks/use-permissions';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [activeUser, setActiveUser] = useState<User | null>(null);
+  const { user, setUser } = usePermissions();
 
   useEffect(() => {
     const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
     if (storedUser) {
       try {
-        setActiveUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        if (!user || user.id !== parsedUser.id) {
+            setUser(parsedUser);
+        }
       } catch (error) {
         console.error("Failed to parse active user from localStorage", error);
-        setActiveUser(null);
+        setUser(null);
         router.push('/');
       }
     } else {
         router.push('/');
     }
-  }, [router]);
+  }, [router, setUser, user]);
   
   const handleLogout = () => {
       localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+      setUser(null);
       router.push('/');
   };
 
   const getInitials = (name: string) => {
-    if (!name) return 'ET';
+    if (!name) return <UserIcon className="h-5 w-5" />;
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
   
@@ -85,17 +89,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <SidebarTrigger />
 
             <div className="flex items-center gap-3">
-              {activeUser && <span className="hidden text-sm font-medium text-foreground sm:inline-block">{activeUser.name}</span>}
+              {user && <span className="hidden text-sm font-medium text-foreground sm:inline-block">{user.name}</span>}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
                     <Avatar>
                       <AvatarImage
-                        src={activeUser?.photoUrl || ''}
+                        src={user?.photoUrl || ''}
                         alt="User avatar"
                         data-ai-hint="user avatar"
                       />
-                      <AvatarFallback>{getInitials(activeUser?.name || '')}</AvatarFallback>
+                      <AvatarFallback>{getInitials(user?.name || '')}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>

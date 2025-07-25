@@ -1,6 +1,7 @@
+
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, Dispatch, SetStateAction } from "react";
 import { ACTIVE_USER_STORAGE_KEY, mockUsers } from "@/lib/mock-data";
 
 type User = typeof mockUsers[0];
@@ -10,6 +11,7 @@ type ActionKey = keyof Permissions[ModuleKey];
 
 type PermissionsContextType = {
   user: User | null;
+  setUser: Dispatch<SetStateAction<User | null>>;
   can: (action: ActionKey, module: ModuleKey) => boolean;
 };
 
@@ -22,13 +24,16 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        if (!user || user.id !== parsedUser.id) {
+            setUser(parsedUser);
+        }
       } catch (error) {
         console.error("Failed to parse active user for permissions", error);
         setUser(null);
       }
     }
-  }, []);
+  }, [user]);
 
   const can = (action: ActionKey, module: ModuleKey): boolean => {
     if (!user) {
@@ -46,9 +51,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <PermissionsContext.Provider value={{ user, can }}>
+    <PermissionsContext.Provider value={{ user, setUser, can }}>
       {children}
-    </PermissionsContext.Provider>
+    </Permissions-Context.Provider>
   );
 }
 

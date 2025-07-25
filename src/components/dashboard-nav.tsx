@@ -20,7 +20,7 @@ import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { usePermissions } from '@/hooks/use-permissions';
 
 const allNavItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' as const },
+  { href: '/dashboard/dashboard', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' as const },
   { href: '/dashboard/users', label: 'Usuarios', icon: Users, module: 'users' as const },
   { href: '/dashboard/clients', label: 'Clientes', icon: Building, module: 'clients' as const },
   { href: '/dashboard/systems', label: 'Sistemas', icon: Shield, module: 'systems' as const },
@@ -36,7 +36,8 @@ export function DashboardNav() {
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
-      return pathname === href;
+      // This is to handle the redirect from /dashboard to /dashboard/dashboard
+      return pathname.startsWith(href);
     }
     const basePath = href.split('/').slice(0, 3).join('/');
     return pathname.startsWith(basePath);
@@ -49,31 +50,12 @@ export function DashboardNav() {
     return can('update', module);
   }
 
+  const accessibleNavItems = allNavItems.filter(item => hasAccess(item.module));
+
   return (
     <>
-      {allNavItems.map((item) => {
-        const disabled = !hasAccess(item.module);
-        return (
+      {accessibleNavItems.map((item) => (
           <SidebarMenuItem key={item.label}>
-            {disabled ? (
-              <SidebarMenuButton
-                isActive={false}
-                disabled={true}
-                tooltip={item.label}
-                className={cn(disabled && 'cursor-not-allowed opacity-50')}
-              >
-                <item.icon />
-                <span>{item.label}</span>
-                {item.ai && (
-                  <Badge
-                    variant="outline"
-                    className="ml-auto bg-accent/20 text-accent-foreground border-accent"
-                  >
-                    AI
-                  </Badge>
-                )}
-              </SidebarMenuButton>
-            ) : (
               <SidebarMenuButton
                 asChild
                 isActive={isActive(item.href)}
@@ -92,10 +74,8 @@ export function DashboardNav() {
                   )}
                 </Link>
               </SidebarMenuButton>
-            )}
           </SidebarMenuItem>
-        )
-      })}
+      ))}
     </>
   );
 }
