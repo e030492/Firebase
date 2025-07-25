@@ -36,7 +36,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Equipment, Client, System } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
 
 export default function EditEquipmentPage() {
   const params = useParams();
@@ -70,7 +69,6 @@ export default function EditEquipmentPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   
   // --- Autocomplete States ---
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
@@ -243,7 +241,6 @@ export default function EditEquipmentPage() {
         return;
     }
     setIsSaving(true);
-    setUploadProgress(0);
 
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const systemName = systems.find(s => s.id === systemId)?.name || '';
@@ -269,7 +266,7 @@ export default function EditEquipmentPage() {
           configPassword,
         };
         
-        await updateEquipment(equipmentId, updatedData, setUploadProgress);
+        await updateEquipment(equipmentId, updatedData);
         alert('Equipo actualizado con éxito.');
         router.push('/dashboard/equipments');
     } catch (error) {
@@ -277,7 +274,6 @@ export default function EditEquipmentPage() {
         alert("Error al actualizar el equipo.");
     } finally {
         setIsSaving(false);
-        setUploadProgress(null);
     }
   }
 
@@ -615,7 +611,6 @@ export default function EditEquipmentPage() {
                     <Camera className="mr-2 h-4 w-4" />
                     {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
                 </Button>
-                {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
                <Separator />
                <div className="grid md:grid-cols-2 gap-4">

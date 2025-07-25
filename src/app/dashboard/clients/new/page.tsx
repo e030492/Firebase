@@ -1,7 +1,6 @@
 
 "use client";
-import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +19,6 @@ import { Client, User } from '@/lib/services';
 import type { Almacen } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Switch } from '@/components/ui/switch';
-import { Progress } from '@/components/ui/progress';
 
 type Plano = {
   url: string;
@@ -63,7 +61,6 @@ export default function NewClientPage() {
   const [userPassword, setUserPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
   const officePhotoInputRef = useRef<HTMLInputElement>(null);
   const almacenPhotoInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
@@ -151,7 +148,6 @@ export default function NewClientPage() {
         return;
     }
     setLoading(true);
-    setUploadProgress(0);
 
     try {
         const newClientData: Omit<Client, 'id'> = {
@@ -181,7 +177,7 @@ export default function NewClientPage() {
         await updateClient(newClient.id, {
             officePhotoUrl: officePhotoUrl,
             almacenes: almacenesToSave,
-        }, setUploadProgress);
+        });
         
         if (generateUserAccess && newClient) {
             const newUserForClient: Omit<User, 'id'> = {
@@ -204,7 +200,6 @@ export default function NewClientPage() {
         alert("Error al crear el cliente.");
     } finally {
         setLoading(false);
-        setUploadProgress(null);
     }
   };
 
@@ -275,7 +270,6 @@ export default function NewClientPage() {
                       <Camera className="mr-2 h-4 w-4" />
                       {officePhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}
                   </Button>
-                  {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
             </div>
           </CardContent>
@@ -323,7 +317,6 @@ export default function NewClientPage() {
                           <Camera className="mr-2 h-4 w-4" />
                           {almacen.photoUrl ? 'Cambiar Foto' : 'Subir Foto'}
                       </Button>
-                      {uploadProgress !== null && almacen.photoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                   </div>
                   <div className="grid gap-3">
                       <Label>Planos del Almacén {index + 1} (PDF)</Label>
