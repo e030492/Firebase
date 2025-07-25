@@ -101,6 +101,29 @@ function SubmitButton() {
   );
 }
 
+const levenshtein = (s1: string, s2: string): number => {
+  if (!s1) return s2.length;
+  if (!s2) return s1.length;
+  const track = Array(s2.length + 1).fill(null).map(() => Array(s1.length + 1).fill(null));
+  for (let i = 0; i <= s1.length; i += 1) {
+    track[0][i] = i;
+  }
+  for (let j = 0; j <= s2.length; j += 1) {
+    track[j][0] = j;
+  }
+  for (let j = 1; j <= s2.length; j += 1) {
+    for (let i = 1; i <= s1.length; i += 1) {
+      const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      track[j][i] = Math.min(
+        track[j][i - 1] + 1, // Deletion
+        track[j - 1][i] + 1, // Insertion
+        track[j - 1][i - 1] + indicator, // Substitution
+      );
+    }
+  }
+  return track[s2.length][s1.length];
+};
+
 // Main Page Component
 function ProtocolGenerator() {
   const router = useRouter();
@@ -110,7 +133,6 @@ function ProtocolGenerator() {
 
   // Data states
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
   
   const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
   const [showNoSimilarFoundAlert, setShowNoSimilarFoundAlert] = useState(false);
@@ -127,7 +149,6 @@ function ProtocolGenerator() {
       const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
       if (equipment) {
         setSelectedEquipment(equipment);
-        setSelectedEquipmentId(equipment.id);
         const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
         setExistingSteps(existingProtocol?.steps || []);
       }
@@ -164,7 +185,7 @@ function ProtocolGenerator() {
   };
   
   const handleSaveProtocol = async () => {
-    if (!selectedEquipmentId) {
+    if (!selectedEquipment?.id) {
        alert("No hay un equipo seleccionado para guardar el protocolo.");
        return;
     }
@@ -174,7 +195,7 @@ function ProtocolGenerator() {
        return;
     }
 
-    const existingProtocol = protocols.find(p => p.equipmentId === selectedEquipmentId);
+    const existingProtocol = protocols.find(p => p.equipmentId === selectedEquipment.id);
     
     if (existingProtocol) {
       const allSteps = [...existingProtocol.steps];
@@ -197,7 +218,7 @@ function ProtocolGenerator() {
       }
     } else {
       const newProtocol: Omit<Protocol, 'id'> = {
-        equipmentId: selectedEquipmentId,
+        equipmentId: selectedEquipment.id,
         steps: selectedSteps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
       };
       try {
@@ -216,9 +237,9 @@ function ProtocolGenerator() {
   };
   
   const handleDeleteStep = async () => {
-    if (!stepToDelete) return;
+    if (!stepToDelete || !selectedEquipment) return;
     
-    const protocolToUpdate = protocols.find(p => p.equipmentId === selectedEquipmentId);
+    const protocolToUpdate = protocols.find(p => p.equipmentId === selectedEquipment.id);
     if (!protocolToUpdate) return;
     
     const newSteps = protocolToUpdate.steps.filter(s => s.step !== stepToDelete.step);
@@ -234,7 +255,8 @@ function ProtocolGenerator() {
   };
 
   const handleDeleteAllSteps = async () => {
-    const protocolToUpdate = protocols.find(p => p.equipmentId === selectedEquipmentId);
+    if (!selectedEquipment) return;
+    const protocolToUpdate = protocols.find(p => p.equipmentId === selectedEquipment.id);
     if (!protocolToUpdate) return;
     
     try {
@@ -250,37 +272,45 @@ function ProtocolGenerator() {
   const handleSearchSimilar = () => {
     if (!selectedEquipment) return;
     
-    const similarEquipments = allEquipments.filter(
-      (eq) =>
-        eq.id !== selectedEquipment.id &&
-        eq.name === selectedEquipment.name &&
-        eq.type === selectedEquipment.type
-    );
-
-    const similarEquipmentWithProtocol = similarEquipments.find(
-      (eq) => protocols.some((p) => p.equipmentId === eq.id && p.steps.length > 0)
-    );
-
-    if (similarEquipmentWithProtocol) {
-      const sourceProtocol = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
-      if (sourceProtocol) {
+     const similarEquipmentsWithProtocols = allEquipments
+      .filter(eq => {
+          if (eq.id === selectedEquipment.id) return false;
+          
+          const nameDistance = levenshtein(eq.name.toLowerCase(), selectedEquipment.name.toLowerCase());
+          const typeDistance = levenshtein(eq.type.toLowerCase(), selectedEquipment.type.toLowerCase());
+          
+          return nameDistance <= 4 && typeDistance <= 4;
+      })
+      .map(eq => {
+          const protocol = protocols.find(p => p.equipmentId === eq.id && p.steps.length > 0);
+          return protocol ? { equipment: eq, protocol } : null;
+      })
+      .filter((item): item is { equipment: Equipment; protocol: Protocol } => item !== null);
+      
+    if (similarEquipmentsWithProtocols.length > 0) {
         setProtocolToCopy({
-          sourceProtocol,
-          sourceEquipment: similarEquipmentWithProtocol,
-          targetEquipment: selectedEquipment,
+            sourceOptions: similarEquipmentsWithProtocols,
+            targetEquipment: selectedEquipment,
         });
-        return;
-      }
+    } else {
+        setShowNoSimilarFoundAlert(true);
     }
-    setShowNoSimilarFoundAlert(true);
   };
   
-  const handleCopyProtocol = async () => {
+  const handleCopyProtocol = async (selectedSource: { protocol: Protocol; equipment: Equipment }) => {
     if (!protocolToCopy) return;
 
+    const existingProtocol = protocols.find(p => p.equipmentId === protocolToCopy.targetEquipment.id);
+    
+    if (existingProtocol) {
+      alert("Este equipo ya tiene un protocolo. Por favor, elimínelo primero si desea copiar uno nuevo.");
+      setProtocolToCopy(null);
+      return;
+    }
+    
     const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
       equipmentId: protocolToCopy.targetEquipment.id,
-      steps: protocolToCopy.sourceProtocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
+      steps: selectedSource.protocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
     };
     
     try {
@@ -326,7 +356,7 @@ function ProtocolGenerator() {
         </div>
       </div>
       
-      {!selectedEquipmentId && !loading && (
+      {!selectedEquipment && !loading && (
         <Card className="flex flex-col items-center justify-center p-8 text-center">
             <CardHeader>
                 <CardTitle>Equipo no especificado</CardTitle>
@@ -526,7 +556,7 @@ function ProtocolGenerator() {
                 </Table>
               </CardContent>
               <CardFooter className="border-t px-6 py-4">
-                <Button onClick={handleSaveProtocol} disabled={!selectedEquipmentId || selectedSteps.length === 0}>
+                <Button onClick={handleSaveProtocol} disabled={!selectedEquipment || selectedSteps.length === 0}>
                   <Save className="mr-2 h-4 w-4" />
                   Añadir Pasos Seleccionados
                 </Button>
