@@ -49,6 +49,8 @@ export default function NewClientPage() {
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [phone1, setPhone1] = useState('');
+  const [phone2, setPhone2] = useState('');
   const [officePhotoUrl, setOfficePhotoUrl] = useState<string | null>(null);
   const [almacenes, setAlmacenes] = useState<AlmacenWithPhotos[]>([
     { nombre: '', direccion: '', planos: [], photoUrl: '' },
@@ -167,6 +169,8 @@ export default function NewClientPage() {
             name,
             responsable,
             direccion,
+            phone1,
+            phone2,
             officePhotoUrl: officePhotoUrl || '',
             almacenes: almacenesToSave,
         };
@@ -230,6 +234,16 @@ export default function NewClientPage() {
               <div className="grid gap-3">
                 <Label htmlFor="direccion">Dirección Principal</Label>
                 <Input id="direccion" value={direccion} onChange={e => setDireccion(e.target.value)} placeholder="Ej. Av. Siempre Viva 123, Springfield" required disabled={loading}/>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                    <Label htmlFor="phone1">Teléfono de Contacto 1</Label>
+                    <Input id="phone1" value={phone1} onChange={e => setPhone1(e.target.value)} placeholder="Ej. 55-1234-5678" disabled={loading} />
+                </div>
+                <div className="grid gap-3">
+                    <Label htmlFor="phone2">Teléfono de Contacto 2</Label>
+                    <Input id="phone2" value={phone2} onChange={e => setPhone2(e.target.value)} placeholder="Ej. 55-8765-4321" disabled={loading}/>
+                </div>
               </div>
                <div className="grid gap-3">
                   <Label>Foto de las Oficinas</Label>

@@ -113,6 +113,8 @@ export const mockClients = [
     responsable: 'Juan Pérez',
     direccion: 'Av. Siempre Viva 123, Springfield',
     officePhotoUrl: 'https://placehold.co/400x300.png',
+    phone1: '55-1234-5678',
+    phone2: '55-8765-4321',
     almacenes: [
       { 
         nombre: 'Almacén Central', 
@@ -128,6 +130,8 @@ export const mockClients = [
     responsable: 'María García',
     direccion: 'Calle Falsa 456, Capital City',
     officePhotoUrl: '',
+    phone1: '55-2345-6789',
+    phone2: '',
     almacenes: [
       { 
         nombre: 'Bodega Principal', 
@@ -143,6 +147,8 @@ export const mockClients = [
     responsable: 'Carlos Rodriguez',
     direccion: 'Blvd. de los Sueños 789, Metropolis',
     officePhotoUrl: '',
+    phone1: '55-3456-7890',
+    phone2: '',
     almacenes: []
   },
   {
@@ -151,6 +157,8 @@ export const mockClients = [
     responsable: 'Ana Martinez',
     direccion: 'Paseo de la Reforma 101, CDMX',
     officePhotoUrl: '',
+    phone1: '55-4567-8901',
+    phone2: '55-1098-7654',
     almacenes: [
         { 
             nombre: 'Almacén Sur', 

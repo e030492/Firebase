@@ -8,7 +8,7 @@ import {
 // Interfaces based on mock-data structure
 export type Plano = { url: string; name: string; size: number };
 export type Almacen = { nombre: string; direccion: string; planos?: Plano[], photoUrl?: string };
-export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[], officePhotoUrl?: string };
+export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[], officePhotoUrl?: string, phone1?: string, phone2?: string };
 export type Equipment = typeof mockEquipments[0] & { id: string };
 export type System = typeof mockSystems[0] & { id: string };
 export type User = typeof mockUsers[0] & { id: string; clientId?: string };

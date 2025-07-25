@@ -56,6 +56,8 @@ export default function EditClientPage() {
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [phone1, setPhone1] = useState('');
+  const [phone2, setPhone2] = useState('');
   const [officePhotoUrl, setOfficePhotoUrl] = useState<string | null>(null);
   const [almacenes, setAlmacenes] = useState<AlmacenWithPhotos[]>([
     { nombre: '', direccion: '', planos: [], photoUrl: '' },
@@ -86,6 +88,8 @@ export default function EditClientPage() {
         setName(foundClient.name);
         setResponsable(foundClient.responsable);
         setDireccion(foundClient.direccion);
+        setPhone1(foundClient.phone1 || '');
+        setPhone2(foundClient.phone2 || '');
         setOfficePhotoUrl(foundClient.officePhotoUrl || null);
         const clientAlmacenes = foundClient.almacenes || [];
         const displayAlmacenes: AlmacenWithPhotos[] = [
@@ -215,6 +219,8 @@ export default function EditClientPage() {
             name,
             responsable,
             direccion,
+            phone1,
+            phone2,
             officePhotoUrl: officePhotoUrl || '',
             almacenes: almacenesToSave,
         };
@@ -388,6 +394,16 @@ export default function EditClientPage() {
               <div className="grid gap-3">
                 <Label htmlFor="direccion">Dirección Principal</Label>
                 <Input id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} required disabled={isSaving}/>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                    <Label htmlFor="phone1">Teléfono de Contacto 1</Label>
+                    <Input id="phone1" value={phone1} onChange={e => setPhone1(e.target.value)} placeholder="Ej. 55-1234-5678" disabled={isSaving} />
+                </div>
+                <div className="grid gap-3">
+                    <Label htmlFor="phone2">Teléfono de Contacto 2</Label>
+                    <Input id="phone2" value={phone2} onChange={e => setPhone2(e.target.value)} placeholder="Ej. 55-8765-4321" disabled={isSaving}/>
+                </div>
               </div>
               <div className="grid gap-3">
                   <Label>Foto de las Oficinas</Label>

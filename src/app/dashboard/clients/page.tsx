@@ -233,6 +233,16 @@ export default function ClientsPage() {
                                                     <Label className="font-semibold">Dirección Principal</Label>
                                                     <p className="text-sm text-muted-foreground mt-1">{client.direccion}</p>
                                                 </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <Label className="font-semibold">Teléfono 1</Label>
+                                                        <p className="text-sm text-muted-foreground mt-1">{client.phone1 || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <Label className="font-semibold">Teléfono 2</Label>
+                                                        <p className="text-sm text-muted-foreground mt-1">{client.phone2 || 'N/A'}</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="font-semibold">Foto de Oficinas</Label>
