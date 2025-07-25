@@ -340,22 +340,6 @@ export default function EditEquipmentPage() {
                     disabled={isSaving}
                 />
               </div>
-              <div className="grid gap-3">
-                <Label htmlFor="alias">Alias del Equipo (Opcional)</Label>
-                <Combobox
-                    value={alias}
-                    onChange={setAlias}
-                    options={existingOptions.aliases}
-                    placeholder="Escriba o seleccione un alias..."
-                    searchPlaceholder="Buscar alias..."
-                    emptyPlaceholder="No se encontraron alias."
-                    disabled={isSaving}
-                />
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required className="min-h-32" disabled={isSaving}/>
-              </div>
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                     <Label htmlFor="brand">Marca</Label>
@@ -399,6 +383,22 @@ export default function EditEquipmentPage() {
                   <Label htmlFor="serial">Número de Serie</Label>
                   <Input id="serial" value={serial} onChange={e => setSerial(e.target.value)} placeholder="Ej. SN-12345-ABC" required disabled={isSaving}/>
                 </div>
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="alias">Alias del Equipo (Opcional)</Label>
+                <Combobox
+                    value={alias}
+                    onChange={setAlias}
+                    options={existingOptions.aliases}
+                    placeholder="Escriba o seleccione un alias..."
+                    searchPlaceholder="Buscar alias..."
+                    emptyPlaceholder="No se encontraron alias."
+                    disabled={isSaving}
+                />
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required className="min-h-32" disabled={isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label>Imagen del Equipo</Label>
@@ -569,5 +569,3 @@ export default function EditEquipmentPage() {
     </form>
   );
 }
-
-    
