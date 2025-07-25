@@ -69,7 +69,7 @@ function ReportView({ data, onBack, logoUrl }: { data: EnrichedCedula[], onBack:
         <div className="report-container">
             <header className="flex items-center justify-between mb-8 print:hidden">
                 <div className="flex items-center gap-2">
-                    <Image src={logoUrl || "https://placehold.co/24x24.png"} alt="Escuadra Technology Logo" width={24} height={24} data-ai-hint="logo"/>
+                    <Image src={logoUrl || "https://placehold.co/72x72.png"} alt="Escuadra Technology Logo" width={72} height={72} data-ai-hint="logo"/>
                     <h1 className="text-xl font-bold">Vista Previa del Reporte</h1>
                 </div>
                 <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ function ReportView({ data, onBack, logoUrl }: { data: EnrichedCedula[], onBack:
             <div className="report-header print:block hidden">
                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <Image src={logoUrl || "https://placehold.co/80x80.png"} alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
+                        <Image src={logoUrl || "https://placehold.co/240x240.png"} alt="Escuadra Technology Logo" width={240} height={240} data-ai-hint="logo" />
                     </div>
                 </div>
             </div>
@@ -106,7 +106,7 @@ function ReportView({ data, onBack, logoUrl }: { data: EnrichedCedula[], onBack:
                              <header className="border-b-2 border-gray-900 overflow-hidden print:hidden">
                                 <div style={{ backgroundColor: systemColor }} className="text-white p-4 flex items-start justify-between">
                                     <div className="flex items-center gap-4">
-                                        <Image src={logoUrl || "https://placehold.co/80x80.png"} alt="Escuadra Technology Logo" width={80} height={80} data-ai-hint="logo" />
+                                        <Image src={logoUrl || "https://placehold.co/240x240.png"} alt="Escuadra Technology Logo" width={240} height={240} data-ai-hint="logo" />
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 flex items-start justify-between">

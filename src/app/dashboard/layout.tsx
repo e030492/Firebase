@@ -158,10 +158,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           <SidebarHeader>
             <Link
               href="/dashboard/dashboard"
-              className="group flex h-9 items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
+              className="group flex h-auto items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center transition-all">
-                <Image src={companySettings?.logoUrl || "https://placehold.co/40x40.png"} alt="Escuadra Technology Logo" width={40} height={40} data-ai-hint="logo" />
+              <div className="flex shrink-0 items-center justify-center transition-all p-2">
+                <Image src={companySettings?.logoUrl || "https://placehold.co/120x120.png"} alt="Escuadra Technology Logo" width={120} height={120} data-ai-hint="logo" />
               </div>
             </Link>
           </SidebarHeader>
