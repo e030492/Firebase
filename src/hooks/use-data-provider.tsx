@@ -36,8 +36,6 @@ import {
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 
-type ProgressCallback = (progress: number) => void;
-
 type DataContextType = {
   users: User[];
   clients: Client[];
@@ -51,30 +49,30 @@ type DataContextType = {
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
   // Settings
-  updateCompanySettings: (settingsData: Partial<CompanySettings>, onProgress?: ProgressCallback) => Promise<void>;
+  updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;
   // User mutations
-  createUser: (userData: Omit<User, 'id'>, onProgress?: ProgressCallback) => Promise<void>;
+  createUser: (userData: Omit<User, 'id'>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
-  updateUser: (userId: string, userData: Partial<User>, onProgress?: ProgressCallback) => Promise<void>;
+  updateUser: (userId: string, userData: Partial<User>) => Promise<void>;
   // Client mutations
-  createClient: (clientData: Omit<Client, 'id'>, onProgress?: ProgressCallback) => Promise<void>;
-  updateClient: (clientId: string, clientData: Partial<Client>, onProgress?: ProgressCallback) => Promise<void>;
+  createClient: (clientData: Omit<Client, 'id'>) => Promise<Client>;
+  updateClient: (clientId: string, clientData: Partial<Client>) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   // System mutations
   createSystem: (systemData: Omit<System, 'id'>) => Promise<void>;
   updateSystem: (systemId: string, systemData: Partial<System>) => Promise<void>;
   deleteSystem: (systemId: string) => Promise<void>;
   // Equipment mutations
-  createEquipment: (equipmentData: Omit<Equipment, 'id'>, onProgress?: ProgressCallback) => Promise<void>;
-  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>, onProgress?: ProgressCallback) => Promise<void>;
+  createEquipment: (equipmentData: Omit<Equipment, 'id'>) => Promise<void>;
+  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<void>;
   deleteEquipment: (equipmentId: string) => Promise<void>;
   // Protocol mutations
   createProtocol: (protocolData: Omit<Protocol, 'id'>) => Promise<Protocol>;
   updateProtocol: (protocolId: string, protocolData: Partial<Protocol>) => Promise<Protocol>;
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
-  createCedula: (cedulaData: Omit<Cedula, 'id'>, onProgress?: ProgressCallback) => Promise<void>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onProgress?: ProgressCallback) => Promise<void>;
+  createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<void>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 

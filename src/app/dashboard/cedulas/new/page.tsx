@@ -46,7 +46,6 @@ import { Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from 
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardDescription } from '@/components/ui/card';
 import { useData } from '@/hooks/use-data-provider';
-import { Progress } from '@/components/ui/progress';
 
 type EquipmentWithProtocolStatus = Equipment & { hasProtocol: boolean };
 
@@ -77,7 +76,6 @@ export default function NewCedulaPage() {
   const [notes, setNotes] = useState<{ [step: string]: string }>({});
   
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   
   const [showProtocolAlert, setShowProtocolAlert] = useState(false);
   const [equipmentForProtocol, setEquipmentForProtocol] = useState<string | null>(null);
@@ -195,7 +193,6 @@ export default function NewCedulaPage() {
         return;
     }
     setIsSaving(true);
-    setUploadProgress(0);
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(eq => eq.id === equipmentId)?.name || '';
@@ -221,14 +218,14 @@ export default function NewCedulaPage() {
         step: step.step,
         priority: step.priority,
         completion: Number(completionPercentages[step.step]) || 0,
-        imageUrl: imageUrls[step.step],
+        imageUrl: imageUrls[step.step] || null,
         notes: notes[step.step] || '',
         percentage: step.percentage || 0,
       })),
     };
 
     try {
-        await createCedula(newCedulaData, setUploadProgress);
+        await createCedula(newCedulaData);
         alert('Cédula creada con éxito.');
         router.push('/dashboard/cedulas');
     } catch (error) {
@@ -236,7 +233,6 @@ export default function NewCedulaPage() {
         alert("Error al crear la cédula.");
     } finally {
         setIsSaving(false);
-        setUploadProgress(null);
     }
   };
 
@@ -534,7 +530,6 @@ export default function NewCedulaPage() {
                                         </Button>
                                     )}
                                 </div>
-                                {uploadProgress !== null && imageUrls[step.step]?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                                 <Input
                                     id={`image-upload-${index}`}
                                     type="file"
