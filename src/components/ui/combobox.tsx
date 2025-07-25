@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Input } from "./input"
 
 interface ComboboxProps {
   options: { label: string; value: string }[];
@@ -46,38 +47,25 @@ export function Combobox({
     setOpen(false);
   }
   
-  // This allows typing a new value not in the list
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
-  }
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-          disabled={disabled}
-        >
-          <span className="truncate">
-            {value
-              ? options.find((option) => option.value.toLowerCase() === value.toLowerCase())?.label
-              : placeholder}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        <div className="relative">
+            <CommandInput
+                value={value}
+                onValueChange={onChange}
+                placeholder={placeholder}
+                className="w-full"
+                disabled={disabled}
+                onFocus={() => setOpen(true)}
+            />
+            <ChevronsUpDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
+        </div>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" style={{ minWidth: "var(--radix-popover-trigger-width)" }}>
         <Command>
-           <CommandInput 
-             placeholder={searchPlaceholder} 
-             value={value}
-             onValueChange={onChange}
-           />
-          <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
           <CommandList>
+            <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
