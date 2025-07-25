@@ -69,13 +69,6 @@ type State = {
   error: string | null;
 };
 
-type EquipmentWithProtocolStatus = Equipment & { hasProtocol: boolean };
-
-type ProtocolToCopyInfo = {
-    protocol: Protocol;
-    sourceEquipmentName: string;
-}
-
 // Server Action
 async function generateProtocolAction(prevState: State, formData: FormData): Promise<State> {
   const equipmentName = formData.get('equipmentName') as string;
@@ -114,7 +107,7 @@ function SubmitButton() {
       ) : (
         <>
             <Wand2 className="mr-2 h-4 w-4" />
-            <span>Sugerir Pasos Adicionales</span>
+            <span>Sugerir Pasos</span>
         </>
       )}
     </Button>
@@ -125,15 +118,10 @@ function SubmitButton() {
 function ProtocolGenerator() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { clients, systems, equipments: allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
+  const { allEquipments, protocols, loading, createProtocol, updateProtocol } = useData();
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
 
   // Data states
-  const [filteredEquipments, setFilteredEquipments] = useState<EquipmentWithProtocolStatus[]>([]);
-  
-  // Selection states
-  const [clientId, setClientId] = useState('');
-  const [systemId, setSystemId] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
   const [equipmentName, setEquipmentName] = useState('');
   const [equipmentDescription, setEquipmentDescription] = useState('');
@@ -147,119 +135,32 @@ function ProtocolGenerator() {
   const [showDeleteAllAlert, setShowDeleteAllAlert] = useState(false);
 
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
-  const [isModificationMode, setIsModificationMode] = useState(false);
   
-  const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
-  const [showNotFoundAlert, setShowNotFoundAlert] = useState(false);
-  
-
-  const loadEquipmentData = (equipment: Equipment | undefined) => {
-    if (!equipment) return;
-
-    setSelectedEquipmentId(equipment.id);
-    setEquipmentName(equipment.name);
-    setEquipmentDescription(equipment.description);
-    setEquipmentAlias(equipment.alias || '');
-    setEquipmentModel(equipment.model);
-    setEquipmentSerial(equipment.serial);
-    setEquipmentImageUrl(equipment.imageUrl || '');
-
-    const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
-    setExistingSteps(existingProtocol?.steps || []);
-
-    if (!existingProtocol) {
-      const similarEquipmentWithProtocol = allEquipments.find(
-        eq =>
-          eq.id !== equipment.id &&
-          eq.name === equipment.name &&
-          eq.type === equipment.type &&
-          protocols.some(p => p.equipmentId === eq.id)
-      );
-
-      if (similarEquipmentWithProtocol) {
-        const protocolOfSimilar = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
-        if (protocolOfSimilar) {
-          setProtocolToCopy({ protocol: protocolOfSimilar, sourceEquipmentName: similarEquipmentWithProtocol.name });
-          return;
-        }
-      }
-      setShowNotFoundAlert(true);
-    }
-  };
-
-
   useEffect(() => {
     const equipmentIdFromQuery = searchParams.get('equipmentId');
-    if (equipmentIdFromQuery && allEquipments.length > 0 && protocols) {
-      setIsModificationMode(true);
+    if (equipmentIdFromQuery && allEquipments.length > 0) {
       const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
       if (equipment) {
-        loadEquipmentData(equipment);
+        setSelectedEquipmentId(equipment.id);
+        setEquipmentName(equipment.name);
+        setEquipmentDescription(equipment.description);
+        setEquipmentAlias(equipment.alias || '');
+        setEquipmentModel(equipment.model);
+        setEquipmentSerial(equipment.serial);
+        setEquipmentImageUrl(equipment.imageUrl || '');
+        
+        const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
+        setExistingSteps(existingProtocol?.steps || []);
       }
     }
   }, [searchParams, allEquipments, protocols]);
 
 
   useEffect(() => {
-    if (clientId && systemId) {
-      const clientName = clients.find(c => c.id === clientId)?.name;
-      const systemName = systems.find(s => s.id === systemId)?.name;
-      if (clientName && systemName) {
-        const filtered = allEquipments
-          .filter(eq => eq.client === clientName && eq.system === systemName)
-          .map(eq => ({
-              ...eq,
-              hasProtocol: protocols.some(p => p.equipmentId === eq.id && p.steps.length > 0)
-          }));
-        setFilteredEquipments(filtered);
-      }
-    } else {
-      setFilteredEquipments([]);
-    }
-  }, [clientId, systemId, clients, systems, allEquipments, protocols]);
-
-  useEffect(() => {
     if (state.result) {
       setSelectedSteps([]);
     }
   }, [state.result]);
-
-  const handleClientChange = (newClientId: string) => {
-    setClientId(newClientId);
-    setSystemId('');
-    setSelectedEquipmentId('');
-    setEquipmentName('');
-    setEquipmentDescription('');
-    setFilteredEquipments([]);
-  };
-
-  const handleSystemChange = (newSystemId: string) => {
-    setSystemId(newSystemId);
-    setSelectedEquipmentId('');
-    setEquipmentName('');
-    setEquipmentDescription('');
-  };
-
-  const handleEquipmentChange = (equipmentId: string) => {
-    const selected = allEquipments.find(e => e.id === equipmentId);
-    if (!selected) {
-        setSelectedEquipmentId('');
-        setEquipmentName('');
-        setEquipmentDescription('');
-        setEquipmentAlias('');
-        setEquipmentModel('');
-        setEquipmentSerial('');
-        setEquipmentImageUrl('');
-        return;
-    }
-
-    const existingProtocol = protocols.find(p => p.equipmentId === equipmentId);
-    if (existingProtocol) {
-      router.push(`/dashboard/protocols/new?equipmentId=${equipmentId}`);
-    } else {
-      loadEquipmentData(selected);
-    }
-  };
 
   const handleSelectStep = (step: SuggestMaintenanceProtocolOutput[0], checked: boolean) => {
     setSelectedSteps(prev => {
@@ -285,7 +186,7 @@ function ProtocolGenerator() {
   
   const handleSaveProtocol = async () => {
     if (!selectedEquipmentId) {
-       alert("Por favor, seleccione un equipo antes de guardar.");
+       alert("No hay un equipo seleccionado para guardar el protocolo.");
        return;
     }
     
@@ -321,7 +222,8 @@ function ProtocolGenerator() {
         steps: selectedSteps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
       };
       try {
-        await createProtocol(newProtocol);
+        const createdProtocol = await createProtocol(newProtocol);
+        setExistingSteps(createdProtocol.steps);
       } catch (error) {
         console.error("Failed to create protocol:", error);
         alert("Error al crear el protocolo.");
@@ -330,12 +232,8 @@ function ProtocolGenerator() {
     }
 
     alert('Protocolo guardado con éxito.');
-    if(isModificationMode) {
-       setState({ result: null, error: null });
-       setSelectedSteps([]);
-    } else {
-       router.push('/dashboard/protocols');
-    }
+    setState({ result: null, error: null });
+    setSelectedSteps([]);
   };
   
   const handleDeleteStep = async () => {
@@ -370,25 +268,6 @@ function ProtocolGenerator() {
     }
   };
 
-  const handleCopyProtocol = async () => {
-    if (!protocolToCopy || !selectedEquipmentId) return;
-
-    const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
-        equipmentId: selectedEquipmentId,
-        steps: protocolToCopy.protocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
-    };
-    
-    try {
-        const newProtocol = await createProtocol(newProtocolForCurrentEquipment);
-        setExistingSteps(newProtocol.steps);
-        setProtocolToCopy(null);
-        alert('Protocolo copiado y guardado con éxito.');
-    } catch (error) {
-        console.error("Failed to copy protocol:", error);
-        alert("Error al copiar el protocolo.");
-    }
-  };
-
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
       case 'alta':
@@ -413,74 +292,30 @@ function ProtocolGenerator() {
           <span className="sr-only">Atrás</span>
         </Button>
         <div className="grid gap-0.5">
-            <h1 className="font-headline text-2xl font-bold">{isModificationMode ? 'Modificar Protocolo' : 'Generador de Protocolos (IA)'}</h1>
+            <h1 className="font-headline text-2xl font-bold">Gestión de Protocolo</h1>
             <p className="text-muted-foreground">
-            {isModificationMode 
-                ? 'Vea los pasos existentes y use la IA para sugerir pasos adicionales para el equipo.' 
-                : 'Filtre por equipo o descríbalo para que la IA sugiera un protocolo de mantenimiento.'
-            }
+                Vea los pasos existentes y use la IA para sugerir pasos adicionales para el equipo.
             </p>
         </div>
       </div>
-
-      {!isModificationMode && (
-          <Card>
-             <CardHeader>
-                <CardTitle>Seleccionar Equipo</CardTitle>
-                <CardDescription>Busque un equipo para crear o modificar su protocolo. La IA puede buscar protocolos de equipos similares para acelerar el proceso.</CardDescription>
-             </CardHeader>
-             <CardContent>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="grid gap-3">
-                        <Label htmlFor="client">Cliente</Label>
-                        <Select onValueChange={handleClientChange} value={clientId}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {clients.map(client => (
-                            <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid gap-3">
-                        <Label htmlFor="system">Sistema</Label>
-                        <Select onValueChange={handleSystemChange} value={systemId} disabled={!clientId}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un sistema" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {systems.map(system => (
-                            <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid gap-3">
-                        <Label htmlFor="equipment">Seleccionar Equipo</Label>
-                        <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccione un equipo..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {filteredEquipments.map(eq => (
-                                <SelectItem key={eq.id} value={eq.id} className={eq.hasProtocol ? '' : 'text-primary'}>
-                                {eq.name}
-                                {eq.alias && ` (${eq.alias})`}
-                                {` - N/S: ${eq.serial}`}
-                                {eq.hasProtocol ? '' : ' (Sin Protocolo)'}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-             </CardContent>
-          </Card>
+      
+      {!selectedEquipmentId && !loading && (
+        <Card className="flex flex-col items-center justify-center p-8 text-center">
+            <CardHeader>
+                <CardTitle>Equipo no especificado</CardTitle>
+                <CardDescription>Por favor, vuelva a la página de protocolos y seleccione un equipo para modificar.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button onClick={() => router.push('/dashboard/protocols')}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Volver a Protocolos
+                </Button>
+            </CardContent>
+        </Card>
       )}
 
-      {(isModificationMode || selectedEquipmentId) && (
+      {selectedEquipmentId && (
+        <>
           <Card>
             <CardHeader>
                 <CardTitle>Información del Equipo Seleccionado</CardTitle>
@@ -523,230 +358,142 @@ function ProtocolGenerator() {
                 </div>
             </CardContent>
           </Card>
-      )}
       
-      {(isModificationMode || selectedEquipmentId) && existingSteps.length > 0 && (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>Pasos del Protocolo Existente</CardTitle>
-                    <CardDescription>Estos son los pasos actualmente guardados para este equipo.</CardDescription>
-                </div>
-                <Button variant="destructive" size="sm" onClick={() => setShowDeleteAllAlert(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Eliminar Todos
-                </Button>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[80%]">Paso del Protocolo</TableHead>
-                            <TableHead>Prioridad</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {existingSteps.map((step, index) => (
-                            <TableRow key={index}>
-                                <TableCell>{step.step}</TableCell>
-                                <TableCell>
-                                    <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">
-                                        {step.priority}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                     <Button variant="ghost" size="icon" onClick={() => setStepToDelete(step)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                        <span className="sr-only">Eliminar paso</span>
-                                     </Button>
-                                </TableCell>
+          {existingSteps.length > 0 && (
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Pasos del Protocolo Existente</CardTitle>
+                        <CardDescription>Estos son los pasos actualmente guardados para este equipo.</CardDescription>
+                    </div>
+                    <Button variant="destructive" size="sm" onClick={() => setShowDeleteAllAlert(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar Todos
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[80%]">Paso del Protocolo</TableHead>
+                                <TableHead>Prioridad</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
-      )}
+                        </TableHeader>
+                        <TableBody>
+                            {existingSteps.map((step, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{step.step}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">
+                                            {step.priority}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => setStepToDelete(step)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                            <span className="sr-only">Eliminar paso</span>
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+          )}
 
-      {(isModificationMode || selectedEquipmentId) && !protocolToCopy && !showNotFoundAlert && existingSteps.length === 0 && (
-        <Card>
-            <CardHeader>
-                <CardTitle>Generar Protocolo con IA</CardTitle>
-                <CardDescription>La IA sugerirá pasos basados en la información del equipo.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form action={formAction} className="grid gap-6">
-                    <div className="grid gap-3">
-                    <Label htmlFor="equipmentName">Nombre del Equipo</Label>
-                    <Input
-                        id="equipmentName"
-                        name="equipmentName"
-                        value={equipmentName}
-                        onChange={e => setEquipmentName(e.target.value)}
-                        placeholder="Ej. Cámara IP Domo PTZ"
-                        required
-                        readOnly
-                    />
-                    </div>
-                    <div className="grid gap-3">
-                    <Label htmlFor="equipmentDescription">Descripción del Equipo</Label>
-                    <Textarea
-                        id="equipmentDescription"
-                        name="equipmentDescription"
-                        value={equipmentDescription}
-                        onChange={e => setEquipmentDescription(e.target.value)}
-                        placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
-                        required
-                        className="min-h-32"
-                        readOnly
-                    />
-                    </div>
-                    <SubmitButton />
-                </form>
-            </CardContent>
-        </Card>
-      )}
-      
-      {(isModificationMode || selectedEquipmentId) && existingSteps.length > 0 && (
-        <Card>
+          <Card>
             <form action={formAction}>
             <CardHeader>
                 <CardTitle>{existingSteps.length > 0 ? 'Añadir Nuevos Pasos con IA' : 'Generar Protocolo con IA'}</CardTitle>
                 <CardDescription>La IA sugerirá pasos basados en la información del equipo.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
-                <div className="grid gap-3">
-                <Label htmlFor="equipmentName">Nombre del Equipo</Label>
-                <Input
-                    id="equipmentName"
-                    name="equipmentName"
-                    value={equipmentName}
-                    onChange={e => setEquipmentName(e.target.value)}
-                    placeholder="Ej. Cámara IP Domo PTZ"
-                    required
-                    readOnly
-                  />
-                </div>
-                <div className="grid gap-3">
-                <Label htmlFor="equipmentDescription">Descripción del Equipo</Label>
-                <Textarea
-                    id="equipmentDescription"
-                    name="equipmentDescription"
-                    value={equipmentDescription}
-                    onChange={e => setEquipmentDescription(e.target.value)}
-                    placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
-                    required
-                    className="min-h-32"
-                    readOnly
-                  />
-                </div>
+                <Input name="equipmentName" value={equipmentName} type="hidden" />
+                <Input name="equipmentDescription" value={equipmentDescription} type="hidden" />
+                 <p className="text-sm text-muted-foreground">
+                    Se generarán sugerencias para: <span className="font-semibold text-foreground">{equipmentName}</span>.
+                </p>
+                {existingSteps.length === 0 && (
+                    <Alert>
+                        <Wand2 className="h-4 w-4" />
+                        <AlertTitle>¡Protocolo Vacío!</AlertTitle>
+                        <AlertDescription>
+                            Este equipo no tiene pasos en su protocolo. Haga clic en "Sugerir Pasos" para que la IA genere un protocolo completo.
+                        </AlertDescription>
+                    </Alert>
+                )}
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
                 <SubmitButton />
             </CardFooter>
             </form>
         </Card>
-      )}
 
-      {state.error && (
-        <Alert variant="destructive">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{state.error}</AlertDescription>
-        </Alert>
-      )}
+          {state.error && (
+            <Alert variant="destructive">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{state.error}</AlertDescription>
+            </Alert>
+          )}
 
-      {state.result && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Protocolo Sugerido por IA</CardTitle>
-            <CardDescription>Seleccione los pasos que desea añadir al protocolo del equipo.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      onCheckedChange={handleSelectAllSteps}
-                      checked={areAllStepsSelected}
-                      aria-label="Seleccionar todos los pasos"
-                    />
-                  </TableHead>
-                  <TableHead className="w-[60%]">Paso</TableHead>
-                  <TableHead>Prioridad</TableHead>
-                  <TableHead className="text-right">% Estimado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {state.result.map((item, index) => (
-                  <TableRow key={index} data-state={isStepSelected(item) ? "selected" : ""}>
-                    <TableCell>
-                      <Checkbox
-                        onCheckedChange={(checked) => handleSelectStep(item, !!checked)}
-                        checked={isStepSelected(item)}
-                        aria-label={`Seleccionar paso: ${item.step}`}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{item.step}</TableCell>
-                    <TableCell>
-                      <Badge variant={getPriorityBadgeVariant(item.priority)} className="capitalize">
-                        {item.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{item.percentage}%</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-             <Button onClick={handleSaveProtocol} disabled={!selectedEquipmentId || selectedSteps.length === 0}>
-               <Save className="mr-2 h-4 w-4" />
-               Añadir Pasos Seleccionados
-             </Button>
-          </CardFooter>
-        </Card>
+          {state.result && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Protocolo Sugerido por IA</CardTitle>
+                <CardDescription>Seleccione los pasos que desea añadir al protocolo del equipo.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          onCheckedChange={handleSelectAllSteps}
+                          checked={areAllStepsSelected}
+                          aria-label="Seleccionar todos los pasos"
+                        />
+                      </TableHead>
+                      <TableHead className="w-[60%]">Paso</TableHead>
+                      <TableHead>Prioridad</TableHead>
+                      <TableHead className="text-right">% Estimado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {state.result.map((item, index) => (
+                      <TableRow key={index} data-state={isStepSelected(item) ? "selected" : ""}>
+                        <TableCell>
+                          <Checkbox
+                            onCheckedChange={(checked) => handleSelectStep(item, !!checked)}
+                            checked={isStepSelected(item)}
+                            aria-label={`Seleccionar paso: ${item.step}`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{item.step}</TableCell>
+                        <TableCell>
+                          <Badge variant={getPriorityBadgeVariant(item.priority)} className="capitalize">
+                            {item.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{item.percentage}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+              <CardFooter className="border-t px-6 py-4">
+                <Button onClick={handleSaveProtocol} disabled={!selectedEquipmentId || selectedSteps.length === 0}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Añadir Pasos Seleccionados
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+        </>
       )}
     </div>
-
-    <AlertDialog open={!!protocolToCopy} onOpenChange={() => setProtocolToCopy(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <div className="flex items-center gap-2">
-                    <Copy className="h-6 w-6 text-primary" />
-                    <AlertDialogTitle>Protocolo Similar Encontrado</AlertDialogTitle>
-                </div>
-                <AlertDialogDescription>
-                    Se encontró un protocolo para un equipo similar ("{protocolToCopy?.sourceEquipmentName}"). ¿Desea copiar sus pasos a este equipo?
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => { setProtocolToCopy(null); setShowNotFoundAlert(true); }}>No, generar uno nuevo</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCopyProtocol}>
-                    Sí, Copiar Protocolo
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-
-    <AlertDialog open={showNotFoundAlert} onOpenChange={setShowNotFoundAlert}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <div className="flex items-center gap-2">
-                    <Search className="h-6 w-6 text-muted-foreground" />
-                    <AlertDialogTitle>Búsqueda Completada</AlertDialogTitle>
-                </div>
-                <AlertDialogDescription>
-                    No se encontró un protocolo para un equipo similar. Puede generar uno nuevo utilizando la IA.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogAction onClick={() => setShowNotFoundAlert(false)}>Aceptar</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
 
     <AlertDialog open={!!stepToDelete} onOpenChange={() => setStepToDelete(null)}>
         <AlertDialogContent>
@@ -822,5 +569,3 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
-
-    

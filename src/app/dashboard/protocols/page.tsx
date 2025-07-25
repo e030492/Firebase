@@ -25,7 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera, Search, Copy } from 'lucide-react';
 import { suggestMaintenanceProtocol } from '@/ai/flows/suggest-maintenance-protocol';
 import {
   Dialog,
@@ -73,6 +73,11 @@ type DeletingStepInfo = {
     protocolId: string;
     stepToDelete: ProtocolStep;
 };
+type ProtocolToCopyInfo = {
+    sourceProtocol: Protocol;
+    sourceEquipmentName: string;
+    targetEquipment: Equipment;
+}
 
 export default function ProtocolsPage() {
   const router = useRouter();
@@ -83,22 +88,16 @@ export default function ProtocolsPage() {
       systems, 
       loading,
       createProtocol,
-      updateProtocol,
-      deleteProtocol,
   } = useData();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [editingStep, setEditingStep] = useState<EditingStepInfo | null>(null);
-  const [deletingStep, setDeletingStep] = useState<DeletingStepInfo | null>(null);
   const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
+  const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
+  const [showNoSimilarFoundAlert, setShowNoSimilarFoundAlert] = useState<Equipment | null>(null);
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
-  
-  const [isGenerating, setIsGenerating] = useState<string | null>(null);
-  const [generationError, setGenerationError] = useState<string | null>(null);
   
   const [selectedEquipmentForModification, setSelectedEquipmentForModification] = useState<string>('');
 
@@ -155,70 +154,6 @@ export default function ProtocolsPage() {
     }
   };
 
-  const handleEditChange = (field: keyof ProtocolStep, value: string | number) => {
-    if (!editingStep) return;
-    setEditingStep({
-      ...editingStep,
-      currentData: {
-        ...editingStep.currentData,
-        [field]: value,
-      },
-    });
-  };
-
-  const handleImageChangeInDialog = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && editingStep) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditingStep({
-            ...editingStep,
-            currentData: {
-                ...editingStep.currentData,
-                imageUrl: reader.result as string,
-            },
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingStep) return;
-    
-    const protocolToUpdate = protocols.find(p => p.id === editingStep.protocolId);
-    if (!protocolToUpdate) return;
-
-    const newSteps = protocolToUpdate.steps.map(s => 
-        s.step === editingStep.originalStepText ? { ...editingStep.currentData, percentage: Number(editingStep.currentData.percentage || 0)} : s
-    );
-
-    try {
-        await updateProtocol(editingStep.protocolId, { steps: newSteps });
-        setEditingStep(null);
-    } catch (error) {
-        console.error("Failed to save step edit:", error);
-        alert("Error al guardar los cambios.");
-    }
-  };
-
-  const handleDeleteStep = async () => {
-      if (!deletingStep) return;
-      
-      const protocolToUpdate = protocols.find(p => p.id === deletingStep.protocolId);
-      if (!protocolToUpdate) return;
-      
-      const newSteps = protocolToUpdate.steps.filter(s => s.step !== deletingStep.stepToDelete.step);
-
-      try {
-        await updateProtocol(deletingStep.protocolId, { steps: newSteps });
-        setDeletingStep(null);
-      } catch (error) {
-        console.error("Failed to delete step:", error);
-        alert("Error al eliminar el paso.");
-      }
-  };
-
   const handleDeleteProtocol = async () => {
     if (!protocolToDelete) return;
 
@@ -231,33 +166,45 @@ export default function ProtocolsPage() {
     }
   };
 
-  const handleGenerateProtocol = async (equipment: Equipment) => {
-    setIsGenerating(equipment.id);
-    setGenerationError(null);
+  const handleSearchSimilar = (targetEquipment: Equipment) => {
+    const similarEquipmentWithProtocol = allEquipments.find(
+      eq =>
+        eq.id !== targetEquipment.id &&
+        eq.name === targetEquipment.name &&
+        eq.type === targetEquipment.type &&
+        protocols.some(p => p.equipmentId === eq.id)
+    );
 
-    try {
-      const result = await suggestMaintenanceProtocol({
-        equipmentName: equipment.name,
-        equipmentDescription: equipment.description,
-      });
-
-      if (result && result.length > 0) {
-        const newProtocolData: Omit<Protocol, 'id'> = {
-          equipmentId: equipment.id,
-          steps: result.map(step => ({ ...step, imageUrl: '', notes: '', completion: 0 })),
-        };
-        
-        await createProtocol(newProtocolData);
-      } else {
-        alert("La IA no pudo generar un protocolo para este equipo.");
+    if (similarEquipmentWithProtocol) {
+      const sourceProtocol = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
+      if (sourceProtocol) {
+        setProtocolToCopy({ 
+            sourceProtocol, 
+            sourceEquipmentName: similarEquipmentWithProtocol.name,
+            targetEquipment 
+        });
+        return;
       }
+    }
+    
+    setShowNoSimilarFoundAlert(targetEquipment);
+  };
+  
+  const handleCopyProtocol = async () => {
+    if (!protocolToCopy) return;
+
+    const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
+        equipmentId: protocolToCopy.targetEquipment.id,
+        steps: protocolToCopy.sourceProtocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
+    };
+    
+    try {
+        await createProtocol(newProtocolForCurrentEquipment);
+        setProtocolToCopy(null);
+        alert('Protocolo copiado y guardado con éxito.');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      setGenerationError(`Error al generar el protocolo: ${errorMessage}`);
-      alert(`Error al generar el protocolo. Por favor, inténtelo de nuevo.`);
-      console.error("Error generating protocol:", error);
-    } finally {
-      setIsGenerating(null);
+        console.error("Failed to copy protocol:", error);
+        alert("Error al copiar el protocolo.");
     }
   };
   
@@ -293,7 +240,7 @@ export default function ProtocolsPage() {
             </p>
           </div>
            <Link href={selectedEquipmentForModification ? `/dashboard/protocols/new?equipmentId=${selectedEquipmentForModification}` : "/dashboard/protocols/new"}>
-                <Button disabled={!!filteredEquipments.length && !selectedEquipmentForModification}>
+                <Button disabled={!selectedEquipmentForModification}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {selectedEquipmentForModification ? 'Modificar Protocolo Seleccionado' : 'Crear/Modificar Protocolo'}
                 </Button>
@@ -350,7 +297,6 @@ export default function ProtocolsPage() {
                  </div>
             </div>
             <Separator className="mb-6"/>
-            {generationError && <p className="text-destructive text-sm text-center mb-4">{generationError}</p>}
             
             <RadioGroup value={selectedEquipmentForModification} onValueChange={setSelectedEquipmentForModification}>
                 <Accordion type="single" collapsible className="w-full">
@@ -407,17 +353,18 @@ export default function ProtocolsPage() {
                                                 </DropdownMenuItem>
                                             </>
                                         ) : (
-                                            <DropdownMenuItem 
-                                                onSelect={() => handleGenerateProtocol(equipment)} 
-                                                disabled={!!isGenerating}
-                                            >
-                                                {isGenerating === equipment.id ? (
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Wand2 className="mr-2 h-4 w-4" />
-                                                )}
-                                                <span>{isGenerating === equipment.id ? 'Generando...' : 'Generar con IA'}</span>
+                                            <>
+                                            <DropdownMenuItem onSelect={() => handleSearchSimilar(equipment)}>
+                                                <Search className="mr-2 h-4 w-4" />
+                                                <span>Buscar Similares</span>
                                             </DropdownMenuItem>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
+                                                    <Wand2 className="mr-2 h-4 w-4" />
+                                                    <span>Generar con IA</span>
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            </>
                                         )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -428,48 +375,18 @@ export default function ProtocolsPage() {
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead className="w-16 hidden sm:table-cell">Imagen</TableHead>
                                     <TableHead className="w-[50%]">Paso del Protocolo</TableHead>
                                     <TableHead>Prioridad</TableHead>
-                                    <TableHead className="text-right">Acciones</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {equipmentProtocolSteps.map((protocolStep, index) => (
                                     <TableRow key={index}>
-                                      <TableCell className="hidden sm:table-cell">
-                                        {protocolStep.imageUrl ? (
-                                            <Image src={protocolStep.imageUrl} alt={protocolStep.step} width={48} height={48} data-ai-hint="protocol step photo" className="rounded-md object-cover aspect-square" />
-                                        ) : (
-                                            <div className="h-12 w-12 bg-muted rounded-md flex items-center justify-center">
-                                                <Camera className="h-6 w-6 text-muted-foreground" />
-                                            </div>
-                                        )}
-                                      </TableCell>
                                       <TableCell>{protocolStep.step}</TableCell>
                                       <TableCell>
                                         <Badge variant={getPriorityBadgeVariant(protocolStep.priority)} className="capitalize">
                                           {protocolStep.priority}
                                         </Badge>
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button size="icon" variant="ghost">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onSelect={() => setEditingStep({ protocolId: equipmentProtocol!.id, originalStepText: protocolStep.step, currentData: { ...protocolStep }})}>
-                                                    <Edit className="mr-2 h-4 w-4" />
-                                                    <span>Editar</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setDeletingStep({ protocolId: equipmentProtocol!.id, stepToDelete: protocolStep })}>
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    <span>Eliminar</span>
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
                                       </TableCell>
                                     </TableRow>
                                   ))}
@@ -478,7 +395,7 @@ export default function ProtocolsPage() {
                             ) : (
                               <div className="text-muted-foreground px-4 py-8 flex flex-col items-center justify-center text-center gap-2">
                                 <p>No hay un protocolo de mantenimiento definido para este equipo.</p>
-                                <p className="text-sm">Usa el menú de acciones para generar uno con IA.</p>
+                                <p className="text-sm">Usa el menú de acciones para buscar uno similar o generar uno con IA.</p>
                               </div>
                             )}
                           </AccordionContent>
@@ -495,76 +412,48 @@ export default function ProtocolsPage() {
         </Card>
       </div>
       
-      {/* Edit Dialog */}
-      <Dialog open={!!editingStep} onOpenChange={(open) => !open && setEditingStep(null)}>
-        <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-                <DialogTitle>Editar Paso del Protocolo</DialogTitle>
-                <DialogDescription>Modifique los detalles de este paso del mantenimiento.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-6 py-4">
-                <div className="grid gap-2">
-                    <Label>Imagen del Paso</Label>
-                    {editingStep?.currentData.imageUrl ? (
-                        <Image src={editingStep.currentData.imageUrl} alt="Vista previa del paso" width={400} height={300} data-ai-hint="protocol step photo" className="rounded-md object-cover aspect-video" />
-                    ) : (
-                        <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
-                            <Camera className="h-10 w-10 text-muted-foreground" />
-                        </div>
-                    )}
-                    <Input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        ref={fileInputRef}
-                        onChange={handleImageChangeInDialog}
-                        className="hidden"
-                    />
-                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                        <Camera className="mr-2 h-4 w-4" />
-                        {editingStep?.currentData.imageUrl ? 'Cambiar Imagen' : 'Subir Imagen'}
-                    </Button>
-                </div>
-
-                <div className="grid gap-2">
-                    <Label htmlFor="step-text">Descripción del Paso</Label>
-                    <Textarea id="step-text" value={editingStep?.currentData.step || ''} onChange={(e) => handleEditChange('step', e.target.value)} className="min-h-32" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="step-priority">Prioridad</Label>
-                        <Select value={editingStep?.currentData.priority} onValueChange={(value) => handleEditChange('priority', value as ProtocolStep['priority'])}>
-                            <SelectTrigger id="step-priority">
-                                <SelectValue placeholder="Seleccione prioridad" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="baja">Baja</SelectItem>
-                                <SelectItem value="media">Media</SelectItem>
-                                <SelectItem value="alta">Alta</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </div>
-            <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditingStep(null)}>Cancelar</Button>
-                <Button type="button" onClick={handleSaveEdit}>Guardar Cambios</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-    
-    {/* Delete Step Confirmation Dialog */}
-    <AlertDialog open={!!deletingStep} onOpenChange={(open) => !open && setDeletingStep(null)}>
+    <AlertDialog open={!!protocolToCopy} onOpenChange={() => setProtocolToCopy(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                <div className="flex items-center gap-2">
+                    <Copy className="h-6 w-6 text-primary" />
+                    <AlertDialogTitle>Protocolo Similar Encontrado</AlertDialogTitle>
+                </div>
                 <AlertDialogDescription>
-                    Esta acción no se puede deshacer. Esto eliminará permanentemente el paso del protocolo.
+                    Se encontró un protocolo para un equipo similar ("{protocolToCopy?.sourceEquipmentName}"). ¿Desea copiar sus pasos a "{protocolToCopy?.targetEquipment.name}"?
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+                <AlertDialogCancel onClick={() => setProtocolToCopy(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleCopyProtocol}>
+                    Sí, Copiar Protocolo
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={!!showNoSimilarFoundAlert} onOpenChange={() => setShowNoSimilarFoundAlert(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <div className="flex items-center gap-2">
+                    <Search className="h-6 w-6 text-muted-foreground" />
+                    <AlertDialogTitle>Búsqueda Completada</AlertDialogTitle>
+                </div>
+                <AlertDialogDescription>
+                    No se encontró un protocolo para un equipo similar. Puede generar uno nuevo utilizando la IA.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogAction onClick={() => {
+                    const equipmentId = showNoSimilarFoundAlert?.id;
+                    setShowNoSimilarFoundAlert(null);
+                    if (equipmentId) {
+                       router.push(`/dashboard/protocols/new?equipmentId=${equipmentId}`);
+                    }
+                }}>
+                    Generar con IA
+                </AlertDialogAction>
+                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
