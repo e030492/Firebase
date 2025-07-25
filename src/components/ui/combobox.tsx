@@ -39,30 +39,31 @@ export function Combobox({
     disabled = false
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [inputValue, setInputValue] = React.useState(value)
+  const [internalValue, setInternalValue] = React.useState("")
 
   React.useEffect(() => {
-      if (!open) {
-        setInputValue(value)
-      }
-  }, [value, open])
-  
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen)
-    if (!isOpen) {
-      onChange(inputValue)
+    if (value) {
+      setInternalValue(value);
+    } else {
+      setInternalValue("");
     }
-  }
+  }, [value]);
 
   const handleSelect = (currentValue: string) => {
-    const newValue = currentValue === value ? "" : currentValue;
-    setInputValue(newValue)
+    const newValue = currentValue === internalValue ? "" : currentValue;
+    setInternalValue(newValue);
     onChange(newValue);
     setOpen(false);
   }
   
-  const handleInputChange = (search: string) => {
-    setInputValue(search)
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen)
+    if (!isOpen) {
+      onChange(internalValue);
+    } else {
+      // When opening, ensure the internal value matches the external one
+      setInternalValue(value || "");
+    }
   }
 
   const selectedOptionLabel = options.find((option) => option.value.toLowerCase() === value?.toLowerCase())?.label || value || placeholder;
@@ -85,8 +86,8 @@ export function Combobox({
         <Command>
             <CommandInput
                 placeholder={searchPlaceholder}
-                value={inputValue}
-                onValueChange={handleInputChange}
+                value={internalValue}
+                onValueChange={setInternalValue}
             />
           <CommandList>
             <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
