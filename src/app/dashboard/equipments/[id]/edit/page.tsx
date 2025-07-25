@@ -328,6 +328,67 @@ export default function EditEquipmentPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-3">
+                    <Label htmlFor="client">Cliente</Label>
+                    <Select value={clientId} onValueChange={handleClientChange} required disabled={isSaving}>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {clients.map(client => (
+                            <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="location">Almacén / Ubicación</Label>
+                    <Select value={location} onValueChange={setLocation} required disabled={!clientId || isSaving}>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un almacén" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {clientWarehouses.length > 0 ? (
+                            clientWarehouses.map(almacen => (
+                            <SelectItem key={almacen.nombre} value={almacen.nombre}>{almacen.nombre}</SelectItem>
+                            ))
+                        ) : (
+                            <SelectItem value="no-warehouses" disabled>No hay almacenes para este cliente</SelectItem>
+                        )}
+                        </SelectContent>
+                    </Select>
+                    </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                   <Label htmlFor="system">Sistema Asociado</Label>
+                   <Select value={systemId} onValueChange={setSystemId} required disabled={isSaving}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un sistema" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {systems.map(system => (
+                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                 </div>
+                 <div className="grid gap-3">
+                   <Label htmlFor="status">Estado</Label>
+                   <Select value={status} onValueChange={setStatus} required disabled={isSaving}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Activo">Activo</SelectItem>
+                      <SelectItem value="Inactivo">Inactivo</SelectItem>
+                      <SelectItem value="En Mantenimiento">En Mantenimiento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                 </div>
+               </div>
+              <Separator/>
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
                 <Combobox
@@ -400,7 +461,31 @@ export default function EditEquipmentPage() {
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required className="min-h-32" disabled={isSaving}/>
               </div>
-              <div className="grid gap-3">
+              
+              <Separator />
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-lg font-medium">Configuración de Red</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Información para el acceso y configuración remota del equipo.
+                        </p>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <div className="grid gap-3">
+                            <Label htmlFor="ipAddress">Dirección IP de Configuración</Label>
+                            <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} placeholder="Ej. 192.168.1.100" disabled={isSaving} />
+                        </div>
+                        <div className="grid gap-3">
+                            <Label htmlFor="configUser">Usuario de Configuración</Label>
+                            <Input id="configUser" value={configUser} onChange={e => setConfigUser(e.target.value)} placeholder="Ej. admin" disabled={isSaving} />
+                        </div>
+                        <div className="grid gap-3">
+                            <Label htmlFor="configPassword">Contraseña</Label>
+                            <Input id="configPassword" value={configPassword} onChange={e => setConfigPassword(e.target.value)} placeholder="Contraseña de acceso" disabled={isSaving} />
+                        </div>
+                    </div>
+                </div>
+               <div className="grid gap-3">
                 <Label>Imagen del Equipo</Label>
                 {imageUrl ? (
                     <Image src={imageUrl} alt="Vista previa del equipo" width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video" />
@@ -424,89 +509,6 @@ export default function EditEquipmentPage() {
                     {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
                 </Button>
               </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="client">Cliente</Label>
-                  <Select value={clientId} onValueChange={handleClientChange} required disabled={isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div className="grid gap-3">
-                  <Label htmlFor="location">Almacén / Ubicación</Label>
-                  <Select value={location} onValueChange={setLocation} required disabled={!clientId || isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un almacén" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientWarehouses.length > 0 ? (
-                        clientWarehouses.map(almacen => (
-                          <SelectItem key={almacen.nombre} value={almacen.nombre}>{almacen.nombre}</SelectItem>
-                        ))
-                      ) : (
-                         <SelectItem value="no-warehouses" disabled>No hay almacenes para este cliente</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                   <Label htmlFor="system">Sistema Asociado</Label>
-                   <Select value={systemId} onValueChange={setSystemId} required disabled={isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un sistema" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {systems.map(system => (
-                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                 </div>
-                 <div className="grid gap-3">
-                   <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required disabled={isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Activo">Activo</SelectItem>
-                      <SelectItem value="Inactivo">Inactivo</SelectItem>
-                      <SelectItem value="En Mantenimiento">En Mantenimiento</SelectItem>
-                    </SelectContent>
-                  </Select>
-                 </div>
-               </div>
-               <Separator />
-                <div className="space-y-6">
-                    <div>
-                        <h3 className="text-lg font-medium">Configuración de Red</h3>
-                        <p className="text-sm text-muted-foreground">
-                            Información para el acceso y configuración remota del equipo.
-                        </p>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-4">
-                        <div className="grid gap-3">
-                            <Label htmlFor="ipAddress">Dirección IP de Configuración</Label>
-                            <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} placeholder="Ej. 192.168.1.100" disabled={isSaving} />
-                        </div>
-                        <div className="grid gap-3">
-                            <Label htmlFor="configUser">Usuario de Configuración</Label>
-                            <Input id="configUser" value={configUser} onChange={e => setConfigUser(e.target.value)} placeholder="Ej. admin" disabled={isSaving} />
-                        </div>
-                        <div className="grid gap-3">
-                            <Label htmlFor="configPassword">Contraseña</Label>
-                            <Input id="configPassword" value={configPassword} onChange={e => setConfigPassword(e.target.value)} placeholder="Contraseña de acceso" disabled={isSaving} />
-                        </div>
-                    </div>
-                </div>
                <Separator />
                <div className="grid md:grid-cols-2 gap-4">
                   <div className="grid gap-3">
@@ -569,3 +571,4 @@ export default function EditEquipmentPage() {
     </form>
   );
 }
+

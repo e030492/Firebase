@@ -207,6 +207,67 @@ export default function NewEquipmentPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-3">
+                    <Label htmlFor="client">Cliente</Label>
+                    <Select onValueChange={setClientId} required disabled={isSaving}>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {clients.map(client => (
+                            <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="location">Almacén / Ubicación</Label>
+                    <Select value={location} onValueChange={setLocation} required disabled={!clientId || isSaving}>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleccione un almacén" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {clientWarehouses.length > 0 ? (
+                            clientWarehouses.map(almacen => (
+                            <SelectItem key={almacen.nombre} value={almacen.nombre}>{almacen.nombre}</SelectItem>
+                            ))
+                        ) : (
+                            <SelectItem value="no-warehouses" disabled>No hay almacenes para este cliente</SelectItem>
+                        )}
+                        </SelectContent>
+                    </Select>
+                    </div>
+              </div>
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div className="grid gap-3">
+                  <Label htmlFor="system">Sistema Asociado</Label>
+                  <Select onValueChange={setSystemId} required disabled={isSaving}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un sistema" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {systems.map(system => (
+                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                 </div>
+                 <div className="grid gap-3">
+                   <Label htmlFor="status">Estado</Label>
+                   <Select value={status} onValueChange={setStatus} required disabled={isSaving}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Activo">Activo</SelectItem>
+                      <SelectItem value="Inactivo">Inactivo</SelectItem>
+                      <SelectItem value="En Mantenimiento">En Mantenimiento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                 </div>
+               </div>
+                <Separator/>
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
                 <Combobox
@@ -279,84 +340,7 @@ export default function NewEquipmentPage() {
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el equipo" required className="min-h-32" disabled={isSaving}/>
               </div>
-              <div className="grid gap-3">
-                <Label>Imagen del Equipo</Label>
-                {imageUrl && <Image src={imageUrl} alt="Vista previa del equipo" width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video" />}
-                <Input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  className="hidden"
-                  disabled={isSaving}
-                />
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
-                    <Camera className="mr-2 h-4 w-4" />
-                    {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
-                </Button>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="client">Cliente</Label>
-                  <Select onValueChange={setClientId} required disabled={isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div className="grid gap-3">
-                  <Label htmlFor="location">Almacén / Ubicación</Label>
-                  <Select value={location} onValueChange={setLocation} required disabled={!clientId || isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un almacén" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientWarehouses.length > 0 ? (
-                        clientWarehouses.map(almacen => (
-                          <SelectItem key={almacen.nombre} value={almacen.nombre}>{almacen.nombre}</SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-warehouses" disabled>No hay almacenes para este cliente</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="grid gap-3">
-                  <Label htmlFor="system">Sistema Asociado</Label>
-                  <Select onValueChange={setSystemId} required disabled={isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un sistema" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {systems.map(system => (
-                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                 </div>
-                 <div className="grid gap-3">
-                   <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required disabled={isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Activo">Activo</SelectItem>
-                      <SelectItem value="Inactivo">Inactivo</SelectItem>
-                      <SelectItem value="En Mantenimiento">En Mantenimiento</SelectItem>
-                    </SelectContent>
-                  </Select>
-                 </div>
-               </div>
+              
                <Separator />
                 <div className="space-y-6">
                     <div>
@@ -380,6 +364,24 @@ export default function NewEquipmentPage() {
                         </div>
                     </div>
                 </div>
+                <div className="grid gap-3">
+                <Label>Imagen del Equipo</Label>
+                {imageUrl && <Image src={imageUrl} alt="Vista previa del equipo" width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video" />}
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  className="hidden"
+                  disabled={isSaving}
+                />
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
+                </Button>
+              </div>
                <Separator />
                <div className="grid md:grid-cols-2 gap-4">
                   <div className="grid gap-3">
@@ -442,3 +444,4 @@ export default function NewEquipmentPage() {
     </form>
   );
 }
+
