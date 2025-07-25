@@ -102,6 +102,15 @@ export default function ClientsPage() {
   const handleToggleDetails = (clientId: string) => {
     setExpandedClientId(prevId => (prevId === clientId ? null : clientId));
   };
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
   
   if (loading) {
     return (
@@ -229,21 +238,24 @@ export default function ClientsPage() {
                                                         <div key={index} className="text-sm p-3 border rounded-md bg-background/50">
                                                             <p className="font-medium">{almacen.nombre}</p>
                                                             <p className="text-muted-foreground">{almacen.direccion}</p>
-                                                            {almacen.planosUrl && almacen.planosUrl.length > 0 && (
+                                                            {almacen.planos && almacen.planos.length > 0 && (
                                                                 <div className="mt-2">
                                                                     <p className="text-xs font-semibold text-muted-foreground">Planos:</p>
                                                                     <div className="flex flex-wrap gap-4 mt-1">
-                                                                        {almacen.planosUrl.map((planoUrl, planoIndex) => (
-                                                                            <a
-                                                                                key={planoIndex}
-                                                                                href={planoUrl}
-                                                                                target="_blank"
-                                                                                rel="noopener noreferrer"
-                                                                                className="flex flex-col items-center justify-center gap-2 text-sm text-center text-primary hover:underline p-2 border rounded-md w-24"
-                                                                            >
-                                                                                <FileText className="h-8 w-8" />
-                                                                                <span className="truncate w-full">Plano {planoIndex + 1}</span>
-                                                                            </a>
+                                                                        {almacen.planos.map((plano, planoIndex) => (
+                                                                            <div key={planoIndex} className="relative group border rounded-md p-2 flex flex-col items-center justify-center text-center w-32">
+                                                                                <FileText className="h-8 w-8 text-muted-foreground" />
+                                                                                <a
+                                                                                    href={plano.url}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="text-xs font-medium text-primary hover:underline mt-1 truncate w-full"
+                                                                                    title={plano.name}
+                                                                                >
+                                                                                    {plano.name}
+                                                                                </a>
+                                                                                <p className="text-xs text-muted-foreground">{formatBytes(plano.size)}</p>
+                                                                            </div>
                                                                         ))}
                                                                     </div>
                                                                 </div>
