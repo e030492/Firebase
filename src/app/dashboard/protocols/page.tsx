@@ -56,17 +56,33 @@ import { cn } from '@/lib/utils';
 
 
 export type ProtocolToCopyInfo = {
-    sourceProtocol: Protocol;
-    sourceEquipment: Equipment;
+    sourceOptions: { protocol: Protocol; equipment: Equipment }[];
     targetEquipment: Equipment;
-}
+};
 
-export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: { protocolToCopy: ProtocolToCopyInfo | null, onOpenChange: (open: boolean) => void, onConfirm: () => void }) {
+export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: { protocolToCopy: ProtocolToCopyInfo | null, onOpenChange: (open: boolean) => void, onConfirm: (selectedSource: { protocol: Protocol; equipment: Equipment }) => void }) {
+    const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!protocolToCopy) {
+            setSelectedSourceId(null);
+        }
+    }, [protocolToCopy]);
+    
     if (!protocolToCopy) return null;
+
+    const handleConfirm = () => {
+        const selected = protocolToCopy.sourceOptions.find(opt => opt.equipment.id === selectedSourceId);
+        if (selected) {
+            onConfirm(selected);
+        }
+    };
+    
+    const selectedSourceEquipment = protocolToCopy.sourceOptions.find(opt => opt.equipment.id === selectedSourceId)?.equipment;
 
     return (
         <AlertDialog open={!!protocolToCopy} onOpenChange={onOpenChange}>
-            <AlertDialogContent className="max-w-2xl">
+            <AlertDialogContent className="max-w-4xl">
                 <AlertDialogHeader>
                     <div className="flex items-center gap-2">
                         <Copy className="h-6 w-6 text-primary" />
@@ -74,27 +90,11 @@ export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: 
                     </div>
                     <AlertDialogDescription asChild>
                         <div className="space-y-4 pt-4 text-sm">
-                            <p>Se encontró un protocolo para un equipo similar. ¿Desea copiar sus pasos?</p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-muted p-3 rounded-md space-y-2 border">
-                                    <h4 className="font-semibold mb-1 text-foreground">Equipo Origen (con protocolo)</h4>
-                                    {protocolToCopy.sourceEquipment.imageUrl ? (
-                                        <Image src={protocolToCopy.sourceEquipment.imageUrl} alt={protocolToCopy.sourceEquipment.name} width={200} height={150} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
-                                    ) : (
-                                        <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
-                                    )}
-                                    <p className="font-semibold text-foreground">{protocolToCopy.sourceEquipment.name}</p>
-                                    <div className="text-muted-foreground space-y-1">
-                                        <p><b>Alias:</b> {protocolToCopy.sourceEquipment.alias || 'N/A'}</p>
-                                        <p><b>Tipo:</b> {protocolToCopy.sourceEquipment.type}</p>
-                                        <p><b>Modelo:</b> {protocolToCopy.sourceEquipment.model}</p>
-                                        <p><b>N/S:</b> {protocolToCopy.sourceEquipment.serial}</p>
-                                        <p><b>Cliente:</b> {protocolToCopy.sourceEquipment.client}</p>
-                                    </div>
-                                </div>
+                            <p>Se encontraron protocolos para equipos similares. Seleccione uno para copiar sus pasos al equipo destino.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
                                 <div className="bg-muted p-3 rounded-md space-y-2 border">
                                     <h4 className="font-semibold mb-1 text-foreground">Equipo Destino (actual)</h4>
-                                    {protocolToCopy.targetEquipment.imageUrl ? (
+                                     {protocolToCopy.targetEquipment.imageUrl ? (
                                         <Image src={protocolToCopy.targetEquipment.imageUrl} alt={protocolToCopy.targetEquipment.name} width={200} height={150} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
                                     ) : (
                                         <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
@@ -108,13 +108,42 @@ export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: 
                                        <p><b>Cliente:</b> {protocolToCopy.targetEquipment.client}</p>
                                     </div>
                                 </div>
+                                <div>
+                                    <RadioGroup value={selectedSourceId || ''} onValueChange={setSelectedSourceId}>
+                                        <div className="space-y-2">
+                                            {protocolToCopy.sourceOptions.map(option => (
+                                                <Label key={option.equipment.id} htmlFor={option.equipment.id} className={cn("flex items-start gap-4 rounded-md border p-3 cursor-pointer hover:bg-accent hover:text-accent-foreground", selectedSourceId === option.equipment.id && "bg-accent/50 border-primary")}>
+                                                    <RadioGroupItem value={option.equipment.id} id={option.equipment.id} className="mt-1" />
+                                                    <div className="grid grid-cols-3 gap-4 w-full">
+                                                        <div className="col-span-1">
+                                                            {option.equipment.imageUrl ? (
+                                                                <Image src={option.equipment.imageUrl} alt={option.equipment.name} width={150} height={112} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
+                                                            ) : (
+                                                                <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
+                                                            )}
+                                                        </div>
+                                                        <div className="col-span-2 text-muted-foreground text-xs space-y-0.5">
+                                                            <p className="font-semibold text-foreground text-sm">{option.equipment.name}</p>
+                                                            <p><b>Alias:</b> {option.equipment.alias || 'N/A'}</p>
+                                                            <p><b>Tipo:</b> {option.equipment.type}</p>
+                                                            <p><b>Modelo:</b> {option.equipment.model}</p>
+                                                            <p><b>N/S:</b> {option.equipment.serial}</p>
+                                                            <p><b>Cliente:</b> {option.equipment.client}</p>
+                                                            <Badge variant="outline" className="mt-1">{option.protocol.steps.length} pasos</Badge>
+                                                        </div>
+                                                    </div>
+                                                </Label>
+                                            ))}
+                                        </div>
+                                    </RadioGroup>
+                                </div>
                             </div>
                         </div>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={onConfirm}>
+                    <AlertDialogAction onClick={handleConfirm} disabled={!selectedSourceId}>
                         Sí, Copiar Protocolo
                     </AlertDialogAction>
                 </AlertDialogFooter>
@@ -122,6 +151,27 @@ export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: 
         </AlertDialog>
     );
 }
+
+const levenshtein = (s1: string, s2: string): number => {
+  const track = Array(s2.length + 1).fill(null).map(() => Array(s1.length + 1).fill(null));
+  for (let i = 0; i <= s1.length; i += 1) {
+    track[0][i] = i;
+  }
+  for (let j = 0; j <= s2.length; j += 1) {
+    track[j][0] = j;
+  }
+  for (let j = 1; j <= s2.length; j += 1) {
+    for (let i = 1; i <= s1.length; i += 1) {
+      const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      track[j][i] = Math.min(
+        track[j][i - 1] + 1,
+        track[j - 1][i] + 1,
+        track[j - 1][i - 1] + indicator,
+      );
+    }
+  }
+  return track[s2.length][s1.length];
+};
 
 export default function ProtocolsPage() {
   const router = useRouter();
@@ -150,7 +200,7 @@ export default function ProtocolsPage() {
     if (selectedClientId) {
         const client = clients.find(c => c.id === selectedClientId);
         setClientWarehouses(client?.almacenes.map(a => a.nombre) || []);
-        setSelectedWarehouse(''); // Reset warehouse selection
+        setSelectedWarehouse('');
     } else {
         setClientWarehouses([]);
         setSelectedWarehouse('');
@@ -212,40 +262,34 @@ export default function ProtocolsPage() {
   };
 
   const handleSearchSimilar = (targetEquipment: Equipment) => {
-    const similarEquipments = allEquipments.filter(
-        (eq) =>
-            eq.id !== targetEquipment.id &&
-            eq.name === targetEquipment.name &&
-            eq.type === targetEquipment.type
-    );
-
-    const similarEquipmentWithProtocol = similarEquipments.find(
-        (eq) => protocols.some((p) => p.equipmentId === eq.id && p.steps.length > 0)
-    );
-
-    if (similarEquipmentWithProtocol) {
-        const sourceProtocol = protocols.find(
-            (p) => p.equipmentId === similarEquipmentWithProtocol.id
-        );
-        if (sourceProtocol) {
-            setProtocolToCopy({
-                sourceProtocol,
-                sourceEquipment: similarEquipmentWithProtocol,
-                targetEquipment,
-            });
-            return;
-        }
+    const similarEquipmentsWithProtocols = allEquipments
+      .filter(eq => 
+          eq.id !== targetEquipment.id &&
+          eq.type.toLowerCase() === targetEquipment.type.toLowerCase() &&
+          levenshtein(eq.name.toLowerCase(), targetEquipment.name.toLowerCase()) <= 2
+      )
+      .map(eq => {
+          const protocol = protocols.find(p => p.equipmentId === eq.id && p.steps.length > 0);
+          return protocol ? { equipment: eq, protocol } : null;
+      })
+      .filter((item): item is { equipment: Equipment; protocol: Protocol } => item !== null);
+      
+    if (similarEquipmentsWithProtocols.length > 0) {
+        setProtocolToCopy({
+            sourceOptions: similarEquipmentsWithProtocols,
+            targetEquipment,
+        });
+    } else {
+        setShowNoSimilarFoundAlert(true);
     }
-
-    setShowNoSimilarFoundAlert(true);
   };
   
-  const handleCopyProtocol = async () => {
+  const handleCopyProtocol = async (selectedSource: { protocol: Protocol; equipment: Equipment }) => {
     if (!protocolToCopy) return;
 
     const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
         equipmentId: protocolToCopy.targetEquipment.id,
-        steps: protocolToCopy.sourceProtocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
+        steps: selectedSource.protocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
     };
     
     try {
@@ -389,8 +433,8 @@ export default function ProtocolsPage() {
                                             <>
                                                 <DropdownMenuItem asChild>
                                                     <Link href={`/dashboard/protocols/new?equipmentId=${equipment.id}`}>
-                                                        <Wand2 className="mr-2 h-4 w-4" />
-                                                        <span>Modificar con IA</span>
+                                                        <Edit className="mr-2 h-4 w-4" />
+                                                        <span>Modificar Protocolo</span>
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
@@ -505,3 +549,4 @@ export default function ProtocolsPage() {
     </>
   );
 }
+
