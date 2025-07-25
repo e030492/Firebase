@@ -25,13 +25,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -39,19 +32,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Copy, Trash2, MoreVertical, Wand2, Search } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Search } from 'lucide-react';
 import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,6 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CopyProtocolDialog, type ProtocolToCopyInfo } from '@/app/dashboard/protocols/page';
 
 
 type State = {
@@ -122,13 +109,11 @@ function ProtocolGenerator() {
   const [state, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
 
   // Data states
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
-  const [equipmentName, setEquipmentName] = useState('');
-  const [equipmentDescription, setEquipmentDescription] = useState('');
-  const [equipmentAlias, setEquipmentAlias] = useState('');
-  const [equipmentModel, setEquipmentModel] = useState('');
-  const [equipmentSerial, setEquipmentSerial] = useState('');
-  const [equipmentImageUrl, setEquipmentImageUrl] = useState('');
+  
+  const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
+  const [showNoSimilarFoundAlert, setShowNoSimilarFoundAlert] = useState(false);
 
   const [existingSteps, setExistingSteps] = useState<ProtocolStep[]>([]);
   const [stepToDelete, setStepToDelete] = useState<ProtocolStep | null>(null);
@@ -141,14 +126,8 @@ function ProtocolGenerator() {
     if (equipmentIdFromQuery && !loading) {
       const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
       if (equipment) {
+        setSelectedEquipment(equipment);
         setSelectedEquipmentId(equipment.id);
-        setEquipmentName(equipment.name);
-        setEquipmentDescription(equipment.description);
-        setEquipmentAlias(equipment.alias || '');
-        setEquipmentModel(equipment.model);
-        setEquipmentSerial(equipment.serial);
-        setEquipmentImageUrl(equipment.imageUrl || '');
-        
         const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
         setExistingSteps(existingProtocol?.steps || []);
       }
@@ -268,6 +247,54 @@ function ProtocolGenerator() {
     }
   };
 
+  const handleSearchSimilar = () => {
+    if (!selectedEquipment) return;
+    
+    const similarEquipments = allEquipments.filter(
+      (eq) =>
+        eq.id !== selectedEquipment.id &&
+        eq.name === selectedEquipment.name &&
+        eq.type === selectedEquipment.type
+    );
+
+    const similarEquipmentWithProtocol = similarEquipments.find(
+      (eq) => protocols.some((p) => p.equipmentId === eq.id && p.steps.length > 0)
+    );
+
+    if (similarEquipmentWithProtocol) {
+      const sourceProtocol = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
+      if (sourceProtocol) {
+        setProtocolToCopy({
+          sourceProtocol,
+          sourceEquipment: similarEquipmentWithProtocol,
+          targetEquipment: selectedEquipment,
+        });
+        return;
+      }
+    }
+    setShowNoSimilarFoundAlert(true);
+  };
+  
+  const handleCopyProtocol = async () => {
+    if (!protocolToCopy) return;
+
+    const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
+      equipmentId: protocolToCopy.targetEquipment.id,
+      steps: protocolToCopy.sourceProtocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
+    };
+    
+    try {
+      const newProtocol = await createProtocol(newProtocolForCurrentEquipment);
+      setExistingSteps(newProtocol.steps);
+      setProtocolToCopy(null);
+      alert('Protocolo copiado y guardado con éxito.');
+    } catch (error) {
+      console.error("Failed to copy protocol:", error);
+      alert("Error al copiar el protocolo.");
+    }
+  };
+
+
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
     switch (priority?.toLowerCase()) {
       case 'alta':
@@ -314,7 +341,7 @@ function ProtocolGenerator() {
         </Card>
       )}
 
-      {selectedEquipmentId && (
+      {selectedEquipment && (
         <>
           <Card>
             <CardHeader>
@@ -325,27 +352,27 @@ function ProtocolGenerator() {
                     <div className="grid gap-4">
                         <div className="grid gap-3">
                             <Label>Equipo</Label>
-                            <Input value={equipmentName} readOnly />
+                            <Input value={selectedEquipment.name} readOnly />
                         </div>
                         <div className="grid md:grid-cols-2 gap-4">
                             <div className="grid gap-3">
                                 <Label>Alias</Label>
-                                <Input value={equipmentAlias || 'N/A'} readOnly />
+                                <Input value={selectedEquipment.alias || 'N/A'} readOnly />
                             </div>
                             <div className="grid gap-3">
                                 <Label>Modelo</Label>
-                                <Input value={equipmentModel} readOnly />
+                                <Input value={selectedEquipment.model} readOnly />
                             </div>
                         </div>
                         <div className="grid gap-3">
                             <Label>No. Serie</Label>
-                            <Input value={equipmentSerial} readOnly />
+                            <Input value={selectedEquipment.serial} readOnly />
                         </div>
                     </div>
                     <div className="grid gap-3">
                         <Label>Fotografía del Equipo</Label>
-                        {equipmentImageUrl ? (
-                            <Image src={equipmentImageUrl} alt={`Foto de ${equipmentName}`} width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video border" />
+                        {selectedEquipment.imageUrl ? (
+                            <Image src={selectedEquipment.imageUrl} alt={`Foto de ${selectedEquipment.name}`} width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video border" />
                         ) : (
                             <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
                                 <div className="text-center text-muted-foreground">
@@ -359,7 +386,7 @@ function ProtocolGenerator() {
             </CardContent>
           </Card>
       
-          {existingSteps.length > 0 && (
+          {existingSteps.length > 0 ? (
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
@@ -401,6 +428,21 @@ function ProtocolGenerator() {
                     </Table>
                 </CardContent>
             </Card>
+          ) : (
+             <Card>
+                <CardHeader>
+                    <CardTitle>Protocolo Vacío</CardTitle>
+                     <CardDescription>
+                        Este equipo no tiene pasos en su protocolo. Puede buscar un protocolo de un equipo similar o generar uno nuevo con IA.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={handleSearchSimilar}>
+                        <Search className="mr-2 h-4 w-4" />
+                        Buscar Protocolos Similares
+                    </Button>
+                </CardContent>
+             </Card>
           )}
 
           <Card>
@@ -410,17 +452,17 @@ function ProtocolGenerator() {
                 <CardDescription>La IA sugerirá pasos basados en la información del equipo.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6">
-                <Input name="equipmentName" value={equipmentName} type="hidden" />
-                <Input name="equipmentDescription" value={equipmentDescription} type="hidden" />
+                <Input name="equipmentName" value={selectedEquipment.name} type="hidden" />
+                <Input name="equipmentDescription" value={selectedEquipment.description} type="hidden" />
                  <p className="text-sm text-muted-foreground">
-                    Se generarán sugerencias para: <span className="font-semibold text-foreground">{equipmentName}</span>.
+                    Se generarán sugerencias para: <span className="font-semibold text-foreground">{selectedEquipment.name}</span>.
                 </p>
                 {existingSteps.length === 0 && (
                     <Alert>
                         <Wand2 className="h-4 w-4" />
-                        <AlertTitle>¡Protocolo Vacío!</AlertTitle>
+                        <AlertTitle>¿No encontró un protocolo similar?</AlertTitle>
                         <AlertDescription>
-                            Este equipo no tiene pasos en su protocolo. Haga clic en "Sugerir Pasos" para que la IA genere un protocolo completo.
+                            Haga clic en "Sugerir Pasos" para que la IA genere un protocolo completo desde cero para este equipo.
                         </AlertDescription>
                     </Alert>
                 )}
@@ -494,6 +536,29 @@ function ProtocolGenerator() {
         </>
       )}
     </div>
+
+    <CopyProtocolDialog 
+        protocolToCopy={protocolToCopy} 
+        onOpenChange={() => setProtocolToCopy(null)}
+        onConfirm={handleCopyProtocol}
+    />
+    
+    <AlertDialog open={showNoSimilarFoundAlert} onOpenChange={setShowNoSimilarFoundAlert}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <div className="flex items-center gap-2">
+                    <Search className="h-6 w-6 text-muted-foreground" />
+                    <AlertDialogTitle>Búsqueda Completada</AlertDialogTitle>
+                </div>
+                <AlertDialogDescription>
+                    No se encontró un protocolo para un equipo con el mismo nombre y tipo. Puede generar uno nuevo utilizando la IA.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                 <AlertDialogAction>Entendido</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 
     <AlertDialog open={!!stepToDelete} onOpenChange={() => setStepToDelete(null)}>
         <AlertDialogContent>
@@ -569,5 +634,3 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
-
-    

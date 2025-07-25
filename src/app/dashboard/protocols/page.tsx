@@ -28,14 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera, Search, Copy } from 'lucide-react';
 import { suggestMaintenanceProtocol } from '@/ai/flows/suggest-maintenance-protocol';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -55,28 +47,80 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Protocol, Equipment, Client, System, ProtocolStep } from '@/lib/services';
+import { Protocol, Equipment, Client, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 
 
-type EditingStepInfo = {
-  protocolId: string;
-  originalStepText: string;
-  currentData: ProtocolStep;
-};
-type DeletingStepInfo = {
-    protocolId: string;
-    stepToDelete: ProtocolStep;
-};
-type ProtocolToCopyInfo = {
+export type ProtocolToCopyInfo = {
     sourceProtocol: Protocol;
     sourceEquipment: Equipment;
     targetEquipment: Equipment;
+}
+
+export function CopyProtocolDialog({ protocolToCopy, onOpenChange, onConfirm }: { protocolToCopy: ProtocolToCopyInfo | null, onOpenChange: (open: boolean) => void, onConfirm: () => void }) {
+    if (!protocolToCopy) return null;
+
+    return (
+        <AlertDialog open={!!protocolToCopy} onOpenChange={onOpenChange}>
+            <AlertDialogContent className="max-w-2xl">
+                <AlertDialogHeader>
+                    <div className="flex items-center gap-2">
+                        <Copy className="h-6 w-6 text-primary" />
+                        <AlertDialogTitle>Protocolo Similar Encontrado</AlertDialogTitle>
+                    </div>
+                    <AlertDialogDescription asChild>
+                        <div className="space-y-4 pt-4 text-sm">
+                            <p>Se encontró un protocolo para un equipo similar. ¿Desea copiar sus pasos?</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-muted p-3 rounded-md space-y-2 border">
+                                    <h4 className="font-semibold mb-1 text-foreground">Equipo Origen (con protocolo)</h4>
+                                    {protocolToCopy.sourceEquipment.imageUrl ? (
+                                        <Image src={protocolToCopy.sourceEquipment.imageUrl} alt={protocolToCopy.sourceEquipment.name} width={200} height={150} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
+                                    ) : (
+                                        <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
+                                    )}
+                                    <p className="font-semibold text-foreground">{protocolToCopy.sourceEquipment.name}</p>
+                                    <div className="text-muted-foreground space-y-1">
+                                        <p><b>Alias:</b> {protocolToCopy.sourceEquipment.alias || 'N/A'}</p>
+                                        <p><b>Tipo:</b> {protocolToCopy.sourceEquipment.type}</p>
+                                        <p><b>Modelo:</b> {protocolToCopy.sourceEquipment.model}</p>
+                                        <p><b>N/S:</b> {protocolToCopy.sourceEquipment.serial}</p>
+                                        <p><b>Cliente:</b> {protocolToCopy.sourceEquipment.client}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-muted p-3 rounded-md space-y-2 border">
+                                    <h4 className="font-semibold mb-1 text-foreground">Equipo Destino (actual)</h4>
+                                    {protocolToCopy.targetEquipment.imageUrl ? (
+                                        <Image src={protocolToCopy.targetEquipment.imageUrl} alt={protocolToCopy.targetEquipment.name} width={200} height={150} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
+                                    ) : (
+                                        <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
+                                    )}
+                                    <p className="font-semibold text-foreground">{protocolToCopy.targetEquipment.name}</p>
+                                    <div className="text-muted-foreground space-y-1">
+                                       <p><b>Alias:</b> {protocolToCopy.targetEquipment.alias || 'N/A'}</p>
+                                       <p><b>Tipo:</b> {protocolToCopy.targetEquipment.type}</p>
+                                       <p><b>Modelo:</b> {protocolToCopy.targetEquipment.model}</p>
+                                       <p><b>N/S:</b> {protocolToCopy.targetEquipment.serial}</p>
+                                       <p><b>Cliente:</b> {protocolToCopy.targetEquipment.client}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={onConfirm}>
+                        Sí, Copiar Protocolo
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
 }
 
 export default function ProtocolsPage() {
@@ -89,12 +133,11 @@ export default function ProtocolsPage() {
       loading,
       createProtocol,
       deleteProtocol,
-      updateProtocol
   } = useData();
   
   const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
   const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
-  const [showNoSimilarFoundAlert, setShowNoSimilarFoundAlert] = useState<Equipment | null>(null);
+  const [showNoSimilarFoundAlert, setShowNoSimilarFoundAlert] = useState(false);
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
@@ -169,7 +212,6 @@ export default function ProtocolsPage() {
   };
 
   const handleSearchSimilar = (targetEquipment: Equipment) => {
-    // 1. Find all equipments with the same name and type, excluding the target itself.
     const similarEquipments = allEquipments.filter(
         (eq) =>
             eq.id !== targetEquipment.id &&
@@ -177,7 +219,6 @@ export default function ProtocolsPage() {
             eq.type === targetEquipment.type
     );
 
-    // 2. From that list, find the first one that has a defined protocol.
     const similarEquipmentWithProtocol = similarEquipments.find(
         (eq) => protocols.some((p) => p.equipmentId === eq.id && p.steps.length > 0)
     );
@@ -196,7 +237,7 @@ export default function ProtocolsPage() {
         }
     }
 
-    setShowNoSimilarFoundAlert(targetEquipment);
+    setShowNoSimilarFoundAlert(true);
   };
   
   const handleCopyProtocol = async () => {
@@ -421,65 +462,13 @@ export default function ProtocolsPage() {
         </Card>
       </div>
       
-    <AlertDialog open={!!protocolToCopy} onOpenChange={() => setProtocolToCopy(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <div className="flex items-center gap-2">
-                    <Copy className="h-6 w-6 text-primary" />
-                    <AlertDialogTitle>Protocolo Similar Encontrado</AlertDialogTitle>
-                </div>
-                 <AlertDialogDescription asChild>
-                    <div className="space-y-4">
-                        <p>Se encontró un protocolo para un equipo similar. ¿Desea copiar sus pasos?</p>
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* Source Equipment */}
-                            <div className="bg-muted p-3 rounded-md space-y-2">
-                                <h4 className="font-semibold mb-1 text-foreground">Origen</h4>
-                                {protocolToCopy?.sourceEquipment.imageUrl ? (
-                                    <Image src={protocolToCopy.sourceEquipment.imageUrl} alt={protocolToCopy.sourceEquipment.name} width={200} height={150} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
-                                ) : (
-                                    <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
-                                )}
-                                <p className="font-semibold text-sm">{protocolToCopy?.sourceEquipment.name}</p>
-                                <div className="text-xs text-muted-foreground space-y-1">
-                                    {protocolToCopy?.sourceEquipment.alias && <p>Alias: {protocolToCopy.sourceEquipment.alias}</p>}
-                                    <p>Tipo: {protocolToCopy?.sourceEquipment.type}</p>
-                                    <p>Modelo: {protocolToCopy?.sourceEquipment.model}</p>
-                                    <p>N/S: {protocolToCopy?.sourceEquipment.serial}</p>
-                                    <p>Cliente: {protocolToCopy?.sourceEquipment.client}</p>
-                                </div>
-                            </div>
-                            {/* Target Equipment */}
-                            <div className="bg-muted p-3 rounded-md space-y-2">
-                                <h4 className="font-semibold mb-1 text-foreground">Destino</h4>
-                                 {protocolToCopy?.targetEquipment.imageUrl ? (
-                                    <Image src={protocolToCopy.targetEquipment.imageUrl} alt={protocolToCopy.targetEquipment.name} width={200} height={150} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video w-full" />
-                                ) : (
-                                    <div className="w-full aspect-video bg-background/50 rounded-md flex items-center justify-center border"><Camera className="h-8 w-8 text-muted-foreground" /></div>
-                                )}
-                                <p className="font-semibold text-sm">{protocolToCopy?.targetEquipment.name}</p>
-                                <div className="text-xs text-muted-foreground space-y-1">
-                                    {protocolToCopy?.targetEquipment.alias && <p>Alias: {protocolToCopy.targetEquipment.alias}</p>}
-                                    <p>Tipo: {protocolToCopy?.targetEquipment.type}</p>
-                                    <p>Modelo: {protocolToCopy?.targetEquipment.model}</p>
-                                    <p>N/S: {protocolToCopy?.targetEquipment.serial}</p>
-                                    <p>Cliente: {protocolToCopy?.targetEquipment.client}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setProtocolToCopy(null)}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCopyProtocol}>
-                    Sí, Copiar Protocolo
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+    <CopyProtocolDialog 
+        protocolToCopy={protocolToCopy} 
+        onOpenChange={() => setProtocolToCopy(null)}
+        onConfirm={handleCopyProtocol}
+    />
 
-    <AlertDialog open={!!showNoSimilarFoundAlert} onOpenChange={() => setShowNoSimilarFoundAlert(null)}>
+    <AlertDialog open={showNoSimilarFoundAlert} onOpenChange={setShowNoSimilarFoundAlert}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <div className="flex items-center gap-2">
@@ -487,20 +476,11 @@ export default function ProtocolsPage() {
                     <AlertDialogTitle>Búsqueda Completada</AlertDialogTitle>
                 </div>
                 <AlertDialogDescription>
-                    No se encontró un protocolo para un equipo similar. Puede generar uno nuevo utilizando la IA.
+                    No se encontró un protocolo para un equipo con el mismo nombre y tipo. Puede generar uno nuevo utilizando la IA.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={() => {
-                    const equipmentId = showNoSimilarFoundAlert?.id;
-                    setShowNoSimilarFoundAlert(null);
-                    if (equipmentId) {
-                       router.push(`/dashboard/protocols/new?equipmentId=${equipmentId}`);
-                    }
-                }}>
-                    Generar con IA
-                </AlertDialogAction>
+                 <AlertDialogAction>Entendido</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
@@ -525,4 +505,3 @@ export default function ProtocolsPage() {
     </>
   );
 }
-
