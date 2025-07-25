@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -51,28 +52,28 @@ type DataContextType = {
   // Settings
   updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;
   // User mutations
-  createUser: (userData: Omit<User, 'id'>) => Promise<void>;
+  createUser: (userData: Omit<User, 'id'>, onProgress?: (progress: number) => void) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
-  updateUser: (userId: string, userData: Partial<User>) => Promise<void>;
+  updateUser: (userId: string, userData: Partial<User>, onProgress?: (progress: number) => void) => Promise<void>;
   // Client mutations
-  createClient: (clientData: Omit<Client, 'id'>) => Promise<Client>;
-  updateClient: (clientId: string, clientData: Partial<Client>) => Promise<void>;
+  createClient: (clientData: Omit<Client, 'id'>, onProgress?: (progress: number) => void) => Promise<Client>;
+  updateClient: (clientId: string, clientData: Partial<Client>, onProgress?: (progress: number) => void) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   // System mutations
-  createSystem: (systemData: Omit<System, 'id'>) => Promise<void>;
-  updateSystem: (systemId: string, systemData: Partial<System>) => Promise<void>;
+  createSystem: (systemData: Omit<System, 'id'>) => Promise<System>;
+  updateSystem: (systemId: string, systemData: Partial<System>) => Promise<System>;
   deleteSystem: (systemId: string) => Promise<void>;
   // Equipment mutations
-  createEquipment: (equipmentData: Omit<Equipment, 'id'>) => Promise<void>;
-  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<void>;
+  createEquipment: (equipmentData: Omit<Equipment, 'id'>, onProgress?: (progress: number) => void) => Promise<void>;
+  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>, onProgress?: (progress: number) => void) => Promise<void>;
   deleteEquipment: (equipmentId: string) => Promise<void>;
   // Protocol mutations
   createProtocol: (protocolData: Omit<Protocol, 'id'>) => Promise<Protocol>;
   updateProtocol: (protocolId: string, protocolData: Partial<Protocol>) => Promise<Protocol>;
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
-  createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<void>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<void>;
+  createCedula: (cedulaData: Omit<Cedula, 'id'>, onProgress?: (progress: number) => void) => Promise<void>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onProgress?: (progress: number) => void) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 

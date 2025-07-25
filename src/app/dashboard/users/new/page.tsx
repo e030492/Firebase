@@ -35,6 +35,7 @@ import { User, Client } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -115,6 +116,7 @@ export default function NewUserPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
     setPermissions(prev => ({
@@ -172,6 +174,7 @@ export default function NewUserPage() {
     }
     
     setLoading(true);
+    setUploadProgress(0);
 
     try {
         const newUser: Omit<User, 'id'> = {
@@ -185,7 +188,7 @@ export default function NewUserPage() {
             clientId: role === 'cliente' ? selectedClientId : undefined,
         };
 
-        await createUser(newUser);
+        await createUser(newUser, setUploadProgress);
         alert('Usuario creado con éxito.');
         router.push('/dashboard/users');
     } catch (error) {
@@ -193,6 +196,7 @@ export default function NewUserPage() {
         alert("Error al crear el usuario.");
     } finally {
         setLoading(false);
+        setUploadProgress(null);
     }
   };
 
@@ -224,10 +228,13 @@ export default function NewUserPage() {
                     <AvatarImage src={photoUrl || undefined} alt={name} data-ai-hint="user photo" />
                     <AvatarFallback><UserIcon className="h-10 w-10" /></AvatarFallback>
                   </Avatar>
-                  <Button type="button" variant="outline" onClick={() => photoInputRef.current?.click()} disabled={loading}>
-                    <Camera className="mr-2 h-4 w-4" />
-                    Subir Foto
-                  </Button>
+                  <div>
+                    <Button type="button" variant="outline" onClick={() => photoInputRef.current?.click()} disabled={loading}>
+                      <Camera className="mr-2 h-4 w-4" />
+                      Subir Foto
+                    </Button>
+                    {uploadProgress !== null && photoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
+                  </div>
                   <Input
                     id="photo-upload"
                     type="file"
@@ -297,6 +304,13 @@ export default function NewUserPage() {
                         <p className="text-sm text-muted-foreground">Vista previa de la firma</p>
                     )}
                 </div>
+                <div>
+                  <Button type="button" variant="outline" onClick={() => signatureInputRef.current?.click()} disabled={loading}>
+                      <Camera className="mr-2 h-4 w-4" />
+                      {signatureUrl ? 'Cambiar Firma' : 'Subir Firma'}
+                  </Button>
+                  {uploadProgress !== null && signatureUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
+                </div>
                 <Input
                     id="signature-upload"
                     type="file"
@@ -306,10 +320,6 @@ export default function NewUserPage() {
                     className="hidden"
                     disabled={loading}
                 />
-                <Button type="button" variant="outline" onClick={() => signatureInputRef.current?.click()} disabled={loading}>
-                    <Camera className="mr-2 h-4 w-4" />
-                    {signatureUrl ? 'Cambiar Firma' : 'Subir Firma'}
-                </Button>
               </div>
             </div>
           </CardContent>
