@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Camera, User as UserIcon } from 'lucide-react';
-import { User } from '@/lib/services';
+import { User, Client } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -45,6 +45,7 @@ const valueToRoleMap: { [key: string]: string } = {
   'admin': 'Administrador',
   'tecnico': 'Técnico',
   'supervisor': 'Supervisor',
+  'cliente': 'Cliente',
 };
 
 const initialPermissions: Permissions = {
@@ -81,6 +82,14 @@ const defaultPermissionsByRole: { [key: string]: Permissions } = {
     protocols: { create: true, update: true, delete: false },
     cedulas: { create: true, update: true, delete: false },
   },
+  cliente: {
+    users: { create: false, update: false, delete: false },
+    clients: { create: false, update: false, delete: false },
+    systems: { create: false, update: false, delete: false },
+    equipments: { create: false, update: false, delete: false },
+    protocols: { create: false, update: false, delete: false },
+    cedulas: { create: false, update: false, delete: false },
+  },
 };
 
 const modules: { key: ModuleKey; label: string }[] = [
@@ -94,7 +103,7 @@ const modules: { key: ModuleKey; label: string }[] = [
 
 export default function NewUserPage() {
   const router = useRouter();
-  const { createUser } = useData();
+  const { createUser, clients } = useData();
   const signatureInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
@@ -105,6 +114,7 @@ export default function NewUserPage() {
   const [permissions, setPermissions] = useState<Permissions>(initialPermissions);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
@@ -119,6 +129,7 @@ export default function NewUserPage() {
 
   const handleRoleChange = (newRoleValue: string) => {
     setRole(newRoleValue);
+    setSelectedClientId('');
     const newPermissions = defaultPermissionsByRole[newRoleValue] || initialPermissions;
     setPermissions(newPermissions);
   };
@@ -151,6 +162,10 @@ export default function NewUserPage() {
       alert('Por favor, complete todos los campos.');
       return;
     }
+    if (role === 'cliente' && !selectedClientId) {
+      alert('Por favor, seleccione un cliente para asociar a este usuario.');
+      return;
+    }
 
     if (password !== confirmPassword) {
         alert('Las contraseñas no coinciden.');
@@ -168,6 +183,7 @@ export default function NewUserPage() {
             permissions,
             signatureUrl: signatureUrl || '',
             photoUrl: photoUrl || '',
+            clientId: role === 'cliente' ? selectedClientId : undefined,
         };
 
         await createUser(newUser);
@@ -232,18 +248,36 @@ export default function NewUserPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" placeholder="ejemplo@correo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading} />
               </div>
-              <div className="grid gap-3">
-                <Label htmlFor="rol">Rol</Label>
-                 <Select onValueChange={handleRoleChange} value={role} required disabled={loading}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione un rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="tecnico">Técnico</SelectItem>
-                    <SelectItem value="supervisor">Supervisor</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="rol">Rol</Label>
+                   <Select onValueChange={handleRoleChange} value={role} required disabled={loading}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="tecnico">Técnico</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="cliente">Cliente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {role === 'cliente' && (
+                    <div className="grid gap-3">
+                        <Label htmlFor="cliente">Cliente Asociado</Label>
+                        <Select onValueChange={setSelectedClientId} value={selectedClientId} required={role === 'cliente'} disabled={loading}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccione un cliente" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {clients.map(client => (
+                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="password">Contraseña</Label>
@@ -305,21 +339,21 @@ export default function NewUserPage() {
                                     <Checkbox
                                         checked={permissions[module.key].create}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'create', !!checked)}
-                                        disabled={loading}
+                                        disabled={loading || role === 'cliente'}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key].update}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'update', !!checked)}
-                                        disabled={loading}
+                                        disabled={loading || role === 'cliente'}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key].delete}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'delete', !!checked)}
-                                        disabled={loading}
+                                        disabled={loading || role === 'cliente'}
                                     />
                                 </TableCell>
                             </TableRow>

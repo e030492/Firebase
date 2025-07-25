@@ -17,8 +17,9 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Upload, FileText, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Client, Almacen } from '@/lib/services';
+import { Client, Almacen, User } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
+import { Switch } from '@/components/ui/switch';
 
 type Plano = {
   url: string;
@@ -26,11 +27,22 @@ type Plano = {
   size: number;
 };
 
+const defaultPermissionsByRole: { [key: string]: User['permissions'] } = {
+  cliente: {
+    users: { create: false, update: false, delete: false },
+    clients: { create: false, update: false, delete: false },
+    systems: { create: false, update: false, delete: false },
+    equipments: { create: false, update: false, delete: false },
+    protocols: { create: false, update: false, delete: false },
+    cedulas: { create: false, update: false, delete: false },
+  },
+};
+
 export default function EditClientPage() {
   const params = useParams();
   const router = useRouter();
   const clientId = params.id as string;
-  const { clients, updateClient, loading: dataLoading } = useData();
+  const { clients, users, createUser, updateUser: updateUserClient, updateClient, loading: dataLoading } = useData();
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   const [name, setName] = useState('');
@@ -40,6 +52,12 @@ export default function EditClientPage() {
     { nombre: '', direccion: '', planos: [] },
     { nombre: '', direccion: '', planos: [] }
   ]);
+  
+  const [generateUserAccess, setGenerateUserAccess] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+  const [existingUser, setExistingUser] = useState<User | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,6 +65,14 @@ export default function EditClientPage() {
   useEffect(() => {
     if (!dataLoading && clientId) {
       const foundClient = clients.find(c => c.id === clientId);
+      const foundUser = users.find(u => u.clientId === clientId);
+      
+      if (foundUser) {
+          setExistingUser(foundUser);
+          setGenerateUserAccess(true);
+          setUserEmail(foundUser.email);
+      }
+
       if (foundClient) {
         setName(foundClient.name);
         setResponsable(foundClient.responsable);
@@ -77,7 +103,7 @@ export default function EditClientPage() {
         setLoading(false);
       }
     }
-  }, [clientId, clients, dataLoading]);
+  }, [clientId, clients, users, dataLoading]);
 
   const handleAlmacenChange = (index: number, field: keyof Omit<Almacen, 'planos'>, value: string) => {
     const newAlmacenes = [...almacenes];
@@ -129,6 +155,10 @@ export default function EditClientPage() {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (generateUserAccess && !userEmail) {
+        alert("Por favor, ingrese el email para la cuenta del cliente.");
+        return;
+    }
     setIsSaving(true);
     
     try {
@@ -152,6 +182,36 @@ export default function EditClientPage() {
         };
 
         await updateClient(clientId, updatedData);
+        
+        if (generateUserAccess) {
+            if (existingUser) {
+                // Update existing user
+                const userUpdateData: Partial<User> = { email: userEmail };
+                if (userPassword) {
+                    userUpdateData.password = userPassword;
+                }
+                await updateUserClient(existingUser.id, userUpdateData);
+            } else {
+                // Create new user
+                 if (!userPassword) {
+                    alert('Por favor, ingrese una contraseña para el nuevo usuario cliente.');
+                    setIsSaving(false);
+                    return;
+                }
+                const newUserForClient: Omit<User, 'id'> = {
+                    name: `${name} (Cliente)`,
+                    email: userEmail,
+                    password: userPassword,
+                    role: 'Cliente',
+                    permissions: defaultPermissionsByRole.cliente,
+                    clientId: clientId,
+                    photoUrl: '',
+                    signatureUrl: ''
+                };
+                await createUser(newUserForClient);
+            }
+        }
+
         alert('Cliente actualizado con éxito.');
         router.push('/dashboard/clients');
     } catch (error) {
@@ -224,6 +284,14 @@ export default function EditClientPage() {
                         <Skeleton className="h-10 w-full" />
                     </div>
                 </div>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Acceso para el Cliente</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <Skeleton className="h-24 w-full" />
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
                 <Skeleton className="h-10 w-32" />
@@ -330,11 +398,60 @@ export default function EditClientPage() {
               </div>
             ))}
           </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Guardando..." : "Guardar Cambios"}
-            </Button>
-          </CardFooter>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Acceso para el Cliente</CardTitle>
+                <CardDescription>
+                    Active o modifique la cuenta de usuario para que el cliente pueda ver su propia información.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="generate-access"
+                        checked={generateUserAccess}
+                        onCheckedChange={setGenerateUserAccess}
+                        disabled={isSaving}
+                    />
+                    <Label htmlFor="generate-access">
+                        {existingUser ? "Modificar acceso del cliente" : "Generar acceso al sistema para este cliente"}
+                    </Label>
+                </div>
+                {generateUserAccess && (
+                    <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
+                        <div className="grid gap-3">
+                            <Label htmlFor="userEmail">Email del Cliente</Label>
+                            <Input
+                                id="userEmail"
+                                type="email"
+                                placeholder="cliente@ejemplo.com"
+                                value={userEmail}
+                                onChange={(e) => setUserEmail(e.target.value)}
+                                required={generateUserAccess}
+                                disabled={isSaving}
+                            />
+                        </div>
+                        <div className="grid gap-3">
+                            <Label htmlFor="userPassword">Contraseña</Label>
+                            <Input
+                                id="userPassword"
+                                type="password"
+                                placeholder={existingUser ? "Dejar en blanco para no cambiar" : "Contraseña segura"}
+                                value={userPassword}
+                                onChange={(e) => setUserPassword(e.target.value)}
+                                required={!existingUser && generateUserAccess}
+                                disabled={isSaving}
+                            />
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+            <CardFooter className="border-t px-6 py-4">
+                <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "Guardando..." : "Guardar Cambios"}
+                </Button>
+            </CardFooter>
         </Card>
       </div>
     </form>

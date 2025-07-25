@@ -15,9 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Upload, FileText, Trash2 } from 'lucide-react';
-import { Client } from '@/lib/services';
+import { Client, User } from '@/lib/services';
 import type { Almacen } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
+import { Switch } from '@/components/ui/switch';
 
 type Plano = {
   url: string;
@@ -25,9 +26,20 @@ type Plano = {
   size: number;
 };
 
+const defaultPermissionsByRole: { [key: string]: User['permissions'] } = {
+  cliente: {
+    users: { create: false, update: false, delete: false },
+    clients: { create: false, update: false, delete: false },
+    systems: { create: false, update: false, delete: false },
+    equipments: { create: false, update: false, delete: false },
+    protocols: { create: false, update: false, delete: false },
+    cedulas: { create: false, update: false, delete: false },
+  },
+};
+
 export default function NewClientPage() {
   const router = useRouter();
-  const { createClient } = useData();
+  const { createClient, createUser } = useData();
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');
@@ -35,6 +47,11 @@ export default function NewClientPage() {
     { nombre: '', direccion: '', planos: [] },
     { nombre: '', direccion: '', planos: [] }
   ]);
+  
+  const [generateUserAccess, setGenerateUserAccess] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
@@ -89,7 +106,11 @@ export default function NewClientPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !responsable || !direccion) {
-        alert('Por favor, complete todos los campos obligatorios.');
+        alert('Por favor, complete todos los campos obligatorios del cliente.');
+        return;
+    }
+    if (generateUserAccess && (!userEmail || !userPassword)) {
+        alert('Por favor, complete el email y la contraseña para el acceso del cliente.');
         return;
     }
     setLoading(true);
@@ -114,7 +135,22 @@ export default function NewClientPage() {
             almacenes: almacenesToSave,
         };
 
-        await createClient(newClientData);
+        const newClient = await createClient(newClientData);
+        
+        if (generateUserAccess && newClient) {
+            const newUserForClient: Omit<User, 'id'> = {
+                name: `${name} (Cliente)`,
+                email: userEmail,
+                password: userPassword,
+                role: 'Cliente',
+                permissions: defaultPermissionsByRole.cliente,
+                clientId: newClient.id,
+                photoUrl: '',
+                signatureUrl: ''
+            };
+            await createUser(newUserForClient);
+        }
+
         alert('Cliente creado con éxito.');
         router.push('/dashboard/clients');
     } catch (error) {
@@ -210,11 +246,58 @@ export default function NewClientPage() {
               </div>
             ))}
           </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-            <Button type="submit" disabled={loading}>
-              {loading ? "Guardando..." : "Guardar Cliente"}
-            </Button>
-          </CardFooter>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Acceso para el Cliente</CardTitle>
+                <CardDescription>
+                Active esta opción para crear una cuenta de usuario para que el cliente pueda ver su propia información.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="generate-access"
+                        checked={generateUserAccess}
+                        onCheckedChange={setGenerateUserAccess}
+                        disabled={loading}
+                    />
+                    <Label htmlFor="generate-access">Generar acceso al sistema para este cliente</Label>
+                </div>
+                {generateUserAccess && (
+                    <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
+                        <div className="grid gap-3">
+                            <Label htmlFor="userEmail">Email del Cliente</Label>
+                            <Input
+                                id="userEmail"
+                                type="email"
+                                placeholder="cliente@ejemplo.com"
+                                value={userEmail}
+                                onChange={(e) => setUserEmail(e.target.value)}
+                                required={generateUserAccess}
+                                disabled={loading}
+                            />
+                        </div>
+                        <div className="grid gap-3">
+                            <Label htmlFor="userPassword">Contraseña para el Cliente</Label>
+                            <Input
+                                id="userPassword"
+                                type="password"
+                                placeholder="Contraseña segura"
+                                value={userPassword}
+                                onChange={(e) => setUserPassword(e.target.value)}
+                                required={generateUserAccess}
+                                disabled={loading}
+                            />
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+            <CardFooter className="border-t px-6 py-4">
+                <Button type="submit" disabled={loading}>
+                {loading ? "Guardando..." : "Guardar Cliente"}
+                </Button>
+            </CardFooter>
         </Card>
       </div>
     </form>

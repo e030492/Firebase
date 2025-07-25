@@ -35,7 +35,7 @@ import { ArrowLeft, Camera, User as UserIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
-import { User } from '@/lib/services';
+import { User, Client } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -47,12 +47,14 @@ const roleToValueMap: { [key: string]: string } = {
   'Administrador': 'admin',
   'Técnico': 'tecnico',
   'Supervisor': 'supervisor',
+  'Cliente': 'cliente',
 };
 
 const valueToRoleMap: { [key: string]: string } = {
   'admin': 'Administrador',
   'tecnico': 'Técnico',
   'supervisor': 'Supervisor',
+  'cliente': 'Cliente',
 };
 
 const initialPermissions: Permissions = {
@@ -85,9 +87,17 @@ const defaultPermissionsByRole: { [key: string]: Permissions } = {
     users: { create: false, update: false, delete: false },
     clients: { create: false, update: false, delete: false },
     systems: { create: false, update: false, delete: false },
-    equipments: { create: false, update: true, delete: false },
+    equipments: { create: false, update: false, delete: false },
     protocols: { create: true, update: true, delete: false },
     cedulas: { create: true, update: true, delete: false },
+  },
+  cliente: {
+    users: { create: false, update: false, delete: false },
+    clients: { create: false, update: false, delete: false },
+    systems: { create: false, update: false, delete: false },
+    equipments: { create: false, update: false, delete: false },
+    protocols: { create: false, update: false, delete: false },
+    cedulas: { create: false, update: false, delete: false },
   },
 };
 
@@ -105,7 +115,7 @@ export default function EditUserPage() {
   const router = useRouter();
   const userId = params.id as string;
   const { can } = usePermissions();
-  const { users, updateUser, loading: dataLoading } = useData();
+  const { users, clients, updateUser, loading: dataLoading } = useData();
   const signatureInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -117,6 +127,7 @@ export default function EditUserPage() {
   const [permissions, setPermissions] = useState<Permissions>(initialPermissions);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>('');
   
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -132,6 +143,7 @@ export default function EditUserPage() {
             setPermissions(foundUser.permissions || initialPermissions);
             setSignatureUrl(foundUser.signatureUrl || null);
             setPhotoUrl(foundUser.photoUrl || null);
+            setSelectedClientId(foundUser.clientId);
             setLoading(false);
         } else {
             setNotFound(true);
@@ -195,6 +207,7 @@ export default function EditUserPage() {
             permissions,
             signatureUrl: signatureUrl || '',
             photoUrl: photoUrl || '',
+            clientId: role === 'cliente' ? selectedClientId : undefined,
         };
         if (password) {
             updatedData.password = password;
@@ -325,18 +338,36 @@ export default function EditUserPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!canUpdateUsers || isSaving} />
               </div>
-              <div className="grid gap-3">
-                <Label htmlFor="rol">Rol</Label>
-                 <Select value={role} onValueChange={handleRoleChange} required disabled={!canUpdateUsers || isSaving}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione un rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="tecnico">Técnico</SelectItem>
-                    <SelectItem value="supervisor">Supervisor</SelectItem>
-                  </SelectContent>
-                </Select>
+               <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="rol">Rol</Label>
+                   <Select value={role} onValueChange={handleRoleChange} required disabled={!canUpdateUsers || isSaving}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="tecnico">Técnico</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="cliente">Cliente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                 {role === 'cliente' && (
+                    <div className="grid gap-3">
+                        <Label htmlFor="cliente">Cliente Asociado</Label>
+                        <Select onValueChange={setSelectedClientId} value={selectedClientId} required={role === 'cliente'} disabled={!canUpdateUsers || isSaving}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccione un cliente" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {clients.map(client => (
+                                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
               </div>
               <Separator />
                <div className="grid gap-3">
@@ -399,21 +430,21 @@ export default function EditUserPage() {
                                     <Checkbox
                                         checked={permissions[module.key]?.create}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'create', !!checked)}
-                                        disabled={!canUpdateUsers || isSaving}
+                                        disabled={!canUpdateUsers || isSaving || role === 'cliente'}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key]?.update}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'update', !!checked)}
-                                        disabled={!canUpdateUsers || isSaving}
+                                        disabled={!canUpdateUsers || isSaving || role === 'cliente'}
                                     />
                                 </TableCell>
                                 <TableCell className="text-center">
                                      <Checkbox
                                         checked={permissions[module.key]?.delete}
                                         onCheckedChange={(checked) => handlePermissionChange(module.key, 'delete', !!checked)}
-                                        disabled={!canUpdateUsers || isSaving}
+                                        disabled={!canUpdateUsers || isSaving || role === 'cliente'}
                                     />
                                 </TableCell>
                             </TableRow>
