@@ -5,7 +5,7 @@ import {
 } from './mock-data';
 
 // Interfaces based on mock-data structure
-export type Almacen = { nombre: string; direccion: string };
+export type Almacen = { nombre: string; direccion: string; planosUrl?: string[] };
 export type Client = typeof mockClients[0] & { id: string };
 export type Equipment = typeof mockEquipments[0] & { id: string };
 export type System = typeof mockSystems[0] & { id: string };

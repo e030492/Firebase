@@ -1,6 +1,6 @@
 
 "use client";
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Trash2 } from 'lucide-react';
 import { Client } from '@/lib/services';
 import type { Almacen } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
@@ -25,12 +25,41 @@ export default function NewClientPage() {
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [almacenes, setAlmacenes] = useState<Almacen[]>([{ nombre: '', direccion: '' }, { nombre: '', direccion: '' }]);
+  const [almacenes, setAlmacenes] = useState<Almacen[]>([{ nombre: '', direccion: '', planosUrl: [] }, { nombre: '', direccion: '', planosUrl: [] }]);
   const [loading, setLoading] = useState(false);
+  const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
-  const handleAlmacenChange = (index: number, field: keyof Almacen, value: string) => {
+  const handleAlmacenChange = (index: number, field: keyof Omit<Almacen, 'planosUrl'>, value: string) => {
     const newAlmacenes = [...almacenes];
     newAlmacenes[index] = { ...newAlmacenes[index], [field]: value };
+    setAlmacenes(newAlmacenes);
+  };
+  
+  const handleFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+        const fileReaders: Promise<string>[] = [];
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            fileReaders.push(new Promise((resolve, reject) => {
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            }));
+        });
+        
+        Promise.all(fileReaders).then(newUrls => {
+            const newAlmacenes = [...almacenes];
+            const currentPlanos = newAlmacenes[index].planosUrl || [];
+            newAlmacenes[index].planosUrl = [...currentPlanos, ...newUrls];
+            setAlmacenes(newAlmacenes);
+        });
+    }
+  };
+  
+  const removePlano = (almacenIndex: number, planoIndex: number) => {
+    const newAlmacenes = [...almacenes];
+    newAlmacenes[almacenIndex].planosUrl?.splice(planoIndex, 1);
     setAlmacenes(newAlmacenes);
   };
 
@@ -43,7 +72,7 @@ export default function NewClientPage() {
     setLoading(true);
 
     try {
-        const almacenesToSave = almacenes.filter(a => a.nombre.trim() !== '' && a.direccion.trim() !== '');
+        const almacenesToSave = almacenes.filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '');
 
         const newClientData: Omit<Client, 'id'> = {
             name,
@@ -108,25 +137,73 @@ export default function NewClientPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="grid gap-3">
-                <Label htmlFor="almacen1">Nombre Almacén 1</Label>
-                <Input id="almacen1" value={almacenes[0]?.nombre || ''} onChange={(e) => handleAlmacenChange(0, 'nombre', e.target.value)} placeholder="Ej. Almacén Central" disabled={loading} />
+            {/* Almacen 1 */}
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="almacen1">Nombre Almacén 1</Label>
+                  <Input id="almacen1" value={almacenes[0]?.nombre || ''} onChange={(e) => handleAlmacenChange(0, 'nombre', e.target.value)} placeholder="Ej. Almacén Central" disabled={loading} />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="direccion_almacen1">Dirección Almacén 1</Label>
+                  <Input id="direccion_almacen1" value={almacenes[0]?.direccion || ''} onChange={(e) => handleAlmacenChange(0, 'direccion', e.target.value)} placeholder="Dirección completa del almacén 1" disabled={loading} />
+                </div>
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="direccion_almacen1">Dirección Almacén 1</Label>
-                <Input id="direccion_almacen1" value={almacenes[0]?.direccion || ''} onChange={(e) => handleAlmacenChange(0, 'direccion', e.target.value)} placeholder="Dirección completa del almacén 1" disabled={loading} />
+                  <Label>Planos del Almacén 1 (PDF)</Label>
+                  <Button type="button" variant="outline" onClick={() => fileInputRefs[0].current?.click()} disabled={loading}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Subir Planos
+                  </Button>
+                  <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[0]} onChange={(e) => handleFileChange(0, e)} className="hidden" />
+                  <div className="space-y-2">
+                    {(almacenes[0].planosUrl || []).map((url, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 border rounded-md">
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                          <FileText className="h-4 w-4" />
+                          Plano {i + 1}
+                        </a>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removePlano(0, i)} disabled={loading}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
               </div>
             </div>
             <Separator />
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="grid gap-3">
-                <Label htmlFor="almacen2">Nombre Almacén 2 (Opcional)</Label>
-                <Input id="almacen2" value={almacenes[1]?.nombre || ''} onChange={(e) => handleAlmacenChange(1, 'nombre', e.target.value)} placeholder="Ej. Bodega Norte" disabled={loading} />
+            {/* Almacen 2 */}
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="almacen2">Nombre Almacén 2 (Opcional)</Label>
+                  <Input id="almacen2" value={almacenes[1]?.nombre || ''} onChange={(e) => handleAlmacenChange(1, 'nombre', e.target.value)} placeholder="Ej. Bodega Norte" disabled={loading} />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="direccion_almacen2">Dirección Almacén 2</Label>
+                  <Input id="direccion_almacen2" value={almacenes[1]?.direccion || ''} onChange={(e) => handleAlmacenChange(1, 'direccion', e.target.value)} placeholder="Dirección completa del almacén 2" disabled={loading} />
+                </div>
               </div>
-              <div className="grid gap-3">
-                <Label htmlFor="direccion_almacen2">Dirección Almacén 2</Label>
-                <Input id="direccion_almacen2" value={almacenes[1]?.direccion || ''} onChange={(e) => handleAlmacenChange(1, 'direccion', e.target.value)} placeholder="Dirección completa del almacén 2" disabled={loading} />
+               <div className="grid gap-3">
+                  <Label>Planos del Almacén 2 (PDF)</Label>
+                  <Button type="button" variant="outline" onClick={() => fileInputRefs[1].current?.click()} disabled={loading}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Subir Planos
+                  </Button>
+                  <Input type="file" accept="application/pdf" multiple ref={fileInputRefs[1]} onChange={(e) => handleFileChange(1, e)} className="hidden" />
+                   <div className="space-y-2">
+                    {(almacenes[1].planosUrl || []).map((url, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 border rounded-md">
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                          <FileText className="h-4 w-4" />
+                          Plano {i + 1}
+                        </a>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removePlano(1, i)} disabled={loading}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
               </div>
             </div>
           </CardContent>

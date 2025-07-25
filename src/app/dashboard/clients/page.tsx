@@ -35,7 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, FileText } from 'lucide-react';
 import { Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -229,6 +229,25 @@ export default function ClientsPage() {
                                                         <div key={index} className="text-sm p-3 border rounded-md bg-background/50">
                                                             <p className="font-medium">{almacen.nombre}</p>
                                                             <p className="text-muted-foreground">{almacen.direccion}</p>
+                                                            {almacen.planosUrl && almacen.planosUrl.length > 0 && (
+                                                                <div className="mt-2">
+                                                                    <p className="text-xs font-semibold text-muted-foreground">Planos:</p>
+                                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                                        {almacen.planosUrl.map((planoUrl, planoIndex) => (
+                                                                            <a
+                                                                                key={planoIndex}
+                                                                                href={planoUrl}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="flex items-center gap-1 text-primary hover:underline"
+                                                                            >
+                                                                                <FileText className="h-3 w-3" />
+                                                                                <span>Plano {planoIndex + 1}</span>
+                                                                            </a>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
