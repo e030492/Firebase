@@ -33,6 +33,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { useData } from '@/hooks/use-data-provider';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 
 
 function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
@@ -40,6 +41,7 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const logoInputRef = useRef<HTMLInputElement>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
     useEffect(() => {
         if (companySettings) {
@@ -60,8 +62,9 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
 
     const handleSave = async () => {
         setIsSaving(true);
+        setUploadProgress(null);
         try {
-            await updateCompanySettings({ logoUrl: logoUrl || '' });
+            await updateCompanySettings({ logoUrl: logoUrl || '' }, setUploadProgress);
             alert('Configuración guardada con éxito.');
             onOpenChange(false);
         } catch (error) {
@@ -69,6 +72,7 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
             alert('Error al guardar la configuración.');
         } finally {
             setIsSaving(false);
+            setUploadProgress(null);
         }
     };
 
@@ -103,6 +107,7 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
                             <Upload className="mr-2 h-4 w-4" />
                             Subir Logo
                         </Button>
+                        {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
                     </div>
                 </div>
                 <SheetFooter>
@@ -161,7 +166,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               className="group flex h-auto items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
             >
               <div className="flex shrink-0 items-center justify-center transition-all p-2">
-                <Image src={companySettings?.logoUrl || "https://placehold.co/405x405.png"} alt="Escuadra Technology Logo" width={405} height={405} data-ai-hint="logo" />
+                <Image src={companySettings?.logoUrl || "https://placehold.co/360x360.png"} alt="Escuadra Technology Logo" width={360} height={360} data-ai-hint="logo" />
               </div>
             </Link>
           </SidebarHeader>
