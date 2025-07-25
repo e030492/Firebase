@@ -36,7 +36,6 @@ import { Equipment, Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
-import { Combobox } from '@/components/ui/combobox';
 
 export default function NewEquipmentPage() {
   const router = useRouter();
@@ -65,18 +64,6 @@ export default function NewEquipmentPage() {
 
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
   const [isSaving, setIsSaving] = useState(false);
-
-    const existingOptions = useMemo(() => {
-        const names = [...new Set(equipments.map(e => e.name).filter(Boolean))].map(n => ({ value: n, label: n }));
-        const aliases = [...new Set(equipments.map(e => e.alias).filter(Boolean))].map(a => ({ value: a, label: a }));
-        const brands = [...new Set(equipments.map(e => e.brand).filter(Boolean))].map(b => ({ value: b, label: b }));
-        const models = [...new Set(equipments.map(e => e.model).filter(Boolean))].map(m => ({ value: m, label: m }));
-        const types = [...new Set(equipments.map(e => e.type).filter(Boolean))].map(t => ({ value: t, label: t }));
-        const ipAddresses = [...new Set(equipments.map(e => e.ipAddress).filter(Boolean))].map(ip => ({ value: ip, label: ip }));
-        const configUsers = [...new Set(equipments.map(e => e.configUser).filter(Boolean))].map(u => ({ value: u, label: u }));
-        const configPasswords = [...new Set(equipments.map(e => e.configPassword).filter(Boolean))].map(p => ({ value: p, label: p }));
-        return { names, aliases, brands, models, types, ipAddresses, configUsers, configPasswords };
-    }, [equipments]);
 
   useEffect(() => {
     if (clientId) {
@@ -273,54 +260,22 @@ export default function NewEquipmentPage() {
                 <Separator/>
               <div className="grid gap-3">
                 <Label htmlFor="name">Nombre del Equipo</Label>
-                <Combobox
-                    value={name}
-                    onChange={setName}
-                    options={existingOptions.names}
-                    placeholder="Escriba o seleccione un nombre..."
-                    searchPlaceholder="Buscar nombre..."
-                    emptyPlaceholder="No se encontraron nombres."
-                    disabled={isSaving}
-                />
+                <Input id="name" value={name} onChange={e => setName(e.target.value)} required disabled={isSaving}/>
               </div>
                <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="brand">Marca</Label>
-                    <Combobox
-                        value={brand}
-                        onChange={setBrand}
-                        options={existingOptions.brands}
-                        placeholder="Seleccione o escriba una marca..."
-                        searchPlaceholder="Buscar marca..."
-                        emptyPlaceholder="No se encontraron marcas."
-                        disabled={isSaving}
-                    />
+                  <Input id="brand" value={brand} onChange={e => setBrand(e.target.value)} required disabled={isSaving}/>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="model">Modelo</Label>
-                    <Combobox
-                        value={model}
-                        onChange={setModel}
-                        options={existingOptions.models}
-                        placeholder="Seleccione o escriba un modelo..."
-                        searchPlaceholder="Buscar modelo..."
-                        emptyPlaceholder="No se encontraron modelos."
-                        disabled={isSaving}
-                    />
+                  <Input id="model" value={model} onChange={e => setModel(e.target.value)} required disabled={isSaving}/>
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                   <Label htmlFor="type">Tipo</Label>
-                    <Combobox
-                        value={type}
-                        onChange={setType}
-                        options={existingOptions.types}
-                        placeholder="Seleccione o escriba un tipo..."
-                        searchPlaceholder="Buscar tipo..."
-                        emptyPlaceholder="No se encontraron tipos."
-                        disabled={isSaving}
-                    />
+                  <Input id="type" value={type} onChange={e => setType(e.target.value)} required disabled={isSaving}/>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="serial">Número de Serie</Label>
@@ -329,15 +284,7 @@ export default function NewEquipmentPage() {
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="alias">Alias del Equipo (Opcional)</Label>
-                <Combobox
-                    value={alias}
-                    onChange={setAlias}
-                    options={existingOptions.aliases}
-                    placeholder="Escriba o seleccione un alias..."
-                    searchPlaceholder="Buscar alias..."
-                    emptyPlaceholder="No se encontraron alias."
-                    disabled={isSaving}
-                />
+                <Input id="alias" value={alias} onChange={e => setAlias(e.target.value)} disabled={isSaving}/>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="description">Descripción</Label>
@@ -355,39 +302,15 @@ export default function NewEquipmentPage() {
                     <div className="grid md:grid-cols-3 gap-4">
                         <div className="grid gap-3">
                             <Label htmlFor="ipAddress">Dirección IP de Configuración</Label>
-                             <Combobox
-                                value={ipAddress}
-                                onChange={setIpAddress}
-                                options={existingOptions.ipAddresses}
-                                placeholder="Escriba o seleccione una IP..."
-                                searchPlaceholder="Buscar IP..."
-                                emptyPlaceholder="No se encontraron IPs."
-                                disabled={isSaving}
-                            />
+                            <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} disabled={isSaving}/>
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="configUser">Usuario de Configuración</Label>
-                             <Combobox
-                                value={configUser}
-                                onChange={setConfigUser}
-                                options={existingOptions.configUsers}
-                                placeholder="Escriba o seleccione un usuario..."
-                                searchPlaceholder="Buscar usuario..."
-                                emptyPlaceholder="No se encontraron usuarios."
-                                disabled={isSaving}
-                            />
+                            <Input id="configUser" value={configUser} onChange={e => setConfigUser(e.target.value)} disabled={isSaving}/>
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="configPassword">Contraseña</Label>
-                             <Combobox
-                                value={configPassword}
-                                onChange={setConfigPassword}
-                                options={existingOptions.configPasswords}
-                                placeholder="Escriba o seleccione una contraseña..."
-                                searchPlaceholder="Buscar contraseña..."
-                                emptyPlaceholder="No se encontraron contraseñas."
-                                disabled={isSaving}
-                            />
+                            <Input id="configPassword" value={configPassword} onChange={e => setConfigPassword(e.target.value)} disabled={isSaving}/>
                         </div>
                     </div>
                 </div>
