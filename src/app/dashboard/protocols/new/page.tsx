@@ -167,26 +167,27 @@ function ProtocolGenerator() {
     const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
     setExistingSteps(existingProtocol?.steps || []);
 
-    // Intelligent Search Logic
     if (!existingProtocol) {
       const similarEquipmentWithProtocol = allEquipments.find(
-        eq => eq.id !== equipment.id && eq.type === equipment.type && protocols.some(p => p.equipmentId === eq.id)
+        eq =>
+          eq.id !== equipment.id &&
+          eq.name === equipment.name &&
+          eq.type === equipment.type &&
+          protocols.some(p => p.equipmentId === eq.id)
       );
 
       if (similarEquipmentWithProtocol) {
-          const protocolOfSimilar = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
-          if (protocolOfSimilar) {
-              setProtocolToCopy({ protocol: protocolOfSimilar, sourceEquipmentName: similarEquipmentWithProtocol.name });
-              return;
-          }
+        const protocolOfSimilar = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
+        if (protocolOfSimilar) {
+          setProtocolToCopy({ protocol: protocolOfSimilar, sourceEquipmentName: similarEquipmentWithProtocol.name });
+          return;
+        }
       }
-      // Only show not found alert if no protocol and no similar one was found
       setShowNotFoundAlert(true);
     }
   };
 
 
-  // Pre-fill form if equipmentId is in query params
   useEffect(() => {
     const equipmentIdFromQuery = searchParams.get('equipmentId');
     if (equipmentIdFromQuery && allEquipments.length > 0 && protocols) {
@@ -199,7 +200,6 @@ function ProtocolGenerator() {
   }, [searchParams, allEquipments, protocols]);
 
 
-  // Filter equipments when client or system changes
   useEffect(() => {
     if (clientId && systemId) {
       const clientName = clients.find(c => c.id === clientId)?.name;
@@ -218,14 +218,12 @@ function ProtocolGenerator() {
     }
   }, [clientId, systemId, clients, systems, allEquipments, protocols]);
 
-  // Reset selections when AI result changes
   useEffect(() => {
     if (state.result) {
       setSelectedSteps([]);
     }
   }, [state.result]);
 
-  // Handlers for dropdowns
   const handleClientChange = (newClientId: string) => {
     setClientId(newClientId);
     setSystemId('');
@@ -571,7 +569,46 @@ function ProtocolGenerator() {
         </Card>
       )}
 
-      {(isModificationMode || selectedEquipmentId) && (
+      {(isModificationMode || selectedEquipmentId) && !protocolToCopy && !showNotFoundAlert && existingSteps.length === 0 && (
+        <Card>
+            <CardHeader>
+                <CardTitle>Generar Protocolo con IA</CardTitle>
+                <CardDescription>La IA sugerirá pasos basados en la información del equipo.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form action={formAction} className="grid gap-6">
+                    <div className="grid gap-3">
+                    <Label htmlFor="equipmentName">Nombre del Equipo</Label>
+                    <Input
+                        id="equipmentName"
+                        name="equipmentName"
+                        value={equipmentName}
+                        onChange={e => setEquipmentName(e.target.value)}
+                        placeholder="Ej. Cámara IP Domo PTZ"
+                        required
+                        readOnly
+                    />
+                    </div>
+                    <div className="grid gap-3">
+                    <Label htmlFor="equipmentDescription">Descripción del Equipo</Label>
+                    <Textarea
+                        id="equipmentDescription"
+                        name="equipmentDescription"
+                        value={equipmentDescription}
+                        onChange={e => setEquipmentDescription(e.target.value)}
+                        placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
+                        required
+                        className="min-h-32"
+                        readOnly
+                    />
+                    </div>
+                    <SubmitButton />
+                </form>
+            </CardContent>
+        </Card>
+      )}
+      
+      {(isModificationMode || selectedEquipmentId) && existingSteps.length > 0 && (
         <Card>
             <form action={formAction}>
             <CardHeader>
@@ -785,3 +822,5 @@ export default function NewProtocolPage() {
         </Suspense>
     )
 }
+
+    
