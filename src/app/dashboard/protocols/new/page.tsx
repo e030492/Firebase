@@ -152,7 +152,7 @@ function ProtocolGenerator() {
     const isModifying = !!equipmentIdFromQuery;
     setIsModificationMode(isModifying);
 
-    if (isModifying && allEquipments.length > 0) {
+    if (isModifying && allEquipments.length > 0 && protocols) {
         const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
         if (equipment) {
             setSelectedEquipmentId(equipment.id);
@@ -235,8 +235,14 @@ function ProtocolGenerator() {
     setEquipmentImageUrl(selected.imageUrl || '');
     
     const existingProtocol = protocols.find(p => p.equipmentId === equipmentId);
-    if (existingProtocol) return;
-
+    if (existingProtocol) {
+      // If a protocol already exists, we are in modification mode implicitly.
+      setIsModificationMode(true);
+      setExistingSteps(existingProtocol.steps);
+      return; // Stop here
+    }
+    
+    // If no protocol exists for the selected equipment, check for similar ones.
     const similarEquipment = allEquipments.find(
       eq => eq.id !== selected.id && eq.name === selected.name && eq.type === selected.type
     );
@@ -272,27 +278,33 @@ function ProtocolGenerator() {
   };
   
   const handleSaveProtocol = async () => {
-    if (!selectedEquipmentId || selectedSteps.length === 0) {
-      alert("Por favor, seleccione un equipo y al menos un paso del protocolo antes de guardar.");
-      return;
+    if (!selectedEquipmentId) {
+       alert("Por favor, seleccione un equipo antes de guardar.");
+       return;
     }
     
+    // Do not save if no new steps are selected and no existing steps were modified
+    if (selectedSteps.length === 0) {
+       alert("Por favor, seleccione al menos un paso sugerido para añadir al protocolo.");
+       return;
+    }
+
     const existingProtocol = protocols.find(p => p.equipmentId === selectedEquipmentId);
     
     if (existingProtocol) {
-      const stepMap = new Map(existingProtocol.steps.map(item => [item.step, item]));
+      const allSteps = [...existingProtocol.steps];
+      const existingStepTexts = new Set(allSteps.map(s => s.step));
+
       selectedSteps.forEach(newStep => {
-          const formattedNewStep: ProtocolStep = {
-              ...newStep,
-              completion: 0,
-              notes: '',
-              imageUrl: '',
-          };
-          stepMap.set(newStep.step, formattedNewStep);
+        if (!existingStepTexts.has(newStep.step)) {
+           const formattedNewStep: ProtocolStep = { ...newStep, completion: 0, notes: '', imageUrl: ''};
+           allSteps.push(formattedNewStep);
+        }
       });
       
       try {
-        await updateProtocol(existingProtocol.id, { steps: Array.from(stepMap.values()) });
+        await updateProtocol(existingProtocol.id, { steps: allSteps });
+        setExistingSteps(allSteps);
       } catch (error) {
         console.error("Failed to update protocol:", error);
         alert("Error al actualizar el protocolo.");
@@ -313,7 +325,13 @@ function ProtocolGenerator() {
     }
 
     alert('Protocolo guardado con éxito.');
-    router.push('/dashboard/protocols');
+    if(isModificationMode) {
+       // Reset suggested steps form if in modification mode
+       setState({ result: null, error: null });
+       setSelectedSteps([]);
+    } else {
+       router.push('/dashboard/protocols');
+    }
   };
   
   const handleDeleteStep = async () => {
@@ -401,7 +419,7 @@ function ProtocolGenerator() {
         </div>
       </div>
 
-      {isModificationMode && (
+      {(isModificationMode || selectedEquipmentId) && (
           <Card>
             <CardHeader>
                 <CardTitle>Información del Equipo Seleccionado</CardTitle>
@@ -453,9 +471,9 @@ function ProtocolGenerator() {
                     <CardTitle>Pasos del Protocolo Existente</CardTitle>
                     <CardDescription>Estos son los pasos actualmente guardados para este equipo.</CardDescription>
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => setShowDeleteAllAlert(true)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Eliminar Todos los Pasos</span>
+                <Button variant="destructive" size="sm" onClick={() => setShowDeleteAllAlert(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar Todos
                 </Button>
             </CardHeader>
             <CardContent>
@@ -527,17 +545,18 @@ function ProtocolGenerator() {
                     </Select>
                 </div>
                 <div className="grid gap-3">
-                    <Label htmlFor="equipment">Seleccionar Equipo (Opcional)</Label>
+                    <Label htmlFor="equipment">Seleccionar Equipo</Label>
                     <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId}>
                     <SelectTrigger>
                         <SelectValue placeholder="Seleccione un equipo..." />
                     </SelectTrigger>
                     <SelectContent>
                         {filteredEquipments.map(eq => (
-                            <SelectItem key={eq.id} value={eq.id} className={!eq.hasProtocol ? 'text-destructive' : ''}>
+                            <SelectItem key={eq.id} value={eq.id} className={eq.hasProtocol ? '' : 'text-primary'}>
                             {eq.name}
                             {eq.alias && ` (${eq.alias})`}
                             {` - N/S: ${eq.serial}`}
+                            {eq.hasProtocol ? '' : ' (Sin Protocolo)'}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -591,7 +610,7 @@ function ProtocolGenerator() {
       {state.result && (
         <Card>
           <CardHeader>
-            <CardTitle>Protocolo Sugerido</CardTitle>
+            <CardTitle>Protocolo Sugerido por IA</CardTitle>
             <CardDescription>Seleccione los pasos que desea añadir al protocolo del equipo.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -635,7 +654,7 @@ function ProtocolGenerator() {
           <CardFooter className="border-t px-6 py-4">
              <Button onClick={handleSaveProtocol} disabled={!selectedEquipmentId || selectedSteps.length === 0}>
                <Save className="mr-2 h-4 w-4" />
-               Guardar Pasos Seleccionados
+               Añadir Pasos Seleccionados
              </Button>
           </CardFooter>
         </Card>
