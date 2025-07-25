@@ -58,13 +58,15 @@ export default function EditClientPage() {
         ];
         if (clientAlmacenes[0]) {
             displayAlmacenes[0] = { 
-                ...clientAlmacenes[0], 
+                nombre: clientAlmacenes[0].nombre,
+                direccion: clientAlmacenes[0].direccion, 
                 planos: clientAlmacenes[0].planos?.map(p => ({...p})) || [] 
             };
         }
         if (clientAlmacenes[1]) {
             displayAlmacenes[1] = { 
-                ...clientAlmacenes[1], 
+                nombre: clientAlmacenes[1].nombre,
+                direccion: clientAlmacenes[1].direccion, 
                 planos: clientAlmacenes[1].planos?.map(p => ({...p})) || []
             };
         }
@@ -133,8 +135,13 @@ export default function EditClientPage() {
         const almacenesToSave = almacenes
             .filter(a => a.nombre.trim() !== '' || a.direccion.trim() !== '')
             .map(a => ({
-                ...a,
-                planos: a.planos.map(p => ({...p})) // Ensure planos are plain objects
+                nombre: a.nombre,
+                direccion: a.direccion,
+                planos: a.planos.map(p => ({
+                    url: p.url,
+                    name: p.name,
+                    size: p.size
+                }))
             }));
 
         const updatedData: Partial<Client> = {
@@ -333,4 +340,3 @@ export default function EditClientPage() {
     </form>
   );
 }
-
