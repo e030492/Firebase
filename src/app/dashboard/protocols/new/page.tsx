@@ -152,6 +152,40 @@ function ProtocolGenerator() {
   const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
   const [showNotFoundAlert, setShowNotFoundAlert] = useState(false);
   
+
+  const loadEquipmentData = (equipment: Equipment | undefined) => {
+    if (!equipment) return;
+
+    setSelectedEquipmentId(equipment.id);
+    setEquipmentName(equipment.name);
+    setEquipmentDescription(equipment.description);
+    setEquipmentAlias(equipment.alias || '');
+    setEquipmentModel(equipment.model);
+    setEquipmentSerial(equipment.serial);
+    setEquipmentImageUrl(equipment.imageUrl || '');
+
+    const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
+    setExistingSteps(existingProtocol?.steps || []);
+
+    // Intelligent Search Logic
+    if (!existingProtocol) {
+      const similarEquipmentWithProtocol = allEquipments.find(
+        eq => eq.id !== equipment.id && eq.type === equipment.type && protocols.some(p => p.equipmentId === eq.id)
+      );
+
+      if (similarEquipmentWithProtocol) {
+          const protocolOfSimilar = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
+          if (protocolOfSimilar) {
+              setProtocolToCopy({ protocol: protocolOfSimilar, sourceEquipmentName: similarEquipmentWithProtocol.name });
+              return;
+          }
+      }
+      // Only show not found alert if no protocol and no similar one was found
+      setShowNotFoundAlert(true);
+    }
+  };
+
+
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
     const equipmentIdFromQuery = searchParams.get('equipmentId');
@@ -159,16 +193,7 @@ function ProtocolGenerator() {
       setIsModificationMode(true);
       const equipment = allEquipments.find(e => e.id === equipmentIdFromQuery);
       if (equipment) {
-        setSelectedEquipmentId(equipment.id);
-        setEquipmentName(equipment.name);
-        setEquipmentDescription(equipment.description);
-        setEquipmentAlias(equipment.alias || '');
-        setEquipmentModel(equipment.model);
-        setEquipmentSerial(equipment.serial);
-        setEquipmentImageUrl(equipment.imageUrl || '');
-        
-        const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
-        setExistingSteps(existingProtocol?.steps || []);
+        loadEquipmentData(equipment);
       }
     }
   }, [searchParams, allEquipments, protocols]);
@@ -229,35 +254,13 @@ function ProtocolGenerator() {
         setEquipmentImageUrl('');
         return;
     }
-    
-    setSelectedEquipmentId(equipmentId);
-    setEquipmentName(selected.name);
-    setEquipmentDescription(selected.description);
-    setEquipmentAlias(selected.alias || '');
-    setEquipmentModel(selected.model);
-    setEquipmentSerial(selected.serial);
-    setEquipmentImageUrl(selected.imageUrl || '');
-    
+
     const existingProtocol = protocols.find(p => p.equipmentId === equipmentId);
     if (existingProtocol) {
       router.push(`/dashboard/protocols/new?equipmentId=${equipmentId}`);
-      return; 
+    } else {
+      loadEquipmentData(selected);
     }
-    
-    const similarEquipmentWithProtocol = allEquipments.find(
-      eq => eq.id !== selected.id && eq.name === selected.name && eq.type === selected.type && protocols.some(p => p.equipmentId === eq.id)
-    );
-    
-    if (similarEquipmentWithProtocol) {
-        const protocolOfSimilar = protocols.find(p => p.equipmentId === similarEquipmentWithProtocol.id);
-        if (protocolOfSimilar) {
-            setProtocolToCopy({ protocol: protocolOfSimilar, sourceEquipmentName: similarEquipmentWithProtocol.name });
-            return;
-        }
-    }
-    
-    // If we reach here, no protocol was found for the current or similar equipment.
-    setShowNotFoundAlert(true);
   };
 
   const handleSelectStep = (step: SuggestMaintenanceProtocolOutput[0], checked: boolean) => {
@@ -378,10 +381,10 @@ function ProtocolGenerator() {
     };
     
     try {
-        await createProtocol(newProtocolForCurrentEquipment);
-        alert('Protocolo copiado y guardado con éxito.');
+        const newProtocol = await createProtocol(newProtocolForCurrentEquipment);
+        setExistingSteps(newProtocol.steps);
         setProtocolToCopy(null);
-        router.push('/dashboard/protocols');
+        alert('Protocolo copiado y guardado con éxito.');
     } catch (error) {
         console.error("Failed to copy protocol:", error);
         alert("Error al copiar el protocolo.");
@@ -421,6 +424,63 @@ function ProtocolGenerator() {
             </p>
         </div>
       </div>
+
+      {!isModificationMode && (
+          <Card>
+             <CardHeader>
+                <CardTitle>Seleccionar Equipo</CardTitle>
+                <CardDescription>Busque un equipo para crear o modificar su protocolo. La IA puede buscar protocolos de equipos similares para acelerar el proceso.</CardDescription>
+             </CardHeader>
+             <CardContent>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid gap-3">
+                        <Label htmlFor="client">Cliente</Label>
+                        <Select onValueChange={handleClientChange} value={clientId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Seleccione un cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {clients.map(client => (
+                            <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-3">
+                        <Label htmlFor="system">Sistema</Label>
+                        <Select onValueChange={handleSystemChange} value={systemId} disabled={!clientId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Seleccione un sistema" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {systems.map(system => (
+                            <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-3">
+                        <Label htmlFor="equipment">Seleccionar Equipo</Label>
+                        <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Seleccione un equipo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {filteredEquipments.map(eq => (
+                                <SelectItem key={eq.id} value={eq.id} className={eq.hasProtocol ? '' : 'text-primary'}>
+                                {eq.name}
+                                {eq.alias && ` (${eq.alias})`}
+                                {` - N/S: ${eq.serial}`}
+                                {eq.hasProtocol ? '' : ' (Sin Protocolo)'}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+             </CardContent>
+          </Card>
+      )}
 
       {(isModificationMode || selectedEquipmentId) && (
           <Card>
@@ -467,7 +527,7 @@ function ProtocolGenerator() {
           </Card>
       )}
       
-      {isModificationMode && existingSteps.length > 0 && (
+      {(isModificationMode || selectedEquipmentId) && existingSteps.length > 0 && (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -511,96 +571,46 @@ function ProtocolGenerator() {
         </Card>
       )}
 
-      <Card>
-        <form action={formAction}>
-          <CardHeader>
-            <CardTitle>{isModificationMode ? 'Añadir Nuevos Pasos con IA' : 'Detalles del Equipo'}</CardTitle>
-            <CardDescription>{isModificationMode ? 'La IA sugerirá pasos adicionales basados en la información del equipo.' : 'Seleccione un equipo existente para autocompletar o ingrese los datos manualmente.'}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-6">
-            {!isModificationMode && (
-              <>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {(isModificationMode || selectedEquipmentId) && (
+        <Card>
+            <form action={formAction}>
+            <CardHeader>
+                <CardTitle>{existingSteps.length > 0 ? 'Añadir Nuevos Pasos con IA' : 'Generar Protocolo con IA'}</CardTitle>
+                <CardDescription>La IA sugerirá pasos basados en la información del equipo.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6">
                 <div className="grid gap-3">
-                    <Label htmlFor="client">Cliente</Label>
-                    <Select onValueChange={handleClientChange} value={clientId}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
+                <Label htmlFor="equipmentName">Nombre del Equipo</Label>
+                <Input
+                    id="equipmentName"
+                    name="equipmentName"
+                    value={equipmentName}
+                    onChange={e => setEquipmentName(e.target.value)}
+                    placeholder="Ej. Cámara IP Domo PTZ"
+                    required
+                    readOnly
+                  />
                 </div>
                 <div className="grid gap-3">
-                    <Label htmlFor="system">Sistema</Label>
-                    <Select onValueChange={handleSystemChange} value={systemId} disabled={!clientId}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un sistema" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {systems.map(system => (
-                        <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
+                <Label htmlFor="equipmentDescription">Descripción del Equipo</Label>
+                <Textarea
+                    id="equipmentDescription"
+                    name="equipmentDescription"
+                    value={equipmentDescription}
+                    onChange={e => setEquipmentDescription(e.target.value)}
+                    placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
+                    required
+                    className="min-h-32"
+                    readOnly
+                  />
                 </div>
-                <div className="grid gap-3">
-                    <Label htmlFor="equipment">Seleccionar Equipo</Label>
-                    <Select onValueChange={handleEquipmentChange} value={selectedEquipmentId} disabled={!systemId}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un equipo..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {filteredEquipments.map(eq => (
-                            <SelectItem key={eq.id} value={eq.id} className={eq.hasProtocol ? '' : 'text-primary'}>
-                            {eq.name}
-                            {eq.alias && ` (${eq.alias})`}
-                            {` - N/S: ${eq.serial}`}
-                            {eq.hasProtocol ? '' : ' (Sin Protocolo)'}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                </div>
-              </div>
-              <Separator/>
-              </>
-            )}
-            
-            <div className="grid gap-3">
-              <Label htmlFor="equipmentName">Nombre del Equipo</Label>
-              <Input
-                id="equipmentName"
-                name="equipmentName"
-                value={equipmentName}
-                onChange={e => setEquipmentName(e.target.value)}
-                placeholder="Ej. Cámara IP Domo PTZ"
-                required
-                readOnly={!!selectedEquipmentId}
-              />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="equipmentDescription">Descripción del Equipo</Label>
-              <Textarea
-                id="equipmentDescription"
-                name="equipmentDescription"
-                value={equipmentDescription}
-                onChange={e => setEquipmentDescription(e.target.value)}
-                placeholder="Ej. Cámara de vigilancia con movimiento horizontal, vertical y zoom, resolución 4K, para exteriores."
-                required
-                className="min-h-32"
-                readOnly={!!selectedEquipmentId}
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-            <SubmitButton />
-          </CardFooter>
-        </form>
-      </Card>
+            </CardContent>
+            <CardFooter className="border-t px-6 py-4">
+                <SubmitButton />
+            </CardFooter>
+            </form>
+        </Card>
+      )}
 
       {state.error && (
         <Alert variant="destructive">
