@@ -36,6 +36,7 @@ import { Equipment, Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 
 export default function NewEquipmentPage() {
   const router = useRouter();
@@ -64,6 +65,7 @@ export default function NewEquipmentPage() {
 
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   
   // --- Autocomplete States ---
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
@@ -197,6 +199,7 @@ export default function NewEquipmentPage() {
     }
     
     setIsSaving(true);
+    setUploadProgress(0);
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const systemName = systems.find(s => s.id === systemId)?.name || '';
@@ -222,7 +225,7 @@ export default function NewEquipmentPage() {
           configPassword,
         };
 
-        await createEquipment(newEquipment);
+        await createEquipment(newEquipment, setUploadProgress);
         alert('Equipo creado con éxito.');
         router.push('/dashboard/equipments');
     } catch (error) {
@@ -230,6 +233,7 @@ export default function NewEquipmentPage() {
         alert("Error al crear el equipo.");
     } finally {
         setIsSaving(false);
+        setUploadProgress(null);
     }
   };
   
@@ -481,6 +485,7 @@ export default function NewEquipmentPage() {
                     <Camera className="mr-2 h-4 w-4" />
                     {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
                 </Button>
+                 {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
                <Separator />
                <div className="grid md:grid-cols-2 gap-4">

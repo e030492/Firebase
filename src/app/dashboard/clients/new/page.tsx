@@ -20,6 +20,7 @@ import { Client, User } from '@/lib/services';
 import type { Almacen } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 
 type Plano = {
   url: string;
@@ -45,7 +46,7 @@ const defaultPermissionsByRole: { [key: string]: User['permissions'] } = {
 
 export default function NewClientPage() {
   const router = useRouter();
-  const { createClient, createUser } = useData();
+  const { createClient, createUser, updateClient } = useData();
   const [name, setName] = useState('');
   const [responsable, setResponsable] = useState('');
   const [direccion, setDireccion] = useState('');
@@ -62,6 +63,7 @@ export default function NewClientPage() {
   const [userPassword, setUserPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
   const officePhotoInputRef = useRef<HTMLInputElement>(null);
   const almacenPhotoInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
@@ -149,8 +151,20 @@ export default function NewClientPage() {
         return;
     }
     setLoading(true);
+    setUploadProgress(0);
 
     try {
+        const newClientData: Omit<Client, 'id'> = {
+            name,
+            responsable,
+            direccion,
+            phone1,
+            phone2,
+            officePhotoUrl: null,
+            almacenes: [],
+        };
+        const newClient = await createClient(newClientData);
+        
         const almacenesToSave = almacenes
             .filter(a => a.nombre.trim() !== '')
             .map(a => ({
@@ -163,18 +177,11 @@ export default function NewClientPage() {
                     size: p.size,
                 }))
             }));
-
-        const newClientData: Omit<Client, 'id'> = {
-            name,
-            responsable,
-            direccion,
-            phone1,
-            phone2,
+        
+        await updateClient(newClient.id, {
             officePhotoUrl: officePhotoUrl,
             almacenes: almacenesToSave,
-        };
-
-        const newClient = await createClient(newClientData);
+        }, setUploadProgress);
         
         if (generateUserAccess && newClient) {
             const newUserForClient: Omit<User, 'id'> = {
@@ -197,6 +204,7 @@ export default function NewClientPage() {
         alert("Error al crear el cliente.");
     } finally {
         setLoading(false);
+        setUploadProgress(null);
     }
   };
 
@@ -267,6 +275,7 @@ export default function NewClientPage() {
                       <Camera className="mr-2 h-4 w-4" />
                       {officePhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}
                   </Button>
+                  {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
             </div>
           </CardContent>
@@ -314,6 +323,7 @@ export default function NewClientPage() {
                           <Camera className="mr-2 h-4 w-4" />
                           {almacen.photoUrl ? 'Cambiar Foto' : 'Subir Foto'}
                       </Button>
+                      {uploadProgress !== null && almacen.photoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                   </div>
                   <div className="grid gap-3">
                       <Label>Planos del Almacén {index + 1} (PDF)</Label>

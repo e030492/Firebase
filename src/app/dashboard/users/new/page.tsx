@@ -36,6 +36,7 @@ import { User, Client } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
@@ -116,6 +117,7 @@ export default function NewUserPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
     setPermissions(prev => ({
@@ -173,6 +175,7 @@ export default function NewUserPage() {
     }
     
     setLoading(true);
+    setUploadProgress(0);
 
     try {
         const newUser: Omit<User, 'id'> = {
@@ -186,13 +189,15 @@ export default function NewUserPage() {
             clientId: role === 'cliente' ? selectedClientId : undefined,
         };
 
-        await createUser(newUser);
+        await createUser(newUser, setUploadProgress);
         alert('Usuario creado con éxito.');
         router.push('/dashboard/users');
     } catch (error) {
         console.error("Failed to create user:", error);
         alert("Error al crear el usuario.");
+    } finally {
         setLoading(false);
+        setUploadProgress(null);
     }
   };
 
@@ -238,6 +243,7 @@ export default function NewUserPage() {
                     disabled={loading}
                   />
                 </div>
+                {uploadProgress !== null && photoUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
               <Separator />
               <div className="grid gap-3">
@@ -310,6 +316,7 @@ export default function NewUserPage() {
                     <Camera className="mr-2 h-4 w-4" />
                     {signatureUrl ? 'Cambiar Firma' : 'Subir Firma'}
                 </Button>
+                {uploadProgress !== null && signatureUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
               </div>
             </div>
           </CardContent>
