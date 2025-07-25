@@ -188,6 +188,9 @@ export const mockEquipments = [
     maintenanceStartDate: '2024-01-15',
     maintenancePeriodicity: 'Anual',
     imageUrl: 'https://placehold.co/400x300.png',
+    ipAddress: '192.168.1.100',
+    configUser: 'admin',
+    configPassword: 'password123',
   },
   {
     id: '2',
@@ -205,6 +208,9 @@ export const mockEquipments = [
     maintenanceStartDate: '2023-11-20',
     maintenancePeriodicity: 'Anual',
     imageUrl: 'https://placehold.co/400x300.png',
+    ipAddress: '',
+    configUser: '',
+    configPassword: '',
   },
   {
     id: '3',
@@ -222,6 +228,9 @@ export const mockEquipments = [
     maintenanceStartDate: '2024-07-01',
     maintenancePeriodicity: 'Semestral',
     imageUrl: '',
+    ipAddress: '',
+    configUser: '',
+    configPassword: '',
   },
     {
     id: '4',
@@ -239,6 +248,9 @@ export const mockEquipments = [
     maintenanceStartDate: '2022-05-10',
     maintenancePeriodicity: 'Anual',
     imageUrl: 'https://placehold.co/400x300.png',
+    ipAddress: '192.168.2.50',
+    configUser: 'service',
+    configPassword: 'password',
   },
 ];
 

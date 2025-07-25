@@ -358,6 +358,12 @@ export default function EquipmentsPage() {
                                             <div><Label className="font-semibold">N/S</Label><p className="text-sm text-muted-foreground">{equipment.serial}</p></div>
                                         </div>
                                         <Separator/>
+                                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            <div><Label className="font-semibold">Dirección IP</Label><p className="text-sm text-muted-foreground">{equipment.ipAddress || 'N/A'}</p></div>
+                                            <div><Label className="font-semibold">Usuario</Label><p className="text-sm text-muted-foreground">{equipment.configUser || 'N/A'}</p></div>
+                                            <div><Label className="font-semibold">Contraseña</Label><p className="text-sm text-muted-foreground">{equipment.configPassword || 'N/A'}</p></div>
+                                        </div>
+                                        <Separator/>
                                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                                             <div><Label className="font-semibold">Ubicación</Label><p className="text-sm text-muted-foreground">{equipment.location}</p></div>
                                             <div>
@@ -401,6 +407,3 @@ export default function EquipmentsPage() {
     </>
   );
 }
-    
-
-

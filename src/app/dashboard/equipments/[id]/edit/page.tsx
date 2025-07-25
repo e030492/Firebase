@@ -35,6 +35,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Equipment, Client, System } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
+import { Separator } from '@/components/ui/separator';
 
 
 export default function EditEquipmentPage() {
@@ -60,6 +61,10 @@ export default function EditEquipmentPage() {
   const [type, setType] = useState('');
   const [serial, setSerial] = useState('');
 
+  const [ipAddress, setIpAddress] = useState('');
+  const [configUser, setConfigUser] = useState('');
+  const [configPassword, setConfigPassword] = useState('');
+
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
   
   const [loading, setLoading] = useState(true);
@@ -81,6 +86,9 @@ export default function EditEquipmentPage() {
             setLocation(equipmentData.location);
             setStatus(equipmentData.status);
             setImageUrl(equipmentData.imageUrl || null);
+            setIpAddress(equipmentData.ipAddress || '');
+            setConfigUser(equipmentData.configUser || '');
+            setConfigPassword(equipmentData.configPassword || '');
             
             if (equipmentData.maintenanceStartDate) {
                 setMaintenanceStartDate(new Date(equipmentData.maintenanceStartDate + 'T00:00:00'));
@@ -146,6 +154,9 @@ export default function EditEquipmentPage() {
           maintenanceStartDate: maintenanceStartDate ? format(maintenanceStartDate, 'yyyy-MM-dd') : '',
           maintenancePeriodicity: maintenancePeriodicity,
           imageUrl: imageUrl || '',
+          ipAddress,
+          configUser,
+          configPassword,
         };
         
         await updateEquipment(equipmentId, updatedData);
@@ -394,6 +405,30 @@ export default function EditEquipmentPage() {
                   </Select>
                  </div>
                </div>
+               <Separator />
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-lg font-medium">Configuración de Red</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Información para el acceso y configuración remota del equipo.
+                        </p>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <div className="grid gap-3">
+                            <Label htmlFor="ipAddress">Dirección IP de Configuración</Label>
+                            <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} placeholder="Ej. 192.168.1.100" disabled={isSaving} />
+                        </div>
+                        <div className="grid gap-3">
+                            <Label htmlFor="configUser">Usuario de Configuración</Label>
+                            <Input id="configUser" value={configUser} onChange={e => setConfigUser(e.target.value)} placeholder="Ej. admin" disabled={isSaving} />
+                        </div>
+                        <div className="grid gap-3">
+                            <Label htmlFor="configPassword">Contraseña</Label>
+                            <Input id="configPassword" value={configPassword} onChange={e => setConfigPassword(e.target.value)} placeholder="Contraseña de acceso" disabled={isSaving} />
+                        </div>
+                    </div>
+                </div>
+               <Separator />
                <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                     <Label htmlFor="maintenanceStartDate">Fecha de Inicio de Mantenimiento</Label>
@@ -449,7 +484,3 @@ export default function EditEquipmentPage() {
     </form>
   );
 }
-
-    
-
-    
