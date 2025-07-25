@@ -211,6 +211,8 @@ export default function EditUserPage() {
 
         if (role === 'cliente') {
             updatedData.clientId = selectedClientId;
+        } else {
+            updatedData.clientId = undefined;
         }
 
         if (password) {
@@ -315,7 +317,7 @@ export default function EditUserPage() {
                 <Label>Foto de Perfil</Label>
                 <div className="flex items-center gap-4">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={photoUrl || undefined} alt={name} data-ai-hint="user photo" />
+                    <AvatarImage src={photoUrl ?? undefined} alt={name} data-ai-hint="user photo" />
                     <AvatarFallback><UserIcon className="h-10 w-10" /></AvatarFallback>
                   </Avatar>
                   <Button type="button" variant="outline" onClick={() => photoInputRef.current?.click()} disabled={!canUpdateUsers || isSaving}>
