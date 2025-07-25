@@ -130,38 +130,36 @@ export default function DashboardPage() {
                 </section>
 
                 <Card className="col-span-1 lg:col-span-3">
-                    <CardHeader>
+                    <CardHeader className="items-center text-center">
                         <CardTitle>Resumen General</CardTitle>
                         <CardDescription>
                             Una vista general de los indicadores clave del sistema.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="pl-2">
-                        <div className="w-1/2 mx-auto">
-                            <ChartContainer config={{}} className="h-80 w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                        <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                                        <Tooltip
-                                            cursor={{ fill: 'hsla(var(--muted), 0.5)' }}
-                                            content={<ChartTooltipContent 
-                                                hideLabel 
-                                                labelClassName="text-lg font-bold"
-                                                formatter={(value, name, props) => {
-                                                    return <div className="flex flex-col gap-1 p-1">
-                                                        <span className="font-bold text-base" style={{color: props.payload.fill}}>{name}</span>
-                                                        <span className="text-muted-foreground">{value}</span>
-                                                    </div>
-                                                }}
-                                            />}
-                                        />
-                                        <Bar dataKey="value" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </ChartContainer>
-                        </div>
+                    <CardContent className="pl-2 mx-auto w-1/2">
+                        <ChartContainer config={{}} className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                                    <Tooltip
+                                        cursor={{ fill: 'hsla(var(--muted), 0.5)' }}
+                                        content={<ChartTooltipContent 
+                                            hideLabel 
+                                            labelClassName="text-lg font-bold"
+                                            formatter={(value, name, props) => {
+                                                return <div className="flex flex-col gap-1 p-1">
+                                                    <span className="font-bold text-base" style={{color: props.payload.fill}}>{name}</span>
+                                                    <span className="text-muted-foreground">{value}</span>
+                                                </div>
+                                            }}
+                                        />}
+                                    />
+                                    <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
                     </CardContent>
                 </Card>
             </main>
