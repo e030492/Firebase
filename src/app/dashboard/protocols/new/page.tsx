@@ -131,18 +131,14 @@ function ProtocolGenerator() {
   // Pre-fill form if equipmentId is in query params
   useEffect(() => {
     const equipmentIdParam = searchParams.get('equipmentId');
-    if (equipmentIdParam && !loading && !dataLoadedRef.current && allEquipments.length > 0 && clients.length > 0 && systems.length > 0) {
+    if (equipmentIdParam && !loading && !dataLoadedRef.current) {
         const equipment = allEquipments.find(e => e.id === equipmentIdParam);
         if (equipment) {
             const client = clients.find(c => c.name === equipment.client);
             const system = systems.find(s => s.name === equipment.system);
             
-            if (client) {
-                setClientId(client.id);
-            }
-            if (system) {
-                setSystemId(system.id);
-            }
+            if (client) setClientId(client.id);
+            if (system) setSystemId(system.id);
             
             setSelectedEquipmentId(equipment.id);
             setEquipmentName(equipment.name);
