@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft, Camera, ShieldAlert, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, Camera, ShieldAlert, Trash2, HardHat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -357,18 +357,49 @@ export default function NewCedulaPage() {
                 <div className="grid gap-3">
                     <Label htmlFor="equipment">Equipo</Label>
                     <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || isSaving}>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un equipo" />
-                        </SelectTrigger>
-                        <SelectContent>
+                      <SelectTrigger className="h-auto">
+                        <SelectValue placeholder="Seleccione un equipo">
+                          {equipmentId && (() => {
+                            const eq = filteredEquipments.find(e => e.id === equipmentId);
+                            if (!eq) return "Seleccione un equipo";
+                            return (
+                                <div className="flex items-center gap-3 py-1">
+                                    {eq.imageUrl ? (
+                                        <Image src={eq.imageUrl} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover" />
+                                    ) : (
+                                        <div className="h-10 w-10 bg-muted rounded-md flex items-center justify-center">
+                                            <HardHat className="h-5 w-5 text-muted-foreground" />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <div className="font-semibold">{eq.name}</div>
+                                        <div className="text-xs text-muted-foreground">{eq.type} - {eq.model}</div>
+                                    </div>
+                                </div>
+                            )
+                          })()}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
                         {filteredEquipments.map(eq => (
-                            <SelectItem key={eq.id} value={eq.id} className={!eq.hasProtocol ? 'text-destructive' : ''}>
-                                {eq.name}
-                                {eq.alias && ` (${eq.alias})`}
-                                {` - Modelo: ${eq.model}, N/S: ${eq.serial}`}
-                            </SelectItem>
+                          <SelectItem key={eq.id} value={eq.id} className={cn("h-auto", !eq.hasProtocol ? 'text-destructive' : '')}>
+                            <div className="flex items-center gap-3 py-2">
+                               {eq.imageUrl ? (
+                                    <Image src={eq.imageUrl} alt={eq.name} width={48} height={48} data-ai-hint="equipment photo" className="rounded-md object-cover" />
+                                ) : (
+                                    <div className="h-12 w-12 bg-muted rounded-md flex items-center justify-center shrink-0">
+                                        <HardHat className="h-6 w-6 text-muted-foreground" />
+                                    </div>
+                                )}
+                                <div className="flex flex-col">
+                                    <span className="font-semibold">{eq.name} {eq.alias && `(${eq.alias})`}</span>
+                                    <span className="text-xs text-muted-foreground">Tipo: <span className="text-foreground">{eq.type}</span></span>
+                                    <span className="text-xs text-muted-foreground">Modelo: {eq.model}, N/S: {eq.serial}</span>
+                                </div>
+                            </div>
+                          </SelectItem>
                         ))}
-                        </SelectContent>
+                      </SelectContent>
                     </Select>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -583,3 +614,5 @@ export default function NewCedulaPage() {
     </>
   );
 }
+
+    
