@@ -150,7 +150,7 @@ function BaseProtocolManager() {
     const unique = new Map<string, Equipment>();
     equipments.forEach(eq => {
       // Ensure the equipment has the necessary data before being considered "unique" and valid for protocol creation
-      if (eq.name && eq.type && eq.brand && eq.model) {
+      if (eq.type && eq.brand && eq.model) {
         const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
         if (!unique.has(identifier)) {
           unique.set(identifier, eq);
@@ -188,7 +188,8 @@ function BaseProtocolManager() {
     }
      startTransition(() => {
         // This call is just to reset the AI results, not to show an error.
-        formAction(new FormData());
+        const formData = new FormData();
+        formAction(formData);
     });
   }, [equipmentData, protocols]);
   
@@ -224,7 +225,8 @@ function BaseProtocolManager() {
     setSteps(uniqueSteps);
     setSelectedSteps([]);
     startTransition(() => {
-        formAction(new FormData());
+        const formData = new FormData();
+        formAction(formData);
     });
     toast({ title: "Pasos Añadidos", description: "Los pasos seleccionados se han añadido a la lista. No olvide guardar los cambios." });
   };
@@ -384,11 +386,30 @@ function BaseProtocolManager() {
                 <div className="grid gap-2">
                     <Label>Seleccionar un tipo de equipo</Label>
                     <Select value={selectedEquipmentIdentifier} onValueChange={handleEquipmentTypeChange}>
-                        <SelectTrigger><SelectValue placeholder="Seleccione un equipo..." /></SelectTrigger>
+                        <SelectTrigger className="h-auto">
+                            <SelectValue placeholder="Seleccione un equipo..." />
+                        </SelectTrigger>
                         <SelectContent>
                             {uniqueEquipmentTypes.map(eq => {
                                 const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-                                return (<SelectItem key={identifier} value={identifier}>{`${eq.name} (Tipo: ${eq.type}, Marca: ${eq.brand}, Modelo: ${eq.model})`}</SelectItem>)
+                                return (
+                                <SelectItem key={identifier} value={identifier}>
+                                    <div className="flex items-center gap-3">
+                                        <Image
+                                            src={eq.imageUrl || 'https://placehold.co/40x40.png'}
+                                            alt={eq.name}
+                                            width={40}
+                                            height={40}
+                                            data-ai-hint="equipment photo"
+                                            className="rounded-md object-cover"
+                                        />
+                                        <div>
+                                            <p className="font-semibold">{eq.name}</p>
+                                            <p className="text-xs text-muted-foreground">{`Tipo: ${eq.type}, Marca: ${eq.brand}, Modelo: ${eq.model}`}</p>
+                                        </div>
+                                    </div>
+                                </SelectItem>
+                                )
                             })}
                         </SelectContent>
                     </Select>
