@@ -183,13 +183,15 @@ function BaseProtocolManager() {
       setExistingProtocol(null);
       setSteps([]);
     }
-     if ((aiState.result || aiState.error) && !type && !brand && !model) {
+     // Clear AI results if equipment selection changes
+    if ((aiState.result || aiState.error) && !type && !brand && !model) {
         startTransition(() => {
             const formData = new FormData();
+            formData.set('isSubmit', 'false');
             formAction(formData);
         });
      }
-  }, [equipmentData, protocols]);
+  }, [equipmentData, protocols, aiState.result, aiState.error, formAction]);
   
   const handleEquipmentTypeChange = (identifier: string) => {
     setSelectedEquipmentIdentifier(identifier);
@@ -224,6 +226,7 @@ function BaseProtocolManager() {
     setSelectedSteps([]);
     startTransition(() => {
         const formData = new FormData();
+        formData.set('isSubmit', 'false');
         formAction(formData);
     });
     toast({ title: "Pasos Añadidos", description: "Los pasos seleccionados se han añadido a la lista. No olvide guardar los cambios." });
@@ -304,7 +307,7 @@ function BaseProtocolManager() {
       return;
     }
 
-    const protocolId = existingProtocol?.id || `${brand}-${model}-${type}`.toLowerCase().replace(/\s+/g, '-');
+    const protocolId = existingProtocol?.id || `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
     const protocolData = { type, brand, model, steps };
 
     if (existingProtocol) {
@@ -318,11 +321,11 @@ function BaseProtocolManager() {
     } else {
       // Create
       try {
-        await createProtocol({ id: protocolId, ...protocolData });
+        await createProtocol({ type, brand, model, steps }, protocolId);
         toast({ title: "Protocolo Creado", description: "El nuevo protocolo base ha sido guardado."});
       } catch (error) {
         console.error("Error creating protocol:", error);
-        toast({ title: "Error", description: "No se pudo crear el protocolo.", variant: "destructive"});
+        toast({ title: "Error", description: `No se pudo crear el protocolo: ${error}`, variant: "destructive"});
       }
     }
   }
@@ -616,7 +619,7 @@ function BaseProtocolManager() {
             )}
         </>
       )}
-    </div>
+    
 
     <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
         <DialogContent>
