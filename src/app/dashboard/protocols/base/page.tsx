@@ -62,13 +62,11 @@ type State = {
 
 // Server Action
 async function generateProtocolAction(prevState: State, formData: FormData): Promise<State> {
-  // This hidden input tells us if the action was triggered by the actual submit button
   const isSubmit = formData.get('isSubmit') === 'true';
   const type = formData.get('type') as string;
   const brand = formData.get('brand') as string;
   const model = formData.get('model') as string;
-  
-  // Only validate if it's a real submission, not a state reset.
+
   if (isSubmit && (!type || !brand || !model)) {
     return { ...prevState, error: 'Por favor, complete el tipo, marca y modelo del equipo.', result: null };
   }
@@ -149,7 +147,6 @@ function BaseProtocolManager() {
   const uniqueEquipmentTypes = useMemo(() => {
     const unique = new Map<string, Equipment>();
     equipments.forEach(eq => {
-      // Ensure the equipment has the necessary data before being considered "unique" and valid for protocol creation
       if (eq.type && eq.brand && eq.model) {
         const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
         if (!unique.has(identifier)) {
@@ -186,11 +183,12 @@ function BaseProtocolManager() {
       setExistingProtocol(null);
       setSteps([]);
     }
-     startTransition(() => {
-        // This call is just to reset the AI results, not to show an error.
-        const formData = new FormData();
-        formAction(formData);
-    });
+     if (aiState.result || aiState.error) {
+        startTransition(() => {
+            const formData = new FormData();
+            formAction(formData);
+        });
+     }
   }, [equipmentData, protocols]);
   
   const handleEquipmentTypeChange = (identifier: string) => {
@@ -405,7 +403,11 @@ function BaseProtocolManager() {
                                         />
                                         <div>
                                             <p className="font-semibold">{eq.name}</p>
-                                            <p className="text-xs text-muted-foreground">{`Tipo: ${eq.type}, Marca: ${eq.brand}, Modelo: ${eq.model}`}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Tipo: <span className="font-semibold text-foreground">{eq.type}</span>,
+                                                Marca: {eq.brand}, 
+                                                Modelo: <span className="font-semibold text-foreground">{eq.model}</span>
+                                            </p>
                                         </div>
                                     </div>
                                 </SelectItem>
