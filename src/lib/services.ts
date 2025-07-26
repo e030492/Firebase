@@ -212,7 +212,8 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
 export const createProtocol = (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
-    const sanitizedData = {
+    // Deep copy and sanitize the data to ensure it's a POJO
+    const sanitizedData = JSON.parse(JSON.stringify({
         ...data,
         steps: data.steps.map(step => ({
             step: step.step || '',
@@ -222,11 +223,16 @@ export const createProtocol = (data: Omit<Protocol, 'id'>, id: string): Promise<
             notes: step.notes || '',
             imageUrl: step.imageUrl || '',
         }))
-    };
+    }));
     return createDocument<Protocol>(collections.protocols, sanitizedData, id);
 };
 
-export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol> => updateDocument<Protocol>(collections.protocols, id, data);
+export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol> => {
+    // Deep copy and sanitize for updates as well
+    const sanitizedData = JSON.parse(JSON.stringify(data));
+    return updateDocument<Protocol>(collections.protocols, id, sanitizedData);
+};
+
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
 
 

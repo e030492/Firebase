@@ -147,6 +147,7 @@ function BaseProtocolManager() {
   const uniqueEquipmentTypes = useMemo(() => {
     const unique = new Map<string, Equipment>();
     equipments.forEach(eq => {
+      // Only include equipments that have all three properties
       if (eq.type && eq.brand && eq.model) {
         const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
         if (!unique.has(identifier)) {
@@ -195,11 +196,9 @@ function BaseProtocolManager() {
     }
     // Clear AI results if equipment selection changes
     if (aiState.result || aiState.error) {
-        startTransition(() => {
-            const formData = new FormData();
-            formData.set('isSubmit', 'false');
-            formAction(formData);
-        });
+        const formData = new FormData();
+        formData.set('isSubmit', 'false');
+        formAction(formData);
      }
   };
 
@@ -224,11 +223,9 @@ function BaseProtocolManager() {
     
     setSteps(uniqueSteps);
     setSelectedSteps([]);
-    startTransition(() => {
-        const formData = new FormData();
-        formData.set('isSubmit', 'false');
-        formAction(formData);
-    });
+    const formData = new FormData();
+    formData.set('isSubmit', 'false');
+    formAction(formData);
     toast({ title: "Pasos Añadidos", description: "Los pasos seleccionados se han añadido a la lista. No olvide guardar los cambios." });
   };
 
@@ -357,8 +354,7 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
 
   return (
-    <>
-      <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+    <div className="flex flex-col h-full">
        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-2 border-b">
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -382,7 +378,7 @@ function BaseProtocolManager() {
         </div>
       </div>
 
-      <div className="grid auto-rows-max items-start gap-4 md:gap-8 mt-4">
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8 mt-4 flex-1 overflow-auto">
         <Card>
             <CardHeader>
                 <CardTitle>Selección del Equipo Base</CardTitle>
@@ -698,7 +694,6 @@ function BaseProtocolManager() {
         </AlertDialogContent>
     </AlertDialog>
     </div>
-    </>
   );
 }
 
