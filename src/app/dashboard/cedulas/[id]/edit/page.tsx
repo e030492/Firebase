@@ -180,7 +180,15 @@ export default function EditCedulaPage() {
         const newSteps = [...prev];
         const updatedStep = { ...newSteps[index], [field]: value };
         newSteps[index] = updatedStep;
-        return newSteps;
+        
+        // Ensure all steps in the array are clean
+        return newSteps.map(step => ({
+            ...step,
+            notes: step.notes || '',
+            imageUrl: step.imageUrl || '',
+            completion: step.completion || 0,
+            percentage: step.percentage || 0,
+        }));
     });
   };
 
