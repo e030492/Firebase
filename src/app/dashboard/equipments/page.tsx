@@ -270,6 +270,12 @@ export default function EquipmentsPage() {
                 <TableRow>
                   <TableHead className="hidden sm:table-cell">Imagen</TableHead>
                   <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('id')}>
+                      ID Equipo
+                      {getSortIcon('id')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
                       Equipo
                       {getSortIcon('name')}
@@ -313,6 +319,9 @@ export default function EquipmentsPage() {
                                     <HardHat className="h-8 w-8 text-muted-foreground" />
                                 </div>
                             )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs text-muted-foreground">{equipment.id}</div>
                         </TableCell>
                         <TableCell className="font-medium">
                           <span className="font-bold">{equipment.name}</span>
@@ -358,7 +367,7 @@ export default function EquipmentsPage() {
                     </TableRow>
                      {expandedEquipmentId === equipment.id && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={7} className="p-0">
+                            <TableCell colSpan={8} className="p-0">
                                 <div className="p-4">
                                 <Card className="shadow-inner">
                                     <CardHeader>
@@ -430,5 +439,7 @@ export default function EquipmentsPage() {
     </>
   );
 }
+
+    
 
     
