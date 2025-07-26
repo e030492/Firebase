@@ -108,16 +108,14 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
 
 async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>, id?: string): Promise<T> {
     const docRef = id ? doc(db, collectionName, id) : doc(collection(db, collectionName));
-    const finalData = JSON.parse(JSON.stringify(data));
-    await setDoc(docRef, finalData);
+    await setDoc(docRef, data);
     return { id: docRef.id, ...data } as T;
 }
 
 
 async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
     const docRef = doc(db, collectionName, id);
-    const sanitizedData = JSON.parse(JSON.stringify(data));
-    await updateDoc(docRef, sanitizedData);
+    await updateDoc(docRef, data);
     const updatedDoc = await getDoc(docRef);
     return { id: updatedDoc.id, ...updatedDoc.data() } as T;
 }
@@ -129,11 +127,13 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 }
 
 // --- Image Upload Service ---
-export async function uploadImageAndGetURL(base64DataUrl: string): Promise<string> {
-    // This function is being kept as a placeholder but will not be used
-    // until the freezing issue is resolved.
-    console.warn("Image upload to Firebase Storage is currently disabled.");
-    return base64DataUrl; // Return the base64 string directly
+export async function uploadImageAndGetURL(base64DataUrl: string, folder: string): Promise<string> {
+    if (!base64DataUrl.startsWith('data:image')) {
+        return base64DataUrl; // It's already a URL
+    }
+    const storageRef = ref(storage, `${folder}/${uuidv4()}`);
+    const uploadResult = await uploadString(storageRef, base64DataUrl, 'data_url');
+    return await getDownloadURL(uploadResult.ref);
 }
 
 
@@ -181,17 +181,24 @@ export const subscribeToCompanySettings = (setSettings: (settings: CompanySettin
 };
 
 export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
+    const logoUrl = data.logoUrl?.startsWith('data:image') ? await uploadImageAndGetURL(data.logoUrl, 'company') : data.logoUrl;
     const docRef = doc(db, collections.settings, 'companyProfile');
-    await setDoc(docRef, data, { merge: true });
+    await setDoc(docRef, { ...data, logoUrl }, { merge: true });
 };
 
 
 // USERS
 export const subscribeToUsers = (setUsers: (users: User[]) => void) => subscribeToCollection<User>(collections.users, setUsers);
 export const createUser = async (data: Omit<User, 'id'>) => {
-    return createDocument<User>(collections.users, data);
+    const photoUrl = data.photoUrl ? await uploadImageAndGetURL(data.photoUrl, 'user-photos') : null;
+    const signatureUrl = data.signatureUrl ? await uploadImageAndGetURL(data.signatureUrl, 'user-signatures') : null;
+    return createDocument<User>(collections.users, { ...data, photoUrl, signatureUrl });
 }
-export const updateUser = (id: string, data: Partial<User>) => updateDocument<User>(collections.users, id, data);
+export const updateUser = async (id: string, data: Partial<User>) => {
+    const photoUrl = data.photoUrl?.startsWith('data:image') ? await uploadImageAndGetURL(data.photoUrl, 'user-photos') : data.photoUrl;
+    const signatureUrl = data.signatureUrl?.startsWith('data:image') ? await uploadImageAndGetURL(data.signatureUrl, 'user-signatures') : data.signatureUrl;
+    return updateDocument<User>(collections.users, id, { ...data, photoUrl, signatureUrl });
+}
 export const deleteUser = (id: string): Promise<boolean> => deleteDocument(collections.users, id);
 
 // CLIENTS
@@ -205,9 +212,13 @@ export const deleteClient = (id: string): Promise<boolean> => deleteDocument(col
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
 export const createEquipment = async (data: Omit<Equipment, 'id'>) => {
-    return createDocument<Equipment>(collections.equipments, data);
+    const imageUrl = data.imageUrl ? await uploadImageAndGetURL(data.imageUrl, 'equipments') : null;
+    return createDocument<Equipment>(collections.equipments, { ...data, imageUrl });
 };
-export const updateEquipment = (id: string, data: Partial<Equipment>) => updateDocument<Equipment>(collections.equipments, id, data);
+export const updateEquipment = async (id: string, data: Partial<Equipment>) => {
+    const imageUrl = data.imageUrl?.startsWith('data:image') ? await uploadImageAndGetURL(data.imageUrl, 'equipments') : data.imageUrl;
+    return updateDocument<Equipment>(collections.equipments, id, { ...data, imageUrl });
+};
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
 // SYSTEMS
@@ -221,32 +232,27 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 // PROTOCOLS
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
-const sanitizeStepsForFirestore = (steps: ProtocolStep[]): any[] => {
-    return steps.map(step => ({
-        step: step.step || '',
-        priority: step.priority || 'baja',
-        percentage: typeof step.percentage === 'number' ? step.percentage : 0,
-        completion: typeof step.completion === 'number' ? step.completion : 0,
-        notes: step.notes || '',
-        imageUrl: step.imageUrl || '',
-    }));
+export const createProtocol = async (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
+    const stepsWithUploadedImages = await Promise.all(
+        data.steps.map(async (step) => {
+            const imageUrl = step.imageUrl ? await uploadImageAndGetURL(step.imageUrl, 'protocol-steps') : '';
+            return { ...step, imageUrl };
+        })
+    );
+    return createDocument<Protocol>(collections.protocols, { ...data, steps: stepsWithUploadedImages }, id);
 };
 
-
-export const createProtocol = (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
-    const sanitizedData = {
-        ...data,
-        steps: sanitizeStepsForFirestore(data.steps)
-    };
-    return createDocument<Protocol>(collections.protocols, sanitizedData, id);
-};
-
-export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol> => {
-    const sanitizedData: Partial<Protocol> = { ...data };
+export const updateProtocol = async (id: string, data: Partial<Protocol>): Promise<Protocol> => {
     if (data.steps) {
-        sanitizedData.steps = sanitizeStepsForFirestore(data.steps);
+        const stepsWithUploadedImages = await Promise.all(
+            data.steps.map(async (step) => {
+                const imageUrl = step.imageUrl ? await uploadImageAndGetURL(step.imageUrl, 'protocol-steps') : '';
+                return { ...step, imageUrl };
+            })
+        );
+        data.steps = stepsWithUploadedImages;
     }
-    return updateDocument<Protocol>(collections.protocols, id, sanitizedData);
+    return updateDocument<Protocol>(collections.protocols, id, data);
 };
 
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
@@ -255,7 +261,35 @@ export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(c
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
 export const createCedula = async (data: Omit<Cedula, 'id'>) => {
-    return createDocument<Cedula>(collections.cedulas, data);
+    const stepsWithUploadedImages = await Promise.all(
+        data.protocolSteps.map(async (step) => {
+            const imageUrl = step.imageUrl ? await uploadImageAndGetURL(step.imageUrl, 'cedula-evidence') : '';
+            return { ...step, imageUrl };
+        })
+    );
+    return createDocument<Cedula>(collections.cedulas, { ...data, protocolSteps: stepsWithUploadedImages });
 }
-export const updateCedula = (id: string, data: Partial<Cedula>) => updateDocument<Cedula>(collections.cedulas, id, data);
+
+export const updateCedula = async (id: string, data: Partial<Cedula>, onProgress?: (progress: number) => void) => {
+    if (data.protocolSteps) {
+        const stepsToUpload = data.protocolSteps.filter(step => step.imageUrl && step.imageUrl.startsWith('data:image'));
+        let uploadedCount = 0;
+
+        const updatedSteps = await Promise.all(
+            data.protocolSteps.map(async (step) => {
+                if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
+                    const uploadedUrl = await uploadImageAndGetURL(step.imageUrl, 'cedula-evidence');
+                    uploadedCount++;
+                    if (onProgress) {
+                        onProgress((uploadedCount / stepsToUpload.length) * 100);
+                    }
+                    return { ...step, imageUrl: uploadedUrl };
+                }
+                return step;
+            })
+        );
+        data.protocolSteps = updatedSteps;
+    }
+    return updateDocument<Cedula>(collections.cedulas, id, data);
+};
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

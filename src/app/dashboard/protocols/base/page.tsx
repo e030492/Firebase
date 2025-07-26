@@ -259,7 +259,7 @@ function BaseProtocolManager() {
     setStepToDeleteIndex(null);
   };
   
-  const handleStepImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStepImageChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -524,7 +524,7 @@ function BaseProtocolManager() {
                                             type="file"
                                             accept="image/*"
                                             capture="environment"
-                                            onChange={(e) => handleStepImageChange(index, e)}
+                                            onChange={(e) => handleStepImageChange(e, index)}
                                             className="hidden"
                                         />
                                     </div>
