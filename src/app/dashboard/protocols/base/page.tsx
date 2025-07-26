@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useActionState, useState, useEffect, Suspense, useRef, useTransition } from 'react';
+import { useActionState, useState, useEffect, Suspense, useRef, useTransition, useMemo } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -506,7 +506,7 @@ function BaseProtocolManager() {
                         <TableHead className="w-10">
                             <Checkbox
                             onCheckedChange={(checked) => setSelectedSteps(checked && aiState.result ? aiState.result : [])}
-                            checked={areAllSelected}
+                            checked={isAllSelected}
                             aria-label="Seleccionar todos los pasos"
                             />
                         </TableHead>
