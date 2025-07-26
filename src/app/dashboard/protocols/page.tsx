@@ -551,8 +551,9 @@ export default function ProtocolsPage() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead className="w-[60%]">Paso</TableHead>
+                                                    <TableHead className="w-[50%]">Paso</TableHead>
                                                     <TableHead>Prioridad</TableHead>
+                                                    <TableHead className="w-[25%]">Imagen</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -563,6 +564,15 @@ export default function ProtocolsPage() {
                                                             <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">
                                                                 {step.priority}
                                                             </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                          {step.imageUrl ? (
+                                                              <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={120} height={90} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video border" />
+                                                          ) : (
+                                                              <div className="w-32 aspect-video bg-background/50 rounded-md flex items-center justify-center border">
+                                                                  <Camera className="h-6 w-6 text-muted-foreground" />
+                                                              </div>
+                                                          )}
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
