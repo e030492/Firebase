@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -6,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format, addMonths, addYears } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Camera, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, Camera, ArrowLeft, Wand2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +35,7 @@ import { Equipment, Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Separator } from '@/components/ui/separator';
+import { generateEquipmentImage } from '@/ai/flows/generate-equipment-image';
 
 export default function NewEquipmentPage() {
   const router = useRouter();
@@ -64,6 +64,7 @@ export default function NewEquipmentPage() {
 
   const [clientWarehouses, setClientWarehouses] = useState<Client['almacenes']>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   
   // --- Autocomplete States ---
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
@@ -187,6 +188,23 @@ export default function NewEquipmentPage() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleGenerateImage = async () => {
+      if (!name || !brand || !model || !type) {
+          alert("Por favor, complete los campos de nombre, marca, modelo y tipo para generar una imagen.");
+          return;
+      }
+      setIsGeneratingImage(true);
+      try {
+          const result = await generateEquipmentImage({ name, brand, model, type });
+          setImageUrl(result.imageUrl);
+      } catch (error) {
+          console.error("Failed to generate image:", error);
+          alert("Error al generar la imagen del equipo.");
+      } finally {
+          setIsGeneratingImage(false);
+      }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -466,12 +484,21 @@ export default function NewEquipmentPage() {
                 </div>
                 <div className="grid gap-3">
                   <Label>Imagen del Equipo</Label>
-                  {imageUrl ? <Image src={imageUrl} alt="Vista previa del equipo" width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video" /> 
-                  : (
-                      <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center">
-                          <Camera className="h-10 w-10 text-muted-foreground" />
-                      </div>
-                  )}
+                  <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                    {isGeneratingImage ? (
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-10 w-10 animate-spin" />
+                            <p>Generando imagen...</p>
+                        </div>
+                    ) : imageUrl ? (
+                        <Image src={imageUrl} alt="Vista previa del equipo" width={400} height={300} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-video" />
+                    ) : (
+                        <div className="text-center text-muted-foreground">
+                            <Camera className="h-10 w-10 mx-auto" />
+                            <p className="text-sm mt-2">Sin imagen</p>
+                        </div>
+                    )}
+                  </div>
                   <Input
                     id="image-upload"
                     type="file"
@@ -480,12 +507,18 @@ export default function NewEquipmentPage() {
                     ref={fileInputRef}
                     onChange={handleImageChange}
                     className="hidden"
-                    disabled={isSaving}
+                    disabled={isSaving || isGeneratingImage}
                   />
-                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
-                      <Camera className="mr-2 h-4 w-4" />
-                      {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSaving || isGeneratingImage}>
+                        <Camera className="mr-2 h-4 w-4" />
+                        {imageUrl ? 'Cambiar Imagen' : 'Tomar o Subir Foto'}
+                    </Button>
+                    <Button type="button" onClick={handleGenerateImage} disabled={isSaving || isGeneratingImage || !name || !brand || !model || !type}>
+                        {isGeneratingImage ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                        Generar con IA
+                    </Button>
+                  </div>
               </div>
                <Separator />
                <div className="grid md:grid-cols-2 gap-4">
@@ -540,7 +573,7 @@ export default function NewEquipmentPage() {
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || isGeneratingImage}>
               {isSaving ? "Guardando..." : "Guardar Equipo"}
             </Button>
           </CardFooter>
