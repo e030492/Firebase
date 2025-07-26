@@ -125,6 +125,8 @@ function BaseProtocolManager() {
   const [type, setType] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
+  const [selectedEquipmentIdentifier, setSelectedEquipmentIdentifier] = useState('');
+
 
   const [existingProtocol, setExistingProtocol] = useState<Protocol | null>(null);
   const [steps, setSteps] = useState<ProtocolStep[]>([]);
@@ -140,20 +142,34 @@ function BaseProtocolManager() {
 
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   
-  const uniqueTypes = useMemo(() => Array.from(new Set(equipments.map(e => e.type))), [equipments]);
-  const uniqueBrands = useMemo(() => Array.from(new Set(equipments.map(e => e.brand))), [equipments]);
-  const uniqueModels = useMemo(() => Array.from(new Set(equipments.map(e => e.model))), [equipments]);
+  const uniqueEquipmentTypes = useMemo(() => {
+    const unique = new Map<string, Equipment>();
+    equipments.forEach(eq => {
+      const identifier = `${eq.name}|${eq.type}|${eq.brand}|${eq.model}`;
+      if (!unique.has(identifier)) {
+        unique.set(identifier, eq);
+      }
+    });
+    return Array.from(unique.values());
+  }, [equipments]);
 
   useEffect(() => {
     if (!loading) {
       const typeParam = searchParams.get('type');
       const brandParam = searchParams.get('brand');
       const modelParam = searchParams.get('model');
-      if (typeParam) setType(typeParam);
-      if (brandParam) setBrand(brandParam);
-      if (modelParam) setModel(modelParam);
+      if (typeParam && brandParam && modelParam) {
+        const foundEq = uniqueEquipmentTypes.find(eq => eq.type === typeParam && eq.brand === brandParam && eq.model === modelParam);
+        if (foundEq) {
+            const identifier = `${foundEq.name}|${foundEq.type}|${foundEq.brand}|${foundEq.model}`;
+            setSelectedEquipmentIdentifier(identifier);
+            setType(typeParam);
+            setBrand(brandParam);
+            setModel(modelParam);
+        }
+      }
     }
-  }, [searchParams, loading]);
+  }, [searchParams, loading, uniqueEquipmentTypes]);
 
   useEffect(() => {
     if (type && brand && model) {
@@ -168,6 +184,20 @@ function BaseProtocolManager() {
         formAction(new FormData()); // Resets the AI form state
     });
   }, [type, brand, model, protocols]);
+  
+  const handleEquipmentTypeChange = (identifier: string) => {
+    setSelectedEquipmentIdentifier(identifier);
+    if (identifier) {
+        const [, typeVal, brandVal, modelVal] = identifier.split('|');
+        setType(typeVal);
+        setBrand(brandVal);
+        setModel(modelVal);
+    } else {
+        setType('');
+        setBrand('');
+        setModel('');
+    }
+  };
 
   const handleAddSelectedSteps = () => {
     if (selectedSteps.length === 0) {
@@ -292,9 +322,7 @@ function BaseProtocolManager() {
         try {
             await deleteProtocol(existingProtocol.id);
             toast({ title: "Protocolo Eliminado", description: "El protocolo base ha sido eliminado."});
-            setType('');
-            setBrand('');
-            setModel('');
+            handleEquipmentTypeChange('');
         } catch (error) {
             toast({ title: "Error", description: "No se pudo eliminar el protocolo.", variant: "destructive"});
         }
@@ -338,38 +366,39 @@ function BaseProtocolManager() {
       <Card>
         <CardHeader>
             <CardTitle>Selección del Equipo Base</CardTitle>
-            <CardDescription>Defina la combinación de Tipo, Marca y Modelo para la que desea gestionar el protocolo.</CardDescription>
+            <CardDescription>Seleccione un equipo para definir la combinación de Tipo, Marca y Modelo para la que desea gestionar el protocolo.</CardDescription>
         </CardHeader>
         <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-1 gap-4">
                 <div className="grid gap-2">
-                    <Label>Tipo de Equipo</Label>
-                    <Select value={type} onValueChange={setType}>
-                        <SelectTrigger><SelectValue placeholder="Seleccione un tipo..." /></SelectTrigger>
+                    <Label>Seleccionar un tipo de equipo por nombre</Label>
+                    <Select value={selectedEquipmentIdentifier} onValueChange={handleEquipmentTypeChange}>
+                        <SelectTrigger><SelectValue placeholder="Seleccione un equipo..." /></SelectTrigger>
                         <SelectContent>
-                            {uniqueTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="grid gap-2">
-                    <Label>Marca</Label>
-                     <Select value={brand} onValueChange={setBrand}>
-                        <SelectTrigger><SelectValue placeholder="Seleccione una marca..." /></SelectTrigger>
-                        <SelectContent>
-                            {uniqueBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="grid gap-2">
-                    <Label>Modelo</Label>
-                     <Select value={model} onValueChange={setModel}>
-                        <SelectTrigger><SelectValue placeholder="Seleccione un modelo..." /></SelectTrigger>
-                        <SelectContent>
-                            {uniqueModels.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                            {uniqueEquipmentTypes.map(eq => {
+                                const identifier = `${eq.name}|${eq.type}|${eq.brand}|${eq.model}`;
+                                return (<SelectItem key={identifier} value={identifier}>{`${eq.name} (Tipo: ${eq.type}, Marca: ${eq.brand}, Modelo: ${eq.model})`}</SelectItem>)
+                            })}
                         </SelectContent>
                     </Select>
                 </div>
             </div>
+             {selectedEquipmentIdentifier && (
+                <div className="grid md:grid-cols-3 gap-4 mt-4 border-t pt-4">
+                    <div className="grid gap-2">
+                        <Label>Tipo de Equipo</Label>
+                        <Input value={type} disabled />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Marca</Label>
+                        <Input value={brand} disabled />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Modelo</Label>
+                        <Input value={model} disabled />
+                    </div>
+                </div>
+            )}
         </CardContent>
       </Card>
       
