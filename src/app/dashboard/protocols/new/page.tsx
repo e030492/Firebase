@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useActionState, useState, useEffect, Suspense, useRef, useTransition } from 'react';
@@ -370,7 +371,12 @@ function ProtocolGenerator() {
     
     const newProtocolForCurrentEquipment: Omit<Protocol, 'id'> = {
       equipmentId: protocolToCopy.targetEquipment.id,
-      steps: selectedSource.protocol.steps.map(s => ({ ...s, imageUrl: '', notes: '', completion: 0 })),
+      steps: selectedSource.protocol.steps.map(s => ({ 
+          ...s, 
+          imageUrl: s.imageUrl || null, // Ensure imageUrl is preserved
+          notes: s.notes || '', 
+          completion: 0 
+      })),
     };
     
     try {
