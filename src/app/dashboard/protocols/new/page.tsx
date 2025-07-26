@@ -10,6 +10,7 @@ import {
   suggestMaintenanceProtocol,
   type SuggestMaintenanceProtocolOutput,
 } from '@/ai/flows/suggest-maintenance-protocol';
+import { generateProtocolStepImage } from '@/ai/flows/generate-protocol-step-image';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -143,6 +144,7 @@ function ProtocolGenerator() {
   const [aiState, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
   const [isPending, startTransition] = useTransition();
 
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Data states
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
@@ -156,6 +158,8 @@ function ProtocolGenerator() {
   const [editedStepPriority, setEditedStepPriority] = useState<'baja' | 'media' | 'alta'>('baja');
   const [stepToDelete, setStepToDelete] = useState<ProtocolStep | null>(null);
   const [showDeleteAllAlert, setShowDeleteAllAlert] = useState(false);
+  const [generatingImageIndex, setGeneratingImageIndex] = useState<number | null>(null);
+
 
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   
@@ -372,6 +376,63 @@ function ProtocolGenerator() {
       alert("Error al copiar el protocolo.");
     }
   };
+  
+  const handleStepImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newSteps = [...existingSteps];
+        newSteps[index].imageUrl = reader.result as string;
+        setExistingSteps(newSteps);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleGenerateStepImage = async (step: ProtocolStep, index: number) => {
+      if (!selectedEquipment) return;
+      setGeneratingImageIndex(index);
+      try {
+          const result = await generateProtocolStepImage({
+              name: selectedEquipment.name,
+              brand: selectedEquipment.brand || '',
+              model: selectedEquipment.model || '',
+              step: step.step,
+          });
+          const newSteps = [...existingSteps];
+          newSteps[index].imageUrl = result.imageUrl;
+          setExistingSteps(newSteps);
+      } catch (error) {
+          console.error("Error generating step image:", error);
+          alert("Error al generar la imagen para el paso.");
+      } finally {
+          setGeneratingImageIndex(null);
+      }
+  };
+  
+  const handleStepImageDelete = (index: number) => {
+    const newSteps = [...existingSteps];
+    newSteps[index].imageUrl = null;
+    setExistingSteps(newSteps);
+  };
+  
+  const handleSaveChanges = async () => {
+    if (!selectedEquipment) return;
+    const protocolToUpdate = protocols.find(p => p.equipmentId === selectedEquipment.id);
+    if (!protocolToUpdate) {
+        alert("Error: No se encontró un protocolo existente para este equipo.");
+        return;
+    }
+    try {
+        await updateProtocol(protocolToUpdate.id, { steps: existingSteps });
+        alert("Cambios guardados con éxito.");
+        router.push('/dashboard/protocols');
+    } catch (error) {
+        console.error("Error saving protocol changes:", error);
+        alert("Error al guardar los cambios en el protocolo.");
+    }
+  };
 
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
@@ -392,16 +453,22 @@ function ProtocolGenerator() {
   return (
     <>
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          <span className="sr-only">Atrás</span>
-        </Button>
-        <div className="grid gap-0.5">
-            <h1 className="font-headline text-2xl font-bold">Gestión de Protocolo</h1>
-            <p className="text-muted-foreground">
-                Vea los pasos existentes y use la IA para sugerir pasos adicionales para el equipo.
-            </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Atrás</span>
+            </Button>
+            <div className="grid gap-0.5">
+                <h1 className="font-headline text-2xl font-bold">Gestión de Protocolo</h1>
+                <p className="text-muted-foreground">
+                    Vea los pasos existentes y use la IA para sugerir pasos adicionales para el equipo.
+                </p>
+            </div>
+        </div>
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push('/dashboard/protocols')}>Cancelar</Button>
+            <Button onClick={handleSaveChanges}><Save className="mr-2 h-4 w-4"/>Guardar Cambios</Button>
         </div>
       </div>
       
@@ -487,38 +554,76 @@ function ProtocolGenerator() {
                         Eliminar Todos
                     </Button>
                 </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[80%]">Paso del Protocolo</TableHead>
-                                <TableHead>Prioridad</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {existingSteps.map((step, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{step.step}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">
-                                            {step.priority}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(step, index)}>
-                                            <Edit className="h-4 w-4" />
-                                            <span className="sr-only">Editar paso</span>
+                <CardContent className="space-y-6">
+                    {existingSteps.map((step, index) => (
+                        <div key={index}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-1">
+                                            <Label className="text-base font-semibold">Paso del Protocolo</Label>
+                                            <p className="text-muted-foreground">{step.step}</p>
+                                        </div>
+                                         <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => openEditDialog(step, index)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Editar
                                         </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => setStepToDelete(step)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                            <span className="sr-only">Eliminar paso</span>
+                                        <Button variant="destructive" size="sm" onClick={() => setStepToDelete(step)}>
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Eliminar
                                         </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                                    </div>
+                                </div>
+                                <div className="grid gap-3">
+                                    <Label>Evidencia Fotográfica del Paso</Label>
+                                    <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                        {generatingImageIndex === index ? (
+                                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                                <Loader2 className="h-10 w-10 animate-spin" />
+                                                <p>Generando imagen...</p>
+                                            </div>
+                                        ) : step.imageUrl ? (
+                                            <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                        ) : (
+                                            <div className="text-center text-muted-foreground">
+                                                <Camera className="h-10 w-10 mx-auto" />
+                                                <p className="text-sm mt-2">Sin imagen</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                         <Button type="button" variant="outline" size="sm" onClick={() => fileInputRefs.current[index]?.click()}>
+                                            <Camera className="mr-2 h-4 w-4" />
+                                            {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                                        </Button>
+                                        <Button type="button" size="sm" onClick={() => handleGenerateStepImage(step, index)} disabled={generatingImageIndex !== null}>
+                                            {generatingImageIndex === index ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                                            Generar con IA
+                                        </Button>
+                                        {step.imageUrl && (
+                                            <Button type="button" variant="destructive" size="icon" onClick={() => handleStepImageDelete(index)}>
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="sr-only">Eliminar Foto</span>
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <Input
+                                        id={`image-upload-${index}`}
+                                        ref={el => fileInputRefs.current[index] = el}
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={(e) => handleStepImageChange(index, e)}
+                                        className="hidden"
+                                    />
+                                </div>
+                            </div>
+                            {index < existingSteps.length - 1 && <Separator className="mt-6" />}
+                        </div>
+                    ))}
                 </CardContent>
             </Card>
           ) : (

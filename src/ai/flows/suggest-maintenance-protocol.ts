@@ -34,6 +34,7 @@ const SuggestMaintenanceProtocolOutputSchema = z.array(
       .min(0)
       .max(100)
       .describe('The estimated percentage of completion for the step.'),
+    imageUrl: z.string().describe('An empty string for the image URL field.')
   })
 );
 export type SuggestMaintenanceProtocolOutput = z.infer<
@@ -62,7 +63,7 @@ Es fundamental que incluyas pasos específicos para la limpieza interna de los c
 
 Además de la limpieza interna, el protocolo debe cubrir la inspección y mantenimiento externo.
 
-Para cada paso, define su prioridad (baja, media, alta) y un porcentaje estimado de finalización. Devuelve un array JSON de objetos con las claves "step", "priority" y "percentage". Toda la salida de texto, especialmente el valor de "step", debe estar en español.
+Para cada paso, define su prioridad (baja, media, alta) y un porcentaje estimado de finalización. Devuelve un array JSON de objetos con las claves "step", "priority", "percentage" y "imageUrl" (siempre como un string vacío). Toda la salida de texto, especialmente el valor de "step", debe estar en español.
 
 Estos son los datos del equipo:
 Nombre del Equipo: {{{name}}}
