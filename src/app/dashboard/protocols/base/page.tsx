@@ -67,12 +67,12 @@ async function generateProtocolAction(prevState: State, formData: FormData): Pro
   const brand = formData.get('brand') as string;
   const model = formData.get('model') as string;
 
-  if (isSubmit && (!type || !brand || !model)) {
-    return { ...prevState, error: 'Por favor, complete el tipo, marca y modelo del equipo.', result: null };
-  }
-  
   if (!isSubmit) {
       return { result: null, error: null };
+  }
+  
+  if (!type || !brand || !model) {
+    return { ...prevState, error: 'Por favor, complete el tipo, marca y modelo del equipo.', result: null };
   }
 
   try {
@@ -119,10 +119,11 @@ function SubmitButton() {
 function BaseProtocolManager() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments } = useData();
+  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments, uploadImageAndGetURL } = useData();
   const [aiState, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
   const [isTransitioning, startTransition] = useTransition();
   const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
 
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -208,13 +209,13 @@ function BaseProtocolManager() {
        return;
     }
 
-    const newSteps = selectedSteps.map(s => ({
+    const newSteps = selectedSteps.map(s => ({ 
       step: s.step,
       priority: s.priority,
       percentage: s.percentage,
-      imageUrl: '', // Ensure imageUrl is an empty string
-      notes: '', // Ensure notes is an empty string
-      completion: 0, // Ensure completion is a number
+      completion: 0, 
+      notes: '', 
+      imageUrl: '',
     }));
     
     const allSteps = [...steps, ...newSteps];
@@ -307,27 +308,35 @@ function BaseProtocolManager() {
       toast({ title: "Información Incompleta", description: "Debe especificar Tipo, Marca y Modelo.", variant: "destructive" });
       return;
     }
+    
+    setIsSaving(true);
+    
+    try {
+        const stepsWithUploadedImages = await Promise.all(
+            steps.map(async (step) => {
+                if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
+                    const downloadURL = await uploadImageAndGetURL(step.imageUrl);
+                    return { ...step, imageUrl: downloadURL };
+                }
+                return step;
+            })
+        );
 
-    const protocolId = existingProtocol?.id || `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-    const protocolData = { type, brand, model, steps };
+        const protocolId = existingProtocol?.id || `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+        const protocolData = { type, brand, model, steps: stepsWithUploadedImages };
 
-    if (existingProtocol) {
-      try {
-        await updateProtocol(protocolId, protocolData);
-        toast({ title: "Protocolo Actualizado", description: "Los cambios al protocolo base han sido guardados."});
-      } catch (error) {
-        console.error("Error updating protocol:", error);
-        toast({ title: "Error", description: "No se pudo actualizar el protocolo.", variant: "destructive"});
-      }
-    } else {
-      // Create
-      try {
-        await createProtocol({ type, brand, model, steps }, protocolId);
-        toast({ title: "Protocolo Creado", description: "El nuevo protocolo base ha sido guardado."});
-      } catch (error) {
-        console.error("Error creating protocol:", error);
-        toast({ title: "Error", description: `No se pudo crear el protocolo.`, variant: "destructive"});
-      }
+        if (existingProtocol) {
+            await updateProtocol(protocolId, protocolData);
+            toast({ title: "Protocolo Actualizado", description: "Los cambios al protocolo base han sido guardados."});
+        } else {
+            await createProtocol({ type, brand, model, steps: stepsWithUploadedImages }, protocolId);
+            toast({ title: "Protocolo Creado", description: "El nuevo protocolo base ha sido guardado."});
+        }
+    } catch (error) {
+        console.error("Error saving protocol:", error);
+        toast({ title: "Error al Guardar", description: `No se pudo guardar el protocolo: ${error instanceof Error ? error.message : 'Error desconocido'}`, variant: "destructive"});
+    } finally {
+        setIsSaving(false);
     }
   }
   
@@ -358,31 +367,30 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 pt-4 pb-2 border-b">
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
-                <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Atrás</span>
-                </Button>
-                <div className="grid gap-0.5">
-                    <h1 className="font-headline text-2xl font-bold">Gestión de Protocolos Base</h1>
-                    <p className="text-muted-foreground">
-                        Cree, edite o genere protocolos para un tipo de equipo específico.
-                    </p>
+    <div className="relative p-6">
+       <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm -mx-6 -mt-6 mb-6 px-6 py-4 border-b">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="sr-only">Atrás</span>
+                    </Button>
+                    <div className="grid gap-0.5">
+                        <h1 className="font-headline text-2xl font-bold">Gestión de Protocolos Base</h1>
+                        <p className="text-muted-foreground">
+                            Cree, edite o genere protocolos para un tipo de equipo específico.
+                        </p>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <Button onClick={handleSaveProtocol} disabled={isFormDisabled || steps.length === 0 || isSaving}>
+                       {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4"/>}
+                       {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
                 </div>
             </div>
-            <div className="flex gap-2">
-                <Button onClick={handleSaveProtocol} disabled={isFormDisabled || steps.length === 0}>
-                    <Save className="mr-2 h-4 w-4"/>
-                    Guardar Cambios
-                </Button>
-            </div>
         </div>
-      </div>
-
-      <div className="grid auto-rows-max items-start gap-4 md:gap-8 mt-4">
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8">
         <Card>
             <CardHeader>
                 <CardTitle>Selección del Equipo Base</CardTitle>
@@ -704,7 +712,7 @@ function BaseProtocolManager() {
 export default function BaseProtocolPageWrapper() {
     return (
         <Suspense fallback={
-          <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+          <div className="grid auto-rows-max items-start gap-4 md:gap-8 p-6">
              <div className="flex items-center gap-4">
                 <Skeleton className="h-7 w-7 rounded-md" />
                 <div className="grid gap-2">

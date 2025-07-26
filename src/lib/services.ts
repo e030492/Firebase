@@ -1,7 +1,9 @@
 
 
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
+import { v4 as uuidv4 } from 'uuid';
+import { db, storage } from './firebase';
 import { 
     mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas,
 } from './mock-data';
@@ -126,6 +128,14 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
     return true;
 }
 
+// --- Image Upload Service ---
+export async function uploadImageAndGetURL(base64DataUrl: string): Promise<string> {
+  const storageRef = ref(storage, `protocol-steps/${uuidv4()}`);
+  await uploadString(storageRef, base64DataUrl, 'data_url');
+  const downloadURL = await getDownloadURL(storageRef);
+  return downloadURL;
+}
+
 
 // --- Specific Service Functions ---
 
@@ -215,12 +225,13 @@ const sanitizeStepsForFirestore = (steps: ProtocolStep[]): any[] => {
     return steps.map(step => ({
         step: step.step || '',
         priority: step.priority || 'baja',
-        percentage: step.percentage || 0,
-        completion: step.completion || 0,
+        percentage: typeof step.percentage === 'number' ? step.percentage : 0,
+        completion: typeof step.completion === 'number' ? step.completion : 0,
         notes: step.notes || '',
         imageUrl: step.imageUrl || '',
     }));
 };
+
 
 export const createProtocol = (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
     const sanitizedData = {
@@ -248,5 +259,3 @@ export const createCedula = async (data: Omit<Cedula, 'id'>) => {
 }
 export const updateCedula = (id: string, data: Partial<Cedula>) => updateDocument<Cedula>(collections.cedulas, id, data);
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
-
-    

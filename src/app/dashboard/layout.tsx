@@ -209,7 +209,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <main className="flex-1">
-            <div className="mx-auto w-full max-w-7xl">
+            <div className="mx-auto w-full max-w-7xl p-4 md:p-6">
               {children}
             </div>
           </main>

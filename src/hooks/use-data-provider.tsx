@@ -33,6 +33,7 @@ import {
     deleteCedula as deleteCedulaService,
     connectionTest,
     loginUser as loginUserService,
+    uploadImageAndGetURL as uploadImageService,
 } from '@/lib/services';
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
@@ -49,6 +50,8 @@ type DataContextType = {
   error: string | null;
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
+  // Image Upload
+  uploadImageAndGetURL: (base64DataUrl: string) => Promise<string>;
   // Settings
   updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;
   // User mutations
@@ -68,7 +71,7 @@ type DataContextType = {
   updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<Equipment>;
   deleteEquipment: (equipmentId: string) => Promise<void>;
   // Protocol mutations
-  createProtocol: (protocolData: Omit<Protocol, 'id'>) => Promise<Protocol>;
+  createProtocol: (protocolData: Omit<Protocol, 'id'>, id?: string) => Promise<Protocol>;
   updateProtocol: (protocolId: string, protocolData: Partial<Protocol>) => Promise<Protocol>;
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
@@ -141,6 +144,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     loginUser,
+    uploadImageAndGetURL: uploadImageService,
     updateCompanySettings: updateCompanySettingsService,
     createUser: createUserService,
     updateUser: updateUserService,
