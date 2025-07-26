@@ -93,9 +93,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function initializeApp() {
       try {
-        setLoading(true);
         setError(null);
-        await connectionTest();
         await seedDatabase();
       } catch (e: any) {
         const errorMessage = e instanceof Error ? e.message : String(e);
