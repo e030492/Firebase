@@ -210,9 +210,9 @@ function BaseProtocolManager() {
     }
 
     const newSteps = selectedSteps.map(s => ({ 
-      step: s.step,
-      priority: s.priority,
-      percentage: s.percentage,
+      step: s.step || '',
+      priority: s.priority || 'baja',
+      percentage: s.percentage || 0,
       completion: 0, 
       notes: '', 
       imageUrl: '',
@@ -227,9 +227,9 @@ function BaseProtocolManager() {
     setSteps(uniqueSteps);
     setSelectedSteps([]);
     startTransition(() => {
-      const formData = new FormData();
-      formData.set('isSubmit', 'false');
-      formAction(formData);
+        const formData = new FormData();
+        formData.set('isSubmit', 'false');
+        formAction(formData);
     });
     toast({ title: "Pasos Añadidos", description: "Los pasos seleccionados se han añadido a la lista. No olvide guardar los cambios." });
   };
@@ -286,7 +286,9 @@ function BaseProtocolManager() {
               step: step.step,
           });
           const newSteps = [...steps];
-          newSteps[index].imageUrl = result.imageUrl;
+          if (result && result.imageUrl) {
+            newSteps[index].imageUrl = result.imageUrl;
+          }
           setSteps(newSteps);
       } catch (error) {
           console.error("Error generating step image:", error);
@@ -313,13 +315,23 @@ function BaseProtocolManager() {
     
     try {
         const protocolId = existingProtocol?.id || `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-        const protocolData = { type, brand, model, steps: steps };
+
+        const sanitizedSteps = steps.map(step => ({
+          step: step.step || '',
+          priority: step.priority || 'baja',
+          percentage: Number(step.percentage) || 0,
+          completion: Number(step.completion) || 0,
+          notes: step.notes || '',
+          imageUrl: step.imageUrl || '',
+        }));
+
+        const protocolData = { type, brand, model, steps: sanitizedSteps };
 
         if (existingProtocol) {
             await updateProtocol(protocolId, protocolData);
             toast({ title: "Protocolo Actualizado", description: "Los cambios al protocolo base han sido guardados."});
         } else {
-            await createProtocol({ type, brand, model, steps }, protocolId);
+            await createProtocol({ type, brand, model, steps: sanitizedSteps }, protocolId);
             toast({ title: "Protocolo Creado", description: "El nuevo protocolo base ha sido guardado."});
         }
     } catch (error) {
@@ -380,7 +392,7 @@ function BaseProtocolManager() {
                 </div>
             </div>
         </div>
-      <div className="grid auto-rows-max items-start gap-4 md:gap-8 px-6 pb-6 pt-4">
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8 pt-4">
         <Card>
             <CardHeader>
                 <CardTitle>Selección del Equipo Base</CardTitle>
