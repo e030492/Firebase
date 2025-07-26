@@ -75,7 +75,7 @@ export default function NewCedulaPage() {
   const [isSaving, setIsSaving] = useState(false);
   
   const [showProtocolAlert, setShowProtocolAlert] = useState(false);
-  const [equipmentForProtocol, setEquipmentForProtocol] = useState<string | null>(null);
+  const [equipmentForProtocol, setEquipmentForProtocol] = useState<Equipment | null>(null);
 
   useEffect(() => {
     setTechnicians(users.filter(user => user.role === 'Técnico'));
@@ -110,7 +110,7 @@ export default function NewCedulaPage() {
                 .filter(eq => eq.client === clientName && eq.system === systemName)
                 .map(eq => ({
                     ...eq,
-                    hasProtocol: protocols.some(p => p.equipmentId === eq.id && p.steps.length > 0)
+                    hasProtocol: protocols.some(p => p.type === eq.type && p.brand === eq.brand && p.model === eq.model && p.steps.length > 0)
                 }));
             setFilteredEquipments(filtered);
         } else {
@@ -127,7 +127,7 @@ export default function NewCedulaPage() {
     if (!selectedEquipment) return;
 
     if (!selectedEquipment.hasProtocol) {
-        setEquipmentForProtocol(newEquipmentId);
+        setEquipmentForProtocol(selectedEquipment);
         setShowProtocolAlert(true);
         setEquipmentId('');
         setProtocolSteps([]);
@@ -136,9 +136,14 @@ export default function NewCedulaPage() {
 
     setEquipmentId(newEquipmentId);
 
-    const equipmentProtocol = protocols.find(p => p.equipmentId === newEquipmentId);
+    const equipmentProtocol = protocols.find(p => p.type === selectedEquipment.type && p.brand === selectedEquipment.brand && p.model === selectedEquipment.model);
     if (equipmentProtocol) {
-        const initialSteps = equipmentProtocol.steps.map(step => ({ ...step, completion: 0, notes: '', imageUrl: '' }));
+        const initialSteps = equipmentProtocol.steps.map(step => ({ 
+          ...step, 
+          completion: 0, 
+          notes: '', 
+          imageUrl: step.imageUrl || '' 
+        }));
         setProtocolSteps(initialSteps);
     } else {
         setProtocolSteps([]);
@@ -551,20 +556,25 @@ export default function NewCedulaPage() {
             <AlertDialogHeader>
                 <div className='flex items-center gap-2'>
                     <ShieldAlert className="h-6 w-6 text-destructive" />
-                    <AlertDialogTitle>Protocolo Requerido</AlertDialogTitle>
+                    <AlertDialogTitle>Protocolo Base Requerido</AlertDialogTitle>
                 </div>
-                <AlertDialogDescription>
-                    Este equipo no tiene un protocolo de mantenimiento definido. Es necesario crear uno antes de poder generar una cédula.
+                 <AlertDialogDescription>
+                    No existe un protocolo base para un equipo de tipo '{equipmentForProtocol?.type}', marca '{equipmentForProtocol?.brand}' y modelo '{equipmentForProtocol?.model}'. Es necesario crear uno antes de poder generar una cédula.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setEquipmentForProtocol(null)}>Cancelar</AlertDialogCancel>
                 <AlertDialogAction onClick={() => {
                     if (equipmentForProtocol) {
-                        router.push(`/dashboard/protocols/new?equipmentId=${equipmentForProtocol}`);
+                        const params = new URLSearchParams({
+                            type: equipmentForProtocol.type,
+                            brand: equipmentForProtocol.brand,
+                            model: equipmentForProtocol.model,
+                        });
+                        router.push(`/dashboard/protocols/base?${params.toString()}`);
                     }
                 }}>
-                    Crear Protocolo
+                    Crear Protocolo Base
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

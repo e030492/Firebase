@@ -25,7 +25,7 @@ const allNavItems = [
   { href: '/dashboard/clients', label: 'Clientes', icon: Building, module: 'clients' as const },
   { href: '/dashboard/systems', label: 'Sistemas', icon: Shield, module: 'systems' as const },
   { href: '/dashboard/equipments', label: 'Equipos', icon: HardHat, module: 'equipments' as const },
-  { href: '/dashboard/protocols', label: 'Protocolos', icon: ClipboardList, ai: true, module: 'protocols' as const },
+  { href: '/dashboard/protocols/base', label: 'Protocolos', icon: ClipboardList, ai: true, module: 'protocols' as const },
   { href: '/dashboard/cedulas', label: 'Cédulas', icon: FileText, module: 'cedulas' as const },
   { href: '/dashboard/reports', label: 'Reportes', icon: LineChart, module: 'reports' as const },
 ];
@@ -35,10 +35,11 @@ export function DashboardNav() {
   const { can } = usePermissions();
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') {
-      // This is to handle the redirect from /dashboard to /dashboard/dashboard
-      return pathname.startsWith(href);
+    // Exact match for dashboard
+    if (href === '/dashboard/dashboard') {
+        return pathname === href;
     }
+    // Broader match for other sections
     const basePath = href.split('/').slice(0, 3).join('/');
     return pathname.startsWith(basePath);
   };

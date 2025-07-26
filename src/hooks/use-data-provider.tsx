@@ -28,7 +28,6 @@ import {
     createProtocol as createProtocolService,
     updateProtocol as updateProtocolService,
     deleteProtocol as deleteProtocolService,
-    deleteProtocolByEquipmentId as deleteProtocolByEquipmentIdService,
     createCedula as createCedulaService,
     updateCedula as updateCedulaService,
     deleteCedula as deleteCedulaService,
@@ -163,10 +162,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     deleteSystem: async (id) => { await deleteSystemService(id); },
     createEquipment: createEquipmentService,
     updateEquipment: updateEquipmentService,
-    deleteEquipment: async (id) => { 
-        await deleteProtocolByEquipmentId(id);
-        await deleteEquipmentService(id);
-    },
+    deleteEquipment: async (id) => { await deleteEquipmentService(id); },
     createProtocol: createProtocolService,
     updateProtocol: updateProtocolService,
     deleteProtocol: async (id) => { await deleteProtocolService(id); },

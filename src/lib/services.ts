@@ -1,6 +1,4 @@
 
-
-
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { 
@@ -15,7 +13,14 @@ export type Equipment = typeof mockEquipments[0] & { id: string, imageUrl?: stri
 export type System = typeof mockSystems[0] & { id: string };
 export type User = typeof mockUsers[0] & { id: string; clientId?: string, photoUrl?: string | null, signatureUrl?: string | null };
 export type ProtocolStep = typeof mockProtocols[0]['steps'][0] & { imageUrl?: string | null };
-export type Protocol = { id: string, equipmentId: string; steps: ProtocolStep[] };
+export type Protocol = { 
+    id: string; 
+    steps: ProtocolStep[];
+    // Base Protocol fields
+    type: string;
+    brand: string;
+    model: string;
+};
 export type Cedula = typeof mockCedulas[0] & { id: string };
 export type CompanySettings = { id: string; logoUrl: string | null };
 
@@ -171,22 +176,6 @@ export const createProtocol = (data: Omit<Protocol, 'id'>): Promise<Protocol> =>
 export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol> => updateDocument<Protocol>(collections.protocols, id, data);
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
 
-export async function deleteProtocolByEquipmentId(equipmentId: string): Promise<boolean> {
-    const protocolsRef = collection(db, collections.protocols);
-    const q = query(protocolsRef, where("equipmentId", "==", equipmentId));
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-        return false;
-    }
-
-    const batch = writeBatch(db);
-    querySnapshot.forEach(doc => {
-        batch.delete(doc.ref);
-    });
-    await batch.commit();
-    return true;
-}
 
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);

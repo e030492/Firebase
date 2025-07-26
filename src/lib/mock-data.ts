@@ -288,8 +288,10 @@ export const mockEquipments = [
 
 export const mockProtocols = [
   {
-    equipmentId: '1', // Cámara Domo PTZ
     id: 'proto-1',
+    type: 'Domo PTZ',
+    brand: 'Hikvision',
+    model: 'DS-2DE4225IW-DE',
     steps: [
       { step: 'Revisar y limpiar la carcasa exterior y el domo.', priority: 'alta' as const, percentage: 10, completion: 0, notes: '', imageUrl: '' },
       { step: 'Verificar el movimiento PTZ (paneo, inclinación, zoom) en todo su rango.', priority: 'alta' as const, percentage: 25, completion: 0, notes: '', imageUrl: '' },
@@ -299,8 +301,10 @@ export const mockProtocols = [
     ]
   },
   {
-    equipmentId: '2', // Lector de Tarjetas RFID
     id: 'proto-2',
+    type: 'Lector RFID',
+    brand: 'ZKTeco',
+    model: 'KR500',
     steps: [
         { step: 'Limpiar la superficie del lector con un paño suave.', priority: 'baja' as const, percentage: 20, completion: 0, notes: '', imageUrl: '' },
         { step: 'Probar la lectura con varias tarjetas de prueba.', priority: 'alta' as const, percentage: 40, completion: 0, notes: '', imageUrl: '' },
@@ -321,7 +325,7 @@ export const mockCedulas = [
     creationDate: '2024-07-20T10:30:00',
     status: 'Pendiente' as const,
     description: 'Revisión trimestral de la cámara de la entrada principal.',
-    protocolSteps: (mockProtocols.find(p => p.equipmentId === '1')?.steps || []).map(step => ({
+    protocolSteps: (mockProtocols[0]?.steps || []).map(step => ({
         step: step.step,
         priority: step.priority,
         completion: 0,
@@ -341,7 +345,7 @@ export const mockCedulas = [
     creationDate: '2024-07-18T14:00:00',
     status: 'Completada' as const,
     description: 'Cambio de batería y limpieza de lector.',
-    protocolSteps: (mockProtocols.find(p => p.equipmentId === '2')?.steps || []).map(step => ({
+    protocolSteps: (mockProtocols[1]?.steps || []).map(step => ({
         step: step.step,
         priority: step.priority,
         completion: 100,
