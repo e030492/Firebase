@@ -195,13 +195,11 @@ function BaseProtocolManager() {
         setEquipmentData({ type: '', brand: '', model: '' });
     }
     // Clear AI results if equipment selection changes
-    if (aiState.result || aiState.error) {
-        startTransition(() => {
-            const formData = new FormData();
-            formData.set('isSubmit', 'false');
-            formAction(formData);
-        });
-     }
+    startTransition(() => {
+        const formData = new FormData();
+        formData.set('isSubmit', 'false');
+        formAction(formData);
+    });
   };
 
   const handleAddSelectedSteps = () => {
@@ -210,13 +208,13 @@ function BaseProtocolManager() {
        return;
     }
 
-    const newSteps = selectedSteps.map(s => ({ 
-        step: s.step,
-        priority: s.priority,
-        percentage: s.percentage,
-        imageUrl: '',
-        notes: '',
-        completion: 0
+    const newSteps = selectedSteps.map(s => ({
+      step: s.step,
+      priority: s.priority,
+      percentage: s.percentage,
+      imageUrl: '', // Ensure imageUrl is an empty string
+      notes: '', // Ensure notes is an empty string
+      completion: 0, // Ensure completion is a number
     }));
     
     const allSteps = [...steps, ...newSteps];
@@ -228,9 +226,9 @@ function BaseProtocolManager() {
     setSteps(uniqueSteps);
     setSelectedSteps([]);
     startTransition(() => {
-      const formData = new FormData();
-      formData.set('isSubmit', 'false');
-      formAction(formData);
+        const formData = new FormData();
+        formData.set('isSubmit', 'false');
+        formAction(formData);
     });
     toast({ title: "Pasos Añadidos", description: "Los pasos seleccionados se han añadido a la lista. No olvide guardar los cambios." });
   };
@@ -360,8 +358,8 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-2 border-b">
+    <div className="p-4 md:p-6">
+      <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 pt-4 pb-2 border-b">
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
                 <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
@@ -384,7 +382,7 @@ function BaseProtocolManager() {
         </div>
       </div>
 
-      <div className="grid auto-rows-max items-start gap-4 md:gap-8 mt-4 flex-1">
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8 mt-4">
         <Card>
             <CardHeader>
                 <CardTitle>Selección del Equipo Base</CardTitle>
@@ -731,5 +729,3 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
-
-    
