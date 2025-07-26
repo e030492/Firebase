@@ -268,13 +268,8 @@ export default function EquipmentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">#</TableHead>
                   <TableHead className="hidden sm:table-cell">Imagen</TableHead>
-                  <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('id')}>
-                      ID Equipo
-                      {getSortIcon('id')}
-                    </Button>
-                  </TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
                       Equipo
@@ -308,9 +303,10 @@ export default function EquipmentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedEquipments.map((equipment) => (
+                {sortedEquipments.map((equipment, index) => (
                   <Fragment key={equipment.id}>
                     <TableRow onClick={() => handleToggleDetails(equipment.id)} className="cursor-pointer">
+                        <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                         <TableCell className="hidden sm:table-cell">
                             {equipment.imageUrl ? (
                                 <Image src={equipment.imageUrl} alt={equipment.name} width={64} height={64} data-ai-hint="equipment photo" className="rounded-md object-cover aspect-square" />
@@ -319,9 +315,6 @@ export default function EquipmentsPage() {
                                     <HardHat className="h-8 w-8 text-muted-foreground" />
                                 </div>
                             )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-xs text-muted-foreground">{equipment.id}</div>
                         </TableCell>
                         <TableCell className="font-medium">
                           <span className="font-bold">{equipment.name}</span>
