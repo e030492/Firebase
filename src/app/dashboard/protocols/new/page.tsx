@@ -171,7 +171,7 @@ function ProtocolGenerator() {
       if (equipment) {
         setSelectedEquipment(equipment);
         const existingProtocol = protocols.find(p => p.equipmentId === equipment.id);
-        setExistingSteps(existingProtocol?.steps || []);
+        setExistingSteps(existingProtocol?.steps.map(s => ({...s, imageUrl: s.imageUrl || null, notes: s.notes || ''})) || []);
       }
     }
   }, [searchParams, allEquipments, protocols, loading]);
@@ -278,7 +278,7 @@ function ProtocolGenerator() {
     const updatedStep: ProtocolStep = {
         step: editedStepText,
         priority: editedStepPriority,
-        percentage: originalStep.percentage, // Preserve existing values
+        percentage: originalStep.percentage,
         completion: originalStep.completion || 0,
         notes: originalStep.notes || '',
         imageUrl: originalStep.imageUrl || null,

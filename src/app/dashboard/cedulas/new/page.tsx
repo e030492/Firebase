@@ -201,7 +201,7 @@ export default function NewCedulaPage() {
         step: step.step,
         priority: step.priority,
         completion: Number(step.completion) || 0,
-        imageUrl: step.imageUrl,
+        imageUrl: step.imageUrl || '',
         notes: step.notes || '',
         percentage: step.percentage || 0,
       })),

@@ -119,7 +119,7 @@ export default function EditCedulaPage() {
             if (foundSystem) setSystemId(foundSystem.id);
 
             if (cedula.protocolSteps && cedula.protocolSteps.length > 0) {
-                setProtocolSteps(cedula.protocolSteps);
+                setProtocolSteps(cedula.protocolSteps.map(s => ({ ...s, notes: s.notes || '', imageUrl: s.imageUrl || '' })));
             } else {
                 const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
                 const baseProtocolSteps = equipmentProtocol?.steps || [];
@@ -218,7 +218,7 @@ export default function EditCedulaPage() {
           step: step.step,
           priority: step.priority,
           completion: Number(step.completion) || 0,
-          imageUrl: step.imageUrl,
+          imageUrl: step.imageUrl || '',
           notes: step.notes || '',
           percentage: step.percentage || 0,
         })),
