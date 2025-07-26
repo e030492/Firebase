@@ -356,24 +356,26 @@ function BaseProtocolManager() {
   return (
     <>
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
-       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Atrás</span>
-            </Button>
-            <div className="grid gap-0.5">
-                <h1 className="font-headline text-2xl font-bold">Gestión de Protocolos Base</h1>
-                <p className="text-muted-foreground">
-                    Cree, edite o genere protocolos para un tipo de equipo específico.
-                </p>
+       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-2 border-b">
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">Atrás</span>
+                </Button>
+                <div className="grid gap-0.5">
+                    <h1 className="font-headline text-2xl font-bold">Gestión de Protocolos Base</h1>
+                    <p className="text-muted-foreground">
+                        Cree, edite o genere protocolos para un tipo de equipo específico.
+                    </p>
+                </div>
             </div>
-        </div>
-        <div className="flex gap-2">
-            <Button onClick={handleSaveProtocol} disabled={isFormDisabled || steps.length === 0}>
-                <Save className="mr-2 h-4 w-4"/>
-                Guardar Cambios
-            </Button>
+            <div className="flex gap-2">
+                <Button onClick={handleSaveProtocol} disabled={isFormDisabled || steps.length === 0}>
+                    <Save className="mr-2 h-4 w-4"/>
+                    Guardar Cambios
+                </Button>
+            </div>
         </div>
       </div>
 
