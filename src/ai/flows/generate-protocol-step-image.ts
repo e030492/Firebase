@@ -45,7 +45,7 @@ const generateProtocolStepImageFlow = ai.defineFlow(
       - Model: ${input.model}
       - Maintenance Step to Illustrate: "${input.step}"
       
-      The image must be a clear, close-up, diagram-style photograph on a clean, solid white background. It must not contain any text, logos, or distracting elements. The primary focus should be on the specific action or component mentioned in the maintenance step.`,
+      The image must be a clear, close-up, diagram-style photograph on a clean, solid white background. It must not contain any text, logos, or distracting elements. The primary focus should be on the specific action or component mentioned in the maintenance step. CRITICAL: The output image MUST be a highly compressed JPEG file with a resolution of 1024x768 pixels to ensure a small file size.`,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
