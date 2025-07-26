@@ -139,6 +139,7 @@ function BaseProtocolManager() {
   const [editedStepPriority, setEditedStepPriority] = useState<'baja' | 'media' | 'alta'>('baja');
   
   const [stepToDeleteIndex, setStepToDeleteIndex] = useState<number | null>(null);
+  const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
   const [showDeleteAllAlert, setShowDeleteAllAlert] = useState(false);
   
   const [generatingImageIndex, setGeneratingImageIndex] = useState<number | null>(null);
@@ -355,16 +356,18 @@ function BaseProtocolManager() {
   }
   
   const handleDeleteProtocol = async () => {
-    if (existingProtocol) {
+    if (protocolToDelete) {
         try {
-            await deleteProtocol(existingProtocol.id);
+            await deleteProtocol(protocolToDelete.id);
             toast({ title: "Protocolo Eliminado", description: "El protocolo base ha sido eliminado."});
-            handleEquipmentTypeChange('');
+            if (protocolToDelete.id === existingProtocol?.id) {
+                handleEquipmentTypeChange('');
+            }
         } catch (error) {
             toast({ title: "Error", description: "No se pudo eliminar el protocolo.", variant: "destructive"});
         }
     }
-    setShowDeleteAllAlert(false);
+    setProtocolToDelete(null);
   }
 
   const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
@@ -449,41 +452,6 @@ function BaseProtocolManager() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Protocolos Existentes</CardTitle>
-                                <CardDescription>Seleccione un protocolo para editarlo.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {equipmentsWithProtocol.length > 0 ? (
-                                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                                        {equipmentsWithProtocol.map(eq => {
-                                            const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-                                            return (
-                                                <button 
-                                                    key={identifier} 
-                                                    onClick={() => handleEquipmentTypeChange(identifier)}
-                                                    className="w-full text-left p-2 rounded-md hover:bg-muted"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <ListChecks className="h-5 w-5 text-primary"/>
-                                                        <div>
-                                                            <p className="font-semibold">{eq.name}</p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                            Tipo: {eq.type}, Marca: {eq.brand}, Modelo: {eq.model}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No hay protocolos existentes.</p>
-                                )}
                             </CardContent>
                         </Card>
                     </div>
@@ -696,6 +664,49 @@ function BaseProtocolManager() {
                         )}
                     </div>
                 </div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Listado de Protocolos Base</CardTitle>
+                        <CardDescription>
+                            Aquí puede ver y gestionar todos los protocolos base existentes en el sistema.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[50px]">#</TableHead>
+                                    <TableHead>Protocolo (Tipo, Marca, Modelo)</TableHead>
+                                    <TableHead>Nº de Pasos</TableHead>
+                                    <TableHead>Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {protocols.map((protocol, index) => {
+                                    const identifier = `${protocol.type}|${protocol.brand}|${protocol.model}`;
+                                    return (
+                                        <TableRow key={protocol.id}>
+                                            <TableCell>{index + 1}</TableCell>
+                                            <TableCell className="font-medium">{`${protocol.type} - ${protocol.brand} (${protocol.model})`}</TableCell>
+                                            <TableCell>{protocol.steps.length}</TableCell>
+                                            <TableCell className="space-x-2">
+                                                <Button variant="outline" size="sm" onClick={() => handleEquipmentTypeChange(identifier)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    Editar
+                                                </Button>
+                                                <Button variant="destructive" size="sm" onClick={() => setProtocolToDelete(protocol)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Eliminar
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
             </div>
         </div>
         <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
@@ -767,9 +778,32 @@ function BaseProtocolManager() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={existingProtocol ? handleDeleteProtocol : () => { setSteps([]); setShowDeleteAllAlert(false) }} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                    <AlertDialogAction onClick={() => {
+                        const protocolToHandle = existingProtocol;
+                        if (protocolToHandle) {
+                            setProtocolToDelete(protocolToHandle);
+                        } else {
+                            setSteps([]);
+                        }
+                        setShowDeleteAllAlert(false);
+                    }} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
                         {existingProtocol ? 'Sí, eliminar Protocolo' : 'Sí, limpiar todo'}
                     </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={!!protocolToDelete} onOpenChange={() => setProtocolToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Está seguro de eliminar este protocolo?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción eliminará permanentemente este protocolo base.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setProtocolToDelete(null)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteProtocol} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Sí, eliminar</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -805,3 +839,5 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
+
+    
