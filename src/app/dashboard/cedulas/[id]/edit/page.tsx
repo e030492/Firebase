@@ -125,6 +125,8 @@ export default function EditCedulaPage() {
                   completion: s.completion || 0,
                   notes: s.notes || '',
                   imageUrl: s.imageUrl || '',
+                  percentage: s.percentage || 0,
+                  priority: s.priority || 'baja',
                 }));
               }
               const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
@@ -133,6 +135,8 @@ export default function EditCedulaPage() {
                 completion: 0,
                 notes: '',
                 imageUrl: '',
+                percentage: s.percentage || 0,
+                priority: s.priority || 'baja',
               }));
             };
             setProtocolSteps(getSafeProtocolSteps());
@@ -176,20 +180,10 @@ export default function EditCedulaPage() {
   };
   
   const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
-    setProtocolSteps(prevSteps => {
-        const newSteps = [...prevSteps];
-        // Create a new object for the step to ensure we don't mutate the original state
-        newSteps[index] = { ...newSteps[index], [field]: value };
-
-        // Sanitize the entire array to ensure no undefined values are present
-        return newSteps.map(step => ({
-            ...step,
-            completion: step.completion || 0,
-            notes: step.notes || '',
-            imageUrl: step.imageUrl || '',
-            percentage: step.percentage || 0,
-        }));
-    });
+    const newSteps = [...protocolSteps];
+    const stepToUpdate = { ...newSteps[index], [field]: value };
+    newSteps[index] = stepToUpdate;
+    setProtocolSteps(newSteps);
   };
 
   const handleImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,11 +219,11 @@ export default function EditCedulaPage() {
     
     // Final sanitization before submitting to Firebase
     const sanitizedProtocolSteps = protocolSteps.map(step => ({
-        step: step.step,
-        priority: step.priority,
+        step: step.step || '',
+        priority: step.priority || 'baja',
         completion: Number(step.completion) || 0,
-        imageUrl: step.imageUrl || '', // Ensure imageUrl is a string
-        notes: step.notes || '',       // Ensure notes is a string
+        imageUrl: step.imageUrl || '',
+        notes: step.notes || '',
         percentage: step.percentage || 0,
     }));
 
@@ -653,5 +647,3 @@ export default function EditCedulaPage() {
     </form>
   );
 }
-
-    

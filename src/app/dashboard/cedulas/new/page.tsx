@@ -139,10 +139,12 @@ export default function NewCedulaPage() {
     const equipmentProtocol = protocols.find(p => p.type === selectedEquipment.type && p.brand === selectedEquipment.brand && p.model === selectedEquipment.model);
     if (equipmentProtocol) {
         const initialSteps = equipmentProtocol.steps.map(step => ({ 
-          ...step, 
+          step: step.step || '',
+          priority: step.priority || 'baja',
+          percentage: step.percentage || 0,
           completion: 0, 
           notes: '', 
-          imageUrl: step.imageUrl || '' 
+          imageUrl: '',
         }));
         setProtocolSteps(initialSteps);
     } else {
@@ -151,12 +153,10 @@ export default function NewCedulaPage() {
   };
 
   const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
-    setProtocolSteps(prev => {
-        const newSteps = [...prev];
-        const updatedStep = { ...newSteps[index], [field]: value };
-        newSteps[index] = updatedStep;
-        return newSteps;
-    });
+    const newSteps = [...protocolSteps];
+    const stepToUpdate = { ...newSteps[index], [field]: value };
+    newSteps[index] = stepToUpdate;
+    setProtocolSteps(newSteps);
   };
 
   const handleImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -203,8 +203,8 @@ export default function NewCedulaPage() {
       description,
       semaforo: semaforo as Cedula['semaforo'],
       protocolSteps: protocolSteps.map(step => ({
-        step: step.step,
-        priority: step.priority,
+        step: step.step || '',
+        priority: step.priority || 'baja',
         completion: Number(step.completion) || 0,
         imageUrl: step.imageUrl || '',
         notes: step.notes || '',
