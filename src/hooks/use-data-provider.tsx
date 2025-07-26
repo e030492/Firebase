@@ -91,42 +91,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const initializeApp = async () => {
-      setLoading(true);
-      setError(null);
-
+    async function initializeApp() {
       try {
+        setLoading(true);
+        setError(null);
         await connectionTest();
         await seedDatabase();
-        
-        const unsubscribers = [
-          subscribeToUsers(setUsers),
-          subscribeToClients(setClients),
-          subscribeToSystems(setSystems),
-          subscribeToEquipments(setEquipments),
-          subscribeToProtocols(setProtocols),
-          subscribeToCedulas(setCedulas),
-          subscribeToCompanySettings(setCompanySettings),
-        ];
-
-        setLoading(false);
-
-        return () => {
-          unsubscribers.forEach(unsubscribe => unsubscribe());
-        };
-
-      } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
-        setError(`FATAL: ${errorMessage}`);
-        console.error("Failed to initialize data from Firestore:", e);
+      } catch (e: any) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        setError(`FATAL: No se pudo inicializar la base de datos. ${errorMessage}`);
+        console.error("Failed to initialize database:", e);
+      } finally {
         setLoading(false);
       }
-    };
+    }
 
-    const unsubscribePromise = initializeApp();
+    initializeApp();
+
+    const unsubscribers = [
+        subscribeToUsers(setUsers),
+        subscribeToClients(setClients),
+        subscribeToSystems(setSystems),
+        subscribeToEquipments(setEquipments),
+        subscribeToProtocols(setProtocols),
+        subscribeToCedulas(setCedulas),
+        subscribeToCompanySettings(setCompanySettings),
+    ];
 
     return () => {
-      unsubscribePromise.then(cleanup => cleanup && cleanup());
+        unsubscribers.forEach(unsubscribe => unsubscribe());
     };
   }, []);
   
