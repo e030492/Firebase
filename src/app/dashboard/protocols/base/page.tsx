@@ -259,7 +259,7 @@ function BaseProtocolManager() {
     setStepToDeleteIndex(null);
   };
   
-  const handleStepImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStepImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -357,8 +357,8 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
 
   return (
-    <div className="relative">
-       <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm -mx-6 px-6 pt-4 pb-2 border-b">
+    <div className="relative h-full">
+        <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm -mx-6 px-6 pt-4 pb-2 border-b">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
@@ -380,7 +380,7 @@ function BaseProtocolManager() {
                 </div>
             </div>
         </div>
-      <div className="grid auto-rows-max items-start gap-4 md:gap-8 p-6">
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8 px-6 pb-6 pt-4">
         <Card>
             <CardHeader>
                 <CardTitle>Selección del Equipo Base</CardTitle>
