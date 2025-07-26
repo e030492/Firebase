@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera, Search, Copy, ChevronDown } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreVertical, Wand2, Loader2, Camera, Search, Copy, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { suggestMaintenanceProtocol } from '@/ai/flows/suggest-maintenance-protocol';
 import {
   AlertDialog,
@@ -171,6 +171,8 @@ const levenshtein = (s1: string, s2: string): number => {
   return track[s2.length][s1.length];
 };
 
+type SortableKey = 'name' | 'client' | 'system';
+
 export default function ProtocolsPage() {
   const router = useRouter();
   const { 
@@ -187,6 +189,7 @@ export default function ProtocolsPage() {
   const [protocolToCopy, setProtocolToCopy] = useState<ProtocolToCopyInfo | null>(null);
   const [showNoSimilarFoundAlert, setShowNoSimilarFoundAlert] = useState(false);
   const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
@@ -227,9 +230,39 @@ export default function ProtocolsPage() {
         equipments = equipments.filter(eq => eq.location === selectedWarehouse);
     }
     
+     if (sortConfig !== null) {
+      equipments.sort((a, b) => {
+        const key = sortConfig.key as keyof typeof a;
+        if (a[key] < b[key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[key] > b[key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    
     return equipments;
-  }, [selectedClientId, selectedSystemId, selectedWarehouse, allEquipments, clients, systems]);
+  }, [selectedClientId, selectedSystemId, selectedWarehouse, allEquipments, clients, systems, sortConfig]);
 
+   const requestSort = (key: SortableKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortableKey) => {
+    if (sortConfig?.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+        return <ArrowUp className="ml-2 h-4 w-4 text-foreground" />;
+    }
+    return <ArrowDown className="ml-2 h-4 w-4 text-foreground" />;
+  };
 
   const getProtocolForEquipment = (equipmentId: string): Protocol | undefined => {
     return protocols.find(p => p.equipmentId === equipmentId);
@@ -412,9 +445,24 @@ export default function ProtocolsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12"></TableHead>
-                    <TableHead>Equipo</TableHead>
-                    <TableHead className="hidden md:table-cell">Cliente</TableHead>
-                    <TableHead className="hidden lg:table-cell">Sistema</TableHead>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('name')}>
+                            Equipo
+                            {getSortIcon('name')}
+                        </Button>
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell">
+                        <Button variant="ghost" onClick={() => requestSort('client')}>
+                            Cliente
+                            {getSortIcon('client')}
+                        </Button>
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                        <Button variant="ghost" onClick={() => requestSort('system')}>
+                            Sistema
+                            {getSortIcon('system')}
+                        </Button>
+                    </TableHead>
                     <TableHead className="text-right">Pasos</TableHead>
                     <TableHead className="text-right w-24">Acciones</TableHead>
                   </TableRow>
@@ -583,4 +631,3 @@ export default function ProtocolsPage() {
     </>
   );
 }
-
