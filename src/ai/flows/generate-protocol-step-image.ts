@@ -39,10 +39,13 @@ const generateProtocolStepImageFlow = ai.defineFlow(
   async input => {
     const {media} = await ai.generate({
       model: googleAI.model('gemini-2.0-flash-preview-image-generation'),
-      prompt: `Technical, photorealistic illustration showing the maintenance step for a piece of equipment. 
-      The equipment is a ${input.brand} ${input.model} named "${input.name}".
-      The specific step to illustrate is: "${input.step}".
-      The image should be a clear, close-up, technical diagram-style photo on a clean, white background, without any text or logos. Focus on the specific action or component mentioned in the step.`,
+      prompt: `Create a technical, photorealistic illustration showing a specific maintenance step for a piece of equipment.
+      - Equipment Name: "${input.name}"
+      - Brand: ${input.brand}
+      - Model: ${input.model}
+      - Maintenance Step to Illustrate: "${input.step}"
+      
+      The image must be a clear, close-up, diagram-style photograph on a clean, solid white background. It must not contain any text, logos, or distracting elements. The primary focus should be on the specific action or component mentioned in the maintenance step.`,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },

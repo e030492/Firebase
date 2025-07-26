@@ -39,7 +39,7 @@ const generateEquipmentImageFlow = ai.defineFlow(
   async input => {
     const {media} = await ai.generate({
       model: googleAI.model('gemini-2.0-flash-preview-image-generation'),
-      prompt: `Professional, photorealistic image of a piece of equipment for a product catalog. The equipment is a ${input.type} named "${input.name}", brand ${input.brand}, model ${input.model}. The image should be on a clean, white background, without any text or logos.`,
+      prompt: `Generate a studio-quality, photorealistic image of a piece of equipment for a product catalog. The equipment is a ${input.type} from the brand ${input.brand}, model ${input.model}, named "${input.name}". The image must be on a clean, solid white background, without any text, logos, or shadows.`,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
