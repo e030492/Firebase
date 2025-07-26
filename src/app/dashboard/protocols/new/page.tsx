@@ -272,11 +272,18 @@ function ProtocolGenerator() {
     if (!protocolToUpdate) return;
 
     const newSteps = [...protocolToUpdate.steps];
-    const updatedStep = {
-        ...newSteps[stepToEdit.index],
+    const originalStep = newSteps[stepToEdit.index];
+    
+    // Create a clean, plain object for the update
+    const updatedStep: ProtocolStep = {
         step: editedStepText,
         priority: editedStepPriority,
+        percentage: originalStep.percentage, // Preserve existing values
+        completion: originalStep.completion || 0,
+        notes: originalStep.notes || '',
+        imageUrl: originalStep.imageUrl || null,
     };
+    
     newSteps[stepToEdit.index] = updatedStep;
     
     try {
