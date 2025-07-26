@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft, Camera, ShieldAlert, Trash2, HardHat } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, Camera, Trash2, HardHat, Wand2, Loader2, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,26 +32,20 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardDescription } from '@/components/ui/card';
 import { useData } from '@/hooks/use-data-provider';
+import { suggestBaseProtocol, SuggestBaseProtocolOutput } from '@/ai/flows/suggest-base-protocol';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
-type EquipmentWithProtocolStatus = Equipment & { hasProtocol: boolean };
 
 export default function NewCedulaPage() {
   const router = useRouter();
   const { clients, systems: allSystems, equipments: allEquipments, users, protocols, createCedula, loading } = useData();
+  const { toast } = useToast();
 
   const [folio, setFolio] = useState(`C-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`);
   const [clientId, setClientId] = useState('');
@@ -66,7 +60,7 @@ export default function NewCedulaPage() {
   const [semaforo, setSemaforo] = useState('');
 
   const [filteredSystems, setFilteredSystems] = useState<System[]>([]);
-  const [filteredEquipments, setFilteredEquipments] = useState<EquipmentWithProtocolStatus[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
   const [supervisors, setSupervisors] = useState<User[]>([]);
   
@@ -74,8 +68,8 @@ export default function NewCedulaPage() {
   
   const [isSaving, setIsSaving] = useState(false);
   
-  const [showProtocolAlert, setShowProtocolAlert] = useState(false);
-  const [equipmentForProtocol, setEquipmentForProtocol] = useState<Equipment | null>(null);
+  const [isSuggestingProtocol, setIsSuggestingProtocol] = useState(false);
+  const [suggestedProtocol, setSuggestedProtocol] = useState<SuggestBaseProtocolOutput | null>(null);
 
   useEffect(() => {
     setTechnicians(users.filter(user => user.role === 'Técnico'));
@@ -106,12 +100,7 @@ export default function NewCedulaPage() {
         const clientName = clients.find(c => c.id === clientId)?.name;
         const systemName = allSystems.find(s => s.id === systemId)?.name;
         if (clientName && systemName) {
-            const filtered = allEquipments
-                .filter(eq => eq.client === clientName && eq.system === systemName)
-                .map(eq => ({
-                    ...eq,
-                    hasProtocol: protocols.some(p => p.type === eq.type && p.brand === eq.brand && p.model === eq.model && p.steps.length > 0)
-                }));
+            const filtered = allEquipments.filter(eq => eq.client === clientName && eq.system === systemName);
             setFilteredEquipments(filtered);
         } else {
             setFilteredEquipments([]);
@@ -120,36 +109,62 @@ export default function NewCedulaPage() {
         setFilteredEquipments([]);
     }
     setEquipmentId('');
-  }, [clientId, systemId, clients, allSystems, allEquipments, protocols]);
+  }, [clientId, systemId, clients, allSystems, allEquipments]);
   
-  const handleEquipmentChange = (newEquipmentId: string) => {
-    const selectedEquipment = filteredEquipments.find(eq => eq.id === newEquipmentId);
-    if (!selectedEquipment) return;
-
-    if (!selectedEquipment.hasProtocol) {
-        setEquipmentForProtocol(selectedEquipment);
-        setShowProtocolAlert(true);
-        setEquipmentId('');
-        setProtocolSteps([]);
-        return;
-    }
-
+  const handleEquipmentChange = async (newEquipmentId: string) => {
     setEquipmentId(newEquipmentId);
+    setProtocolSteps([]);
 
-    const equipmentProtocol = protocols.find(p => p.type === selectedEquipment.type && p.brand === selectedEquipment.brand && p.model === selectedEquipment.model);
-    if (equipmentProtocol) {
-        const initialSteps = equipmentProtocol.steps.map(step => ({ 
-          step: step.step || '',
-          priority: step.priority || 'baja',
-          percentage: step.percentage || 0,
-          completion: 0, 
-          notes: '', 
-          imageUrl: '',
-        }));
-        setProtocolSteps(initialSteps);
-    } else {
-        setProtocolSteps([]);
+    const selectedEquipment = allEquipments.find(eq => eq.id === newEquipmentId);
+    if (!selectedEquipment || protocols.length === 0) {
+      setSuggestedProtocol({
+        protocol: null,
+        reason: protocols.length === 0 ? "No hay protocolos base en el sistema." : "No se encontró el equipo seleccionado."
+      });
+      return;
     }
+
+    setIsSuggestingProtocol(true);
+    try {
+      const suggestion = await suggestBaseProtocol({
+        equipment: {
+          name: selectedEquipment.name,
+          type: selectedEquipment.type,
+          brand: selectedEquipment.brand,
+          model: selectedEquipment.model,
+        },
+        existingProtocols: protocols,
+      });
+      setSuggestedProtocol(suggestion);
+    } catch (error) {
+      console.error("Error suggesting protocol:", error);
+      toast({
+        title: "Error de IA",
+        description: "No se pudo obtener una sugerencia de protocolo.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSuggestingProtocol(false);
+    }
+  };
+
+  const handleConfirmProtocol = () => {
+    if (suggestedProtocol?.protocol?.steps) {
+      const initialSteps = suggestedProtocol.protocol.steps.map(step => ({ 
+        step: step.step || '',
+        priority: step.priority || 'baja',
+        percentage: step.percentage || 0,
+        completion: 0, 
+        notes: '', 
+        imageUrl: step.imageUrl || '',
+      }));
+      setProtocolSteps(initialSteps);
+      toast({
+        title: "Protocolo Asignado",
+        description: "Se han cargado los pasos del protocolo sugerido."
+      })
+    }
+    setSuggestedProtocol(null);
   };
 
   const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
@@ -257,6 +272,15 @@ export default function NewCedulaPage() {
       );
   }
 
+  const getPriorityBadgeVariant = (priority: string): 'default' | 'secondary' | 'destructive' => {
+    switch (priority?.toLowerCase()) {
+      case 'alta': return 'destructive';
+      case 'media': return 'default';
+      case 'baja': return 'secondary';
+      default: return 'secondary';
+    }
+  };
+
   return (
     <>
     <form onSubmit={handleSubmit}>
@@ -348,7 +372,7 @@ export default function NewCedulaPage() {
                                 <SelectItem key={system.id} value={system.id}>{system.name}</SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="no-systems" disabled>No hay sistemas con equipos para este cliente</SelectItem>
+                            <SelectItem value="no-systems" disabled>No hay sistemas para este cliente</SelectItem>
                           )}
                         </SelectContent>
                     </Select>
@@ -356,7 +380,7 @@ export default function NewCedulaPage() {
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="equipment">Equipo</Label>
-                    <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || isSaving}>
+                    <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || isSaving || isSuggestingProtocol}>
                       <SelectTrigger className="h-auto">
                         <SelectValue placeholder="Seleccione un equipo">
                           {equipmentId && (() => {
@@ -382,7 +406,7 @@ export default function NewCedulaPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {filteredEquipments.map(eq => (
-                          <SelectItem key={eq.id} value={eq.id} className={cn("h-auto", !eq.hasProtocol ? 'text-destructive' : '')}>
+                          <SelectItem key={eq.id} value={eq.id} className="h-auto">
                             <div className="flex items-center gap-3 py-2">
                                {eq.imageUrl ? (
                                     <Image src={eq.imageUrl} alt={eq.name} width={48} height={48} data-ai-hint="equipment photo" className="rounded-md object-cover" />
@@ -401,6 +425,12 @@ export default function NewCedulaPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {isSuggestingProtocol && (
+                        <div className="flex items-center text-sm text-muted-foreground gap-2 mt-2">
+                            <Loader2 className="h-4 w-4 animate-spin"/>
+                            Buscando protocolo sugerido con IA...
+                        </div>
+                    )}
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
@@ -574,7 +604,7 @@ export default function NewCedulaPage() {
             )}
 
             <div className="flex justify-start">
-                <Button type="submit" disabled={isSaving}>
+                <Button type="submit" disabled={isSaving || isSuggestingProtocol}>
                   {isSaving ? "Guardando..." : "Guardar Cédula"}
                 </Button>
             </div>
@@ -582,37 +612,65 @@ export default function NewCedulaPage() {
       </div>
     </form>
     
-    <AlertDialog open={showProtocolAlert} onOpenChange={setShowProtocolAlert}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <div className='flex items-center gap-2'>
-                    <ShieldAlert className="h-6 w-6 text-destructive" />
-                    <AlertDialogTitle>Protocolo Base Requerido</AlertDialogTitle>
+    <Dialog open={!!suggestedProtocol} onOpenChange={(open) => !open && setSuggestedProtocol(null)}>
+        <DialogContent className="max-w-2xl">
+            <DialogHeader>
+                 <div className='flex items-center gap-2 mb-2'>
+                    <Wand2 className="h-6 w-6 text-primary" />
+                    <DialogTitle>Protocolo Base Sugerido por IA</DialogTitle>
                 </div>
-                 <AlertDialogDescription>
-                    No existe un protocolo base para un equipo de tipo '{equipmentForProtocol?.type}', marca '{equipmentForProtocol?.brand}' y modelo '{equipmentForProtocol?.model}'. Es necesario crear uno antes de poder generar una cédula.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setEquipmentForProtocol(null)}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={() => {
-                    if (equipmentForProtocol) {
-                        const params = new URLSearchParams({
-                            type: equipmentForProtocol.type,
-                            brand: equipmentForProtocol.brand,
-                            model: equipmentForProtocol.model,
-                        });
-                        router.push(`/dashboard/protocols/base?${params.toString()}`);
-                    }
-                }}>
-                    Crear Protocolo Base
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+                <DialogDescription>
+                    {suggestedProtocol?.reason}
+                </DialogDescription>
+            </DialogHeader>
+            {suggestedProtocol?.protocol ? (
+                <div className="mt-4 space-y-4">
+                    <div className="grid md:grid-cols-3 gap-4 border rounded-lg p-4 bg-muted/50">
+                        <div className="grid gap-1">
+                            <Label className="text-muted-foreground">Tipo de Equipo</Label>
+                            <p className="font-semibold">{suggestedProtocol.protocol.type}</p>
+                        </div>
+                        <div className="grid gap-1">
+                            <Label className="text-muted-foreground">Marca</Label>
+                            <p className="font-semibold">{suggestedProtocol.protocol.brand}</p>
+                        </div>
+                        <div className="grid gap-1">
+                            <Label className="text-muted-foreground">Modelo</Label>
+                            <p className="font-semibold">{suggestedProtocol.protocol.model}</p>
+                        </div>
+                    </div>
+                     <div>
+                        <h4 className="font-semibold mb-2">Pasos del Protocolo:</h4>
+                        <div className="border rounded-md max-h-60 overflow-y-auto">
+                            {suggestedProtocol.protocol.steps.map((step, index) => (
+                                <div key={index} className={cn("p-3", index < suggestedProtocol.protocol!.steps.length - 1 && "border-b")}>
+                                    <div className="flex justify-between items-start">
+                                        <p className="text-sm text-foreground pr-4">{step.step}</p>
+                                        <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center text-center p-8 border-dashed border-2 rounded-lg">
+                    <ListChecks className="h-12 w-12 text-muted-foreground mb-4"/>
+                    <h3 className="font-semibold">No se encontraron protocolos</h3>
+                    <p className="text-sm text-muted-foreground">
+                        No hay protocolos base en el sistema o no se encontró una coincidencia adecuada.
+                    </p>
+                </div>
+            )}
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setSuggestedProtocol(null)}>Cancelar</Button>
+                <Button onClick={handleConfirmProtocol} disabled={!suggestedProtocol?.protocol}>
+                    Confirmar y Usar Protocolo
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 
     </>
   );
 }
-
-    
