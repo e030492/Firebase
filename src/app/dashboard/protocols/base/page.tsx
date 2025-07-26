@@ -196,9 +196,11 @@ function BaseProtocolManager() {
     }
     // Clear AI results if equipment selection changes
     if (aiState.result || aiState.error) {
-        const formData = new FormData();
-        formData.set('isSubmit', 'false');
-        formAction(formData);
+        startTransition(() => {
+            const formData = new FormData();
+            formData.set('isSubmit', 'false');
+            formAction(formData);
+        });
      }
   };
 
@@ -223,9 +225,11 @@ function BaseProtocolManager() {
     
     setSteps(uniqueSteps);
     setSelectedSteps([]);
-    const formData = new FormData();
-    formData.set('isSubmit', 'false');
-    formAction(formData);
+    startTransition(() => {
+      const formData = new FormData();
+      formData.set('isSubmit', 'false');
+      formAction(formData);
+    });
     toast({ title: "Pasos Añadidos", description: "Los pasos seleccionados se han añadido a la lista. No olvide guardar los cambios." });
   };
 
@@ -354,8 +358,9 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
 
   return (
+    <>
     <div className="flex flex-col h-full">
-       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-2 border-b">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-2 border-b">
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
                 <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
@@ -617,7 +622,8 @@ function BaseProtocolManager() {
             </>
         )}
       </div>
-
+    </div>
+    
     <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
         <DialogContent>
             <DialogHeader>
@@ -693,7 +699,7 @@ function BaseProtocolManager() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
-    </div>
+    </>
   );
 }
 
