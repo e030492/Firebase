@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft, Camera, Trash2, HardHat, Wand2, Loader2, ListChecks } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, Camera, Trash2, HardHat, Wand2, Loader2, ListChecks, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -285,17 +285,23 @@ export default function NewCedulaPage() {
     <>
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-3xl auto-rows-max items-start gap-4 lg:gap-8">
-        <div className="flex items-center gap-4">
-           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={isSaving}>
-             <ArrowLeft className="h-4 w-4" />
-             <span className="sr-only">Atrás</span>
-           </Button>
-           <div className="grid gap-0.5">
-            <h1 className="font-headline text-2xl font-bold">Crear Nueva Cédula</h1>
-            <p className="text-muted-foreground">
-                Complete los datos para registrar una nueva cédula de mantenimiento.
-            </p>
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-background/95 py-3 backdrop-blur-sm -mx-6 px-6">
+           <div className="flex items-center gap-4">
+              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()} disabled={isSaving}>
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">Atrás</span>
+              </Button>
+              <div className="grid gap-0.5">
+                <h1 className="font-headline text-2xl font-bold">Crear Nueva Cédula</h1>
+                <p className="text-muted-foreground hidden md:block">
+                    Complete los datos para registrar una nueva cédula de mantenimiento.
+                </p>
+              </div>
            </div>
+           <Button type="submit" disabled={isSaving || isSuggestingProtocol}>
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+              {isSaving ? "Guardando..." : "Guardar Cédula"}
+           </Button>
         </div>
         <div className='grid gap-4'>
             <Card>
@@ -602,12 +608,6 @@ export default function NewCedulaPage() {
                     {semaforoInfo.text}
                 </div>
             )}
-
-            <div className="flex justify-start">
-                <Button type="submit" disabled={isSaving || isSuggestingProtocol}>
-                  {isSaving ? "Guardando..." : "Guardar Cédula"}
-                </Button>
-            </div>
         </div>
       </div>
     </form>
@@ -674,3 +674,5 @@ export default function NewCedulaPage() {
     </>
   );
 }
+
+    
