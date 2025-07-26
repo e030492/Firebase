@@ -104,10 +104,12 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
     return unsubscribe;
 }
 
-async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
-    const sanitizedData = JSON.parse(JSON.stringify(data));
-    const docRef = await addDoc(collection(db, collectionName), sanitizedData);
-    return { ...sanitizedData, id: docRef.id } as T;
+async function createDocument<T extends { id: string }>(collectionName: string, data: T): Promise<T> {
+    const { id, ...rest } = data;
+    const docRef = doc(db, collectionName, id);
+    const sanitizedData = JSON.parse(JSON.stringify(rest));
+    await setDoc(docRef, sanitizedData);
+    return data;
 }
 
 async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
@@ -175,37 +177,52 @@ export const updateCompanySettings = async (data: Partial<CompanySettings>) => {
 
 // USERS
 export const subscribeToUsers = (setUsers: (users: User[]) => void) => subscribeToCollection<User>(collections.users, setUsers);
-export const createUser = (data: Omit<User, 'id'>) => createDocument<User>(collections.users, data);
+export const createUser = async (data: Omit<User, 'id'>) => {
+    const docRef = await addDoc(collection(db, collections.users), data);
+    return { ...data, id: docRef.id } as User;
+}
 export const updateUser = (id: string, data: Partial<User>) => updateDocument<User>(collections.users, id, data);
 export const deleteUser = (id: string): Promise<boolean> => deleteDocument(collections.users, id);
 
 // CLIENTS
 export const subscribeToClients = (setClients: (clients: Client[]) => void) => subscribeToCollection<Client>(collections.clients, setClients);
-export const createClient = (data: Omit<Client, 'id'>): Promise<Client> => createDocument<Client>(collections.clients, data);
+export const createClient = async (data: Omit<Client, 'id'>): Promise<Client> => {
+    const docRef = await addDoc(collection(db, collections.clients), data);
+    return { ...data, id: docRef.id } as Client;
+};
 export const updateClient = (id: string, data: Partial<Client>) => updateDocument<Client>(collections.clients, id, data);
 export const deleteClient = (id: string): Promise<boolean> => deleteDocument(collections.clients, id);
 
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
-export const createEquipment = (data: Omit<Equipment, 'id'>) => createDocument<Equipment>(collections.equipments, data);
+export const createEquipment = async (data: Omit<Equipment, 'id'>) => {
+    const docRef = await addDoc(collection(db, collections.equipments), data);
+    return { ...data, id: docRef.id } as Equipment;
+};
 export const updateEquipment = (id: string, data: Partial<Equipment>) => updateDocument<Equipment>(collections.equipments, id, data);
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
 // SYSTEMS
 export const subscribeToSystems = (setSystems: (systems: System[]) => void) => subscribeToCollection<System>(collections.systems, setSystems);
-export const createSystem = (data: Omit<System, 'id'>): Promise<System> => createDocument<System>(collections.systems, data);
+export const createSystem = async (data: Omit<System, 'id'>): Promise<System> => {
+    const docRef = await addDoc(collection(db, collections.systems), data);
+    return { ...data, id: docRef.id } as System;
+}
 export const updateSystem = (id: string, data: Partial<System>): Promise<System> => updateDocument<System>(collections.systems, id, data);
 export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(collections.systems, id);
 
 // PROTOCOLS
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
-export const createProtocol = (data: Omit<Protocol, 'id'>): Promise<Protocol> => createDocument<Protocol>(collections.protocols, data);
+export const createProtocol = (data: Protocol): Promise<Protocol> => createDocument<Protocol>(collections.protocols, data);
 export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol> => updateDocument<Protocol>(collections.protocols, id, data);
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
 
 
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
-export const createCedula = (data: Omit<Cedula, 'id'>) => createDocument<Cedula>(collections.cedulas, data);
+export const createCedula = async (data: Omit<Cedula, 'id'>) => {
+    const docRef = await addDoc(collection(db, collections.cedulas), data);
+    return { ...data, id: docRef.id } as Cedula;
+}
 export const updateCedula = (id: string, data: Partial<Cedula>) => updateDocument<Cedula>(collections.cedulas, id, data);
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

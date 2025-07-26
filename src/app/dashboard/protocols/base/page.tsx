@@ -183,7 +183,7 @@ function BaseProtocolManager() {
       setExistingProtocol(null);
       setSteps([]);
     }
-     if (aiState.result || aiState.error) {
+     if ((aiState.result || aiState.error) && !type && !brand && !model) {
         startTransition(() => {
             const formData = new FormData();
             formAction(formData);
@@ -304,21 +304,24 @@ function BaseProtocolManager() {
       return;
     }
 
+    const protocolId = existingProtocol?.id || `${brand}-${model}-${type}`.toLowerCase().replace(/\s+/g, '-');
+    const protocolData = { type, brand, model, steps };
+
     if (existingProtocol) {
-      // Update
       try {
-        await updateProtocol(existingProtocol.id, { steps });
+        await updateProtocol(protocolId, protocolData);
         toast({ title: "Protocolo Actualizado", description: "Los cambios al protocolo base han sido guardados."});
       } catch (error) {
+        console.error("Error updating protocol:", error);
         toast({ title: "Error", description: "No se pudo actualizar el protocolo.", variant: "destructive"});
       }
     } else {
       // Create
       try {
-        const newProtocolData = { type, brand, model, steps };
-        await createProtocol(newProtocolData);
+        await createProtocol({ id: protocolId, ...protocolData });
         toast({ title: "Protocolo Creado", description: "El nuevo protocolo base ha sido guardado."});
       } catch (error) {
+        console.error("Error creating protocol:", error);
         toast({ title: "Error", description: "No se pudo crear el protocolo.", variant: "destructive"});
       }
     }
