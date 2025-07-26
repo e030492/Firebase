@@ -124,6 +124,31 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 
 // --- Specific Service Functions ---
 
+// LOGIN
+export async function loginUser(email: string, pass: string): Promise<User | null> {
+    try {
+        const usersRef = collection(db, collections.users);
+        const q = query(usersRef, where("email", "==", email.toLowerCase()));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return null; // No user with that email
+        }
+
+        const userDoc = querySnapshot.docs[0];
+        const userData = { id: userDoc.id, ...userDoc.data() } as User;
+
+        if (userData.password === pass) {
+            return userData;
+        }
+
+        return null; // Incorrect password
+    } catch (error) {
+        console.error("Error during login query:", error);
+        throw new Error("Failed to query user database for login.");
+    }
+}
+
 // SETTINGS
 export const subscribeToCompanySettings = (setSettings: (settings: CompanySettings | null) => void) => {
     const docRef = doc(db, collections.settings, 'companyProfile');

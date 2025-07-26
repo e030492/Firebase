@@ -32,6 +32,7 @@ import {
     updateCedula as updateCedulaService,
     deleteCedula as deleteCedulaService,
     connectionTest,
+    loginUser as loginUserService,
 } from '@/lib/services';
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
@@ -131,12 +132,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   
   // --- AUTH ---
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
-      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      if (foundUser && foundUser.password === pass) {
-          localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(foundUser));
-          return foundUser;
+      const user = await loginUserService(email, pass);
+      if (user) {
+          localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
       }
-      return null;
+      return user;
   };
 
   const value: DataContextType = {
