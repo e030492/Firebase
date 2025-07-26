@@ -183,15 +183,7 @@ function BaseProtocolManager() {
       setExistingProtocol(null);
       setSteps([]);
     }
-     // Clear AI results if equipment selection changes
-    if ((aiState.result || aiState.error) && !type && !brand && !model) {
-        startTransition(() => {
-            const formData = new FormData();
-            formData.set('isSubmit', 'false');
-            formAction(formData);
-        });
-     }
-  }, [equipmentData, protocols, aiState.result, aiState.error, formAction]);
+  }, [equipmentData, protocols]);
   
   const handleEquipmentTypeChange = (identifier: string) => {
     setSelectedEquipmentIdentifier(identifier);
@@ -201,6 +193,14 @@ function BaseProtocolManager() {
     } else {
         setEquipmentData({ type: '', brand: '', model: '' });
     }
+    // Clear AI results if equipment selection changes
+    if (aiState.result || aiState.error) {
+        startTransition(() => {
+            const formData = new FormData();
+            formData.set('isSubmit', 'false');
+            formAction(formData);
+        });
+     }
   };
 
   const handleAddSelectedSteps = () => {
@@ -325,7 +325,7 @@ function BaseProtocolManager() {
         toast({ title: "Protocolo Creado", description: "El nuevo protocolo base ha sido guardado."});
       } catch (error) {
         console.error("Error creating protocol:", error);
-        toast({ title: "Error", description: `No se pudo crear el protocolo: ${error}`, variant: "destructive"});
+        toast({ title: "Error", description: `No se pudo crear el protocolo.`, variant: "destructive"});
       }
     }
   }
@@ -358,7 +358,7 @@ function BaseProtocolManager() {
 
   return (
     <>
-    <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8">
        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-2 border-b">
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -382,244 +382,245 @@ function BaseProtocolManager() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-            <CardTitle>Selección del Equipo Base</CardTitle>
-            <CardDescription>Seleccione un equipo para definir la combinación de Tipo, Marca y Modelo para la que desea gestionar el protocolo.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="grid md:grid-cols-1 gap-4">
-                <div className="grid gap-2">
-                    <Label>Seleccionar un tipo de equipo</Label>
-                    <Select value={selectedEquipmentIdentifier} onValueChange={handleEquipmentTypeChange}>
-                        <SelectTrigger className="h-auto">
-                            <SelectValue placeholder="Seleccione un equipo..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {uniqueEquipmentTypes.map(eq => {
-                                const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-                                return (
-                                <SelectItem key={identifier} value={identifier}>
-                                    <div className="flex items-center gap-3">
-                                        <Image
-                                            src={eq.imageUrl || 'https://placehold.co/40x40.png'}
-                                            alt={eq.name}
-                                            width={40}
-                                            height={40}
-                                            data-ai-hint="equipment photo"
-                                            className="rounded-md object-cover"
-                                        />
-                                        <div>
-                                            <p className="font-semibold">{eq.name}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Tipo: <span className="font-semibold text-foreground">{eq.type}</span>,
-                                                Marca: {eq.brand}, 
-                                                Modelo: <span className="font-semibold text-foreground">{eq.model}</span>
-                                            </p>
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8 mt-4">
+        <Card>
+            <CardHeader>
+                <CardTitle>Selección del Equipo Base</CardTitle>
+                <CardDescription>Seleccione un equipo para definir la combinación de Tipo, Marca y Modelo para la que desea gestionar el protocolo.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="grid md:grid-cols-1 gap-4">
+                    <div className="grid gap-2">
+                        <Label>Seleccionar un tipo de equipo</Label>
+                        <Select value={selectedEquipmentIdentifier} onValueChange={handleEquipmentTypeChange}>
+                            <SelectTrigger className="h-auto">
+                                <SelectValue placeholder="Seleccione un equipo..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {uniqueEquipmentTypes.map(eq => {
+                                    const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
+                                    return (
+                                    <SelectItem key={identifier} value={identifier}>
+                                        <div className="flex items-center gap-3">
+                                            <Image
+                                                src={eq.imageUrl || 'https://placehold.co/40x40.png'}
+                                                alt={eq.name}
+                                                width={40}
+                                                height={40}
+                                                data-ai-hint="equipment photo"
+                                                className="rounded-md object-cover"
+                                            />
+                                            <div>
+                                                <p className="font-semibold">{eq.name}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  Tipo: <span className="font-semibold text-foreground">{eq.type}</span>,
+                                                  Marca: {eq.brand},
+                                                  Modelo: <span className="font-semibold text-foreground">{eq.model}</span>
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                </SelectItem>
-                                )
-                            })}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-             {selectedEquipmentIdentifier && (
-                <div className="grid md:grid-cols-3 gap-4 mt-4 border-t pt-4">
-                    <div className="grid gap-2">
-                        <Label>Tipo de Equipo</Label>
-                        <Input value={type} disabled />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label>Marca</Label>
-                        <Input value={brand} disabled />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label>Modelo</Label>
-                        <Input value={model} disabled />
+                                    </SelectItem>
+                                    )
+                                })}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
-            )}
-        </CardContent>
-      </Card>
-      
-      {loading && <p>Cargando...</p>}
-
-      {!isFormDisabled && (
-        <>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Pasos del Protocolo Base</CardTitle>
-                        <CardDescription>
-                            {steps.length > 0 ? "Estos son los pasos actuales para esta combinación de equipo." : "Este protocolo está vacío. Añada pasos manualmente o con IA."}
-                        </CardDescription>
-                    </div>
-                    {steps.length > 0 && (
-                         <Button variant="destructive" size="sm" onClick={() => setShowDeleteAllAlert(true)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {existingProtocol ? "Eliminar Protocolo" : "Limpiar Pasos"}
-                        </Button>
-                    )}
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {steps.map((step, index) => (
-                        <div key={index}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-1">
-                                            <Label className="text-base font-semibold">Paso del Protocolo</Label>
-                                            <p className="text-muted-foreground">{step.step}</p>
-                                        </div>
-                                         <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button variant="outline" size="sm" onClick={() => openEditDialog(step, index)}>
-                                            <Edit className="mr-2 h-4 w-4" />
-                                            Editar
-                                        </Button>
-                                        <Button variant="destructive" size="sm" onClick={() => setStepToDeleteIndex(index)}>
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Eliminar
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="grid gap-3">
-                                    <Label>Evidencia Fotográfica del Paso</Label>
-                                    <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
-                                        {generatingImageIndex === index ? (
-                                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                                <Loader2 className="h-10 w-10 animate-spin" />
-                                                <p>Generando imagen...</p>
-                                            </div>
-                                        ) : step.imageUrl ? (
-                                            <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
-                                        ) : (
-                                            <div className="text-center text-muted-foreground">
-                                                <Camera className="h-10 w-10 mx-auto" />
-                                                <p className="text-sm mt-2">Sin imagen</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                         <Button type="button" variant="outline" size="sm" onClick={() => fileInputRefs.current[index]?.click()}>
-                                            <Camera className="mr-2 h-4 w-4" />
-                                            {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
-                                        </Button>
-                                        <Button type="button" size="sm" onClick={() => handleGenerateStepImage(step, index)} disabled={generatingImageIndex !== null}>
-                                            {generatingImageIndex === index ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                            Generar con IA
-                                        </Button>
-                                        {step.imageUrl && (
-                                            <Button type="button" variant="destructive" size="icon" onClick={() => handleStepImageDelete(index)}>
-                                                <Trash2 className="h-4 w-4" />
-                                                <span className="sr-only">Eliminar Foto</span>
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <Input
-                                        id={`image-upload-${index}`}
-                                        ref={el => fileInputRefs.current[index] = el}
-                                        type="file"
-                                        accept="image/*"
-                                        capture="environment"
-                                        onChange={(e) => handleStepImageChange(index, e)}
-                                        className="hidden"
-                                    />
-                                </div>
-                            </div>
-                            {index < steps.length - 1 && <Separator className="mt-6" />}
+                {selectedEquipmentIdentifier && (
+                    <div className="grid md:grid-cols-3 gap-4 mt-4 border-t pt-4">
+                        <div className="grid gap-2">
+                            <Label>Tipo de Equipo</Label>
+                            <Input value={type} disabled />
                         </div>
-                    ))}
-                </CardContent>
-            </Card>
+                        <div className="grid gap-2">
+                            <Label>Marca</Label>
+                            <Input value={brand} disabled />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Modelo</Label>
+                            <Input value={model} disabled />
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+        
+        {loading && <p>Cargando...</p>}
 
-            <Card>
-                <form action={formAction}>
+        {!isFormDisabled && (
+            <>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Pasos del Protocolo Base</CardTitle>
+                            <CardDescription>
+                                {steps.length > 0 ? "Estos son los pasos actuales para esta combinación de equipo." : "Este protocolo está vacío. Añada pasos manualmente o con IA."}
+                            </CardDescription>
+                        </div>
+                        {steps.length > 0 && (
+                            <Button variant="destructive" size="sm" onClick={() => setShowDeleteAllAlert(true)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {existingProtocol ? "Eliminar Protocolo" : "Limpiar Pasos"}
+                            </Button>
+                        )}
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {steps.map((step, index) => (
+                            <div key={index}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-1">
+                                                <Label className="text-base font-semibold">Paso del Protocolo</Label>
+                                                <p className="text-muted-foreground">{step.step}</p>
+                                            </div>
+                                            <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => openEditDialog(step, index)}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                Editar
+                                            </Button>
+                                            <Button variant="destructive" size="sm" onClick={() => setStepToDeleteIndex(index)}>
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Eliminar
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-3">
+                                        <Label>Evidencia Fotográfica del Paso</Label>
+                                        <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                            {generatingImageIndex === index ? (
+                                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                                    <Loader2 className="h-10 w-10 animate-spin" />
+                                                    <p>Generando imagen...</p>
+                                                </div>
+                                            ) : step.imageUrl ? (
+                                                <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                            ) : (
+                                                <div className="text-center text-muted-foreground">
+                                                    <Camera className="h-10 w-10 mx-auto" />
+                                                    <p className="text-sm mt-2">Sin imagen</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRefs.current[index]?.click()}>
+                                                <Camera className="mr-2 h-4 w-4" />
+                                                {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                                            </Button>
+                                            <Button type="button" size="sm" onClick={() => handleGenerateStepImage(step, index)} disabled={generatingImageIndex !== null}>
+                                                {generatingImageIndex === index ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                                                Generar con IA
+                                            </Button>
+                                            {step.imageUrl && (
+                                                <Button type="button" variant="destructive" size="icon" onClick={() => handleStepImageDelete(index)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Eliminar Foto</span>
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <Input
+                                            id={`image-upload-${index}`}
+                                            ref={el => fileInputRefs.current[index] = el}
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            onChange={(e) => handleStepImageChange(index, e)}
+                                            className="hidden"
+                                        />
+                                    </div>
+                                </div>
+                                {index < steps.length - 1 && <Separator className="mt-6" />}
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <form action={formAction}>
+                        <CardHeader>
+                            <CardTitle>Sugerir Pasos con IA</CardTitle>
+                            <CardDescription>La IA sugerirá pasos basados en el tipo, marca y modelo del equipo.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <input name="isSubmit" value="true" type="hidden" />
+                            <Input name="type" value={type} type="hidden" />
+                            <Input name="brand" value={brand} type="hidden" />
+                            <Input name="model" value={model} type="hidden" />
+                            <p className="text-sm text-muted-foreground">
+                                Haga clic en el botón para generar un protocolo sugerido para esta combinación de equipo.
+                            </p>
+                        </CardContent>
+                        <CardFooter className="border-t px-6 py-4">
+                            <SubmitButton />
+                        </CardFooter>
+                    </form>
+                </Card>
+
+                {aiState.error && (
+                    <Alert variant="destructive">
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{aiState.error}</AlertDescription>
+                    </Alert>
+                )}
+
+                {aiState.result && (
+                    <Card>
                     <CardHeader>
-                        <CardTitle>Sugerir Pasos con IA</CardTitle>
-                        <CardDescription>La IA sugerirá pasos basados en el tipo, marca y modelo del equipo.</CardDescription>
+                        <CardTitle>Protocolo Sugerido por IA</CardTitle>
+                        <CardDescription>Seleccione los pasos que desea añadir al protocolo base.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <input name="isSubmit" value="true" type="hidden" />
-                        <Input name="type" value={type} type="hidden" />
-                        <Input name="brand" value={brand} type="hidden" />
-                        <Input name="model" value={model} type="hidden" />
-                        <p className="text-sm text-muted-foreground">
-                            Haga clic en el botón para generar un protocolo sugerido para esta combinación de equipo.
-                        </p>
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead className="w-10">
+                                <Checkbox
+                                onCheckedChange={(checked) => setSelectedSteps(checked && aiState.result ? aiState.result : [])}
+                                checked={isAllSelected}
+                                aria-label="Seleccionar todos los pasos"
+                                />
+                            </TableHead>
+                            <TableHead className="w-[60%]">Paso</TableHead>
+                            <TableHead>Prioridad</TableHead>
+                            <TableHead className="text-right">% Estimado</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {aiState.result.map((item, index) => (
+                            <TableRow key={index} data-state={selectedSteps.some(s => s.step === item.step) ? "selected" : ""}>
+                                <TableCell>
+                                <Checkbox
+                                    onCheckedChange={(checked) => setSelectedSteps(prev => checked ? [...prev, item] : prev.filter(s => s.step !== item.step))}
+                                    checked={selectedSteps.some(s => s.step === item.step)}
+                                    aria-label={`Seleccionar paso: ${item.step}`}
+                                />
+                                </TableCell>
+                                <TableCell className="font-medium">{item.step}</TableCell>
+                                <TableCell>
+                                <Badge variant={getPriorityBadgeVariant(item.priority)} className="capitalize">
+                                    {item.priority}
+                                </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">{item.percentage}%</TableCell>
+                            </TableRow>
+                            ))}
+                        </TableBody>
+                        </Table>
                     </CardContent>
                     <CardFooter className="border-t px-6 py-4">
-                        <SubmitButton />
+                        <Button onClick={handleAddSelectedSteps} disabled={selectedSteps.length === 0}>
+                        <Save className="mr-2 h-4 w-4" />
+                        Añadir Pasos Seleccionados a la Lista
+                        </Button>
                     </CardFooter>
-                </form>
-            </Card>
-
-            {aiState.error && (
-                <Alert variant="destructive">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{aiState.error}</AlertDescription>
-                </Alert>
-            )}
-
-            {aiState.result && (
-                <Card>
-                <CardHeader>
-                    <CardTitle>Protocolo Sugerido por IA</CardTitle>
-                    <CardDescription>Seleccione los pasos que desea añadir al protocolo base.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead className="w-10">
-                            <Checkbox
-                            onCheckedChange={(checked) => setSelectedSteps(checked && aiState.result ? aiState.result : [])}
-                            checked={isAllSelected}
-                            aria-label="Seleccionar todos los pasos"
-                            />
-                        </TableHead>
-                        <TableHead className="w-[60%]">Paso</TableHead>
-                        <TableHead>Prioridad</TableHead>
-                        <TableHead className="text-right">% Estimado</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {aiState.result.map((item, index) => (
-                        <TableRow key={index} data-state={selectedSteps.some(s => s.step === item.step) ? "selected" : ""}>
-                            <TableCell>
-                            <Checkbox
-                                onCheckedChange={(checked) => setSelectedSteps(prev => checked ? [...prev, item] : prev.filter(s => s.step !== item.step))}
-                                checked={selectedSteps.some(s => s.step === item.step)}
-                                aria-label={`Seleccionar paso: ${item.step}`}
-                            />
-                            </TableCell>
-                            <TableCell className="font-medium">{item.step}</TableCell>
-                            <TableCell>
-                            <Badge variant={getPriorityBadgeVariant(item.priority)} className="capitalize">
-                                {item.priority}
-                            </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">{item.percentage}%</TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                    </Table>
-                </CardContent>
-                <CardFooter className="border-t px-6 py-4">
-                    <Button onClick={handleAddSelectedSteps} disabled={selectedSteps.length === 0}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Añadir Pasos Seleccionados a la Lista
-                    </Button>
-                </CardFooter>
-                </Card>
-            )}
-        </>
-      )}
-    
+                    </Card>
+                )}
+            </>
+        )}
+      </div>
 
     <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
         <DialogContent>
@@ -696,6 +697,7 @@ function BaseProtocolManager() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+    </div>
     </>
   );
 }
