@@ -122,6 +122,7 @@ export default function EditCedulaPage() {
               if (cedula.protocolSteps && cedula.protocolSteps.length > 0) {
                 return cedula.protocolSteps.map(s => ({
                   ...s,
+                  completion: s.completion || 0,
                   notes: s.notes || '',
                   imageUrl: s.imageUrl || '',
                 }));
@@ -129,9 +130,9 @@ export default function EditCedulaPage() {
               const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
               return (equipmentProtocol?.steps || []).map(s => ({
                 ...s,
+                completion: 0,
                 notes: '',
                 imageUrl: '',
-                completion: 0,
               }));
             };
             setProtocolSteps(getSafeProtocolSteps());
