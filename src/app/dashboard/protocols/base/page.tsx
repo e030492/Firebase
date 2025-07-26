@@ -34,7 +34,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks } from 'lucide-react';
 import { Protocol, Equipment, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -148,7 +148,6 @@ function BaseProtocolManager() {
   const uniqueEquipmentTypes = useMemo(() => {
     const unique = new Map<string, Equipment>();
     equipments.forEach(eq => {
-      // Only include equipments that have all three properties
       if (eq.type && eq.brand && eq.model) {
         const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
         if (!unique.has(identifier)) {
@@ -158,6 +157,22 @@ function BaseProtocolManager() {
     });
     return Array.from(unique.values());
   }, [equipments]);
+  
+  const { equipmentsWithProtocol, equipmentsWithoutProtocol } = useMemo(() => {
+    const withProtocol: Equipment[] = [];
+    const withoutProtocol: Equipment[] = [];
+    
+    uniqueEquipmentTypes.forEach(eq => {
+      const hasProtocol = protocols.some(p => p.type === eq.type && p.brand === eq.brand && p.model === eq.model);
+      if (hasProtocol) {
+        withProtocol.push(eq);
+      } else {
+        withoutProtocol.push(eq);
+      }
+    });
+
+    return { equipmentsWithProtocol: withProtocol, equipmentsWithoutProtocol: withoutProtocol };
+  }, [uniqueEquipmentTypes, protocols]);
 
   useEffect(() => {
     if (!loading) {
@@ -166,14 +181,11 @@ function BaseProtocolManager() {
       const modelParam = searchParams.get('model');
       if (typeParam && brandParam && modelParam) {
         const identifier = `${typeParam}|${brandParam}|${modelParam}`;
-        const foundEq = uniqueEquipmentTypes.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === identifier);
-        if (foundEq) {
-            setSelectedEquipmentIdentifier(identifier);
-            setEquipmentData({ type: typeParam, brand: brandParam, model: modelParam });
-        }
+        setSelectedEquipmentIdentifier(identifier);
+        setEquipmentData({ type: typeParam, brand: brandParam, model: modelParam });
       }
     }
-  }, [searchParams, loading, uniqueEquipmentTypes]);
+  }, [searchParams, loading]);
 
   useEffect(() => {
     const { type, brand, model } = equipmentData;
@@ -369,345 +381,398 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
 
   return (
-    <div className="flex flex-col h-full">
-        <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm -mx-6 px-6 pt-6 pb-2 border-b">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4" />
-                    <span className="sr-only">Atrás</span>
-                    </Button>
-                    <div className="grid gap-0.5">
-                        <h1 className="font-headline text-2xl font-bold">Gestión de Protocolos Base</h1>
-                        <p className="text-muted-foreground">
-                            Cree, edite o genere protocolos para un tipo de equipo específico.
-                        </p>
-                    </div>
-                </div>
-                <div className="flex gap-2">
-                    <Button onClick={handleSaveProtocol} disabled={isFormDisabled || steps.length === 0 || isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4"/>}
-                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-                    </Button>
-                </div>
-            </div>
+    <div className="flex flex-col h-full p-4 md:p-6">
+        <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-2 -mt-4 -mx-6 px-6 border-b">
+          <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Atrás</span>
+                  </Button>
+                  <div className="grid gap-0.5">
+                      <h1 className="font-headline text-2xl font-bold">Gestión de Protocolos Base</h1>
+                      <p className="text-muted-foreground">
+                          Cree, edite o genere protocolos para un tipo de equipo específico.
+                      </p>
+                  </div>
+              </div>
+              <div className="flex gap-2">
+                  <Button onClick={handleSaveProtocol} disabled={isFormDisabled || steps.length === 0 || isSaving}>
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4"/>}
+                  {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                  </Button>
+              </div>
+          </div>
         </div>
-        <div className="flex-1 overflow-auto">
-            <div className="grid auto-rows-max items-start gap-4 md:gap-8 pt-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Selección del Equipo Base</CardTitle>
-                        <CardDescription>Seleccione un equipo para definir la combinación de Tipo, Marca y Modelo para la que desea gestionar el protocolo.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid md:grid-cols-1 gap-4">
-                            <div className="grid gap-2">
-                                <Label>Seleccionar un tipo de equipo</Label>
-                                <Select value={selectedEquipmentIdentifier} onValueChange={handleEquipmentTypeChange}>
-                                    <SelectTrigger className="h-auto">
-                                        <SelectValue placeholder="Seleccione un equipo..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {uniqueEquipmentTypes.map(eq => {
-                                            const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-                                            return (
-                                            <SelectItem key={identifier} value={identifier}>
-                                                <div className="flex items-center gap-3">
-                                                    <Image
-                                                        src={eq.imageUrl || 'https://placehold.co/40x40.png'}
-                                                        alt={eq.name}
-                                                        width={40}
-                                                        height={40}
-                                                        data-ai-hint="equipment photo"
-                                                        className="rounded-md object-cover"
-                                                    />
-                                                    <div>
-                                                        <p className="font-semibold">{eq.name}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                        Tipo: <span className="font-semibold text-foreground">{eq.type}</span>,
-                                                        Marca: {eq.brand},
-                                                        Modelo: <span className="font-semibold text-foreground">{eq.model}</span>
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </SelectItem>
-                                            )
-                                        })}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        {selectedEquipmentIdentifier && (
-                            <div className="grid md:grid-cols-3 gap-4 mt-4 border-t pt-4">
-                                <div className="grid gap-2">
-                                    <Label>Tipo de Equipo</Label>
-                                    <Input value={type} disabled />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Marca</Label>
-                                    <Input value={brand} disabled />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Modelo</Label>
-                                    <Input value={model} disabled />
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-                
-                {loading && <p>Cargando...</p>}
-
-                {!isFormDisabled && (
-                    <>
+        <div className="flex-1 overflow-auto pt-4 -mx-6 px-6">
+            <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+                <div className="grid lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-1 space-y-8">
                         <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle>Pasos del Protocolo Base</CardTitle>
-                                    <CardDescription>
-                                        {steps.length > 0 ? "Estos son los pasos actuales para esta combinación de equipo." : "Este protocolo está vacío. Añada pasos manualmente o con IA."}
-                                    </CardDescription>
-                                </div>
-                                {steps.length > 0 && (
-                                    <Button variant="destructive" size="sm" onClick={() => setShowDeleteAllAlert(true)}>
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        {existingProtocol ? "Eliminar Protocolo" : "Limpiar Pasos"}
-                                    </Button>
-                                )}
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {steps.map((step, index) => (
-                                    <div key={index}>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg">
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="space-y-1">
-                                                        <Label className="text-base font-semibold">Paso del Protocolo</Label>
-                                                        <p className="text-muted-foreground">{step.step}</p>
-                                                    </div>
-                                                    <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Button variant="outline" size="sm" onClick={() => openEditDialog(step, index)}>
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        Editar
-                                                    </Button>
-                                                    <Button variant="destructive" size="sm" onClick={() => setStepToDeleteIndex(index)}>
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Eliminar
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            <div className="grid gap-3">
-                                                <Label>Evidencia Fotográfica del Paso</Label>
-                                                <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
-                                                    {generatingImageIndex === index ? (
-                                                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                                            <Loader2 className="h-10 w-10 animate-spin" />
-                                                            <p>Generando imagen...</p>
-                                                        </div>
-                                                    ) : step.imageUrl ? (
-                                                        <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
-                                                    ) : (
-                                                        <div className="text-center text-muted-foreground">
-                                                            <Camera className="h-10 w-10 mx-auto" />
-                                                            <p className="text-sm mt-2">Sin imagen</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => fileInputRefs.current[index]?.click()}>
-                                                        <Camera className="mr-2 h-4 w-4" />
-                                                        {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
-                                                    </Button>
-                                                    <Button type="button" size="sm" onClick={() => handleGenerateStepImage(step, index)} disabled={generatingImageIndex !== null}>
-                                                        {generatingImageIndex === index ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                                                        Generar con IA
-                                                    </Button>
-                                                    {step.imageUrl && (
-                                                        <Button type="button" variant="destructive" size="icon" onClick={() => handleStepImageDelete(index)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                            <span className="sr-only">Eliminar Foto</span>
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                                <Input
-                                                    id={`image-upload-${index}`}
-                                                    ref={el => fileInputRefs.current[index] = el}
-                                                    type="file"
-                                                    accept="image/*"
-                                                    capture="environment"
-                                                    onChange={(e) => handleStepImageChange(e, index)}
-                                                    className="hidden"
-                                                />
-                                            </div>
-                                        </div>
-                                        {index < steps.length - 1 && <Separator className="mt-6" />}
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <form action={formAction}>
-                                <CardHeader>
-                                    <CardTitle>Sugerir Pasos con IA</CardTitle>
-                                    <CardDescription>La IA sugerirá pasos basados en el tipo, marca y modelo del equipo.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <input name="isSubmit" value="true" type="hidden" />
-                                    <Input name="type" value={type} type="hidden" />
-                                    <Input name="brand" value={brand} type="hidden" />
-                                    <Input name="model" value={model} type="hidden" />
-                                    <p className="text-sm text-muted-foreground">
-                                        Haga clic en el botón para generar un protocolo sugerido para esta combinación de equipo.
-                                    </p>
-                                </CardContent>
-                                <CardFooter className="border-t px-6 py-4">
-                                    <SubmitButton />
-                                </CardFooter>
-                            </form>
-                        </Card>
-
-                        {aiState.error && (
-                            <Alert variant="destructive">
-                            <Terminal className="h-4 w-4" />
-                            <AlertTitle>Error</AlertTitle>
-                            <AlertDescription>{aiState.error}</AlertDescription>
-                            </Alert>
-                        )}
-
-                        {aiState.result && (
-                            <Card>
                             <CardHeader>
-                                <CardTitle>Protocolo Sugerido por IA</CardTitle>
-                                <CardDescription>Seleccione los pasos que desea añadir al protocolo base.</CardDescription>
+                                <CardTitle>Equipos sin Protocolo</CardTitle>
+                                <CardDescription>Seleccione un equipo para crear un nuevo protocolo base.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                    <TableHead className="w-10">
-                                        <Checkbox
-                                        onCheckedChange={(checked) => setSelectedSteps(checked && aiState.result ? aiState.result : [])}
-                                        checked={isAllSelected}
-                                        aria-label="Seleccionar todos los pasos"
-                                        />
-                                    </TableHead>
-                                    <TableHead className="w-[60%]">Paso</TableHead>
-                                    <TableHead>Prioridad</TableHead>
-                                    <TableHead className="text-right">% Estimado</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {aiState.result.map((item, index) => (
-                                    <TableRow key={index} data-state={selectedSteps.some(s => s.step === item.step) ? "selected" : ""}>
-                                        <TableCell>
-                                        <Checkbox
-                                            onCheckedChange={(checked) => setSelectedSteps(prev => checked ? [...prev, item] : prev.filter(s => s.step !== item.step))}
-                                            checked={selectedSteps.some(s => s.step === item.step)}
-                                            aria-label={`Seleccionar paso: ${item.step}`}
-                                        />
-                                        </TableCell>
-                                        <TableCell className="font-medium">{item.step}</TableCell>
-                                        <TableCell>
-                                        <Badge variant={getPriorityBadgeVariant(item.priority)} className="capitalize">
-                                            {item.priority}
-                                        </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">{item.percentage}%</TableCell>
-                                    </TableRow>
-                                    ))}
-                                </TableBody>
-                                </Table>
+                                <div className="grid gap-2">
+                                    <Label>Seleccionar un tipo de equipo</Label>
+                                    <Select value={selectedEquipmentIdentifier} onValueChange={handleEquipmentTypeChange}>
+                                        <SelectTrigger className="h-auto">
+                                            <SelectValue placeholder="Seleccione un equipo..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {equipmentsWithoutProtocol.map(eq => {
+                                                const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
+                                                return (
+                                                <SelectItem key={identifier} value={identifier}>
+                                                    <div className="flex items-center gap-3">
+                                                        <Image
+                                                            src={eq.imageUrl || 'https://placehold.co/40x40.png'}
+                                                            alt={eq.name}
+                                                            width={40}
+                                                            height={40}
+                                                            data-ai-hint="equipment photo"
+                                                            className="rounded-md object-cover"
+                                                        />
+                                                        <div>
+                                                            <p className="font-semibold">{eq.name}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                            Tipo: <span className="font-semibold text-foreground">{eq.type}</span>,
+                                                            Marca: {eq.brand},
+                                                            Modelo: <span className="font-semibold text-foreground">{eq.model}</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </SelectItem>
+                                                )
+                                            })}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </CardContent>
-                            <CardFooter className="border-t px-6 py-4">
-                                <Button onClick={handleAddSelectedSteps} disabled={selectedSteps.length === 0}>
-                                <Save className="mr-2 h-4 w-4" />
-                                Añadir Pasos Seleccionados a la Lista
-                                </Button>
-                            </CardFooter>
-                            </Card>
-                        )}
-                    </>
-                )}
-            </div>
-            <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Editar Paso del Protocolo</DialogTitle>
-                        <DialogDescription>
-                            Modifique la descripción y la prioridad de este paso.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="step-text">Descripción del Paso</Label>
-                            <Textarea 
-                                id="step-text"
-                                value={editedStepText}
-                                onChange={(e) => setEditedStepText(e.target.value)}
-                                className="min-h-32"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="step-priority">Prioridad</Label>
-                            <Select value={editedStepPriority} onValueChange={(v) => setEditedStepPriority(v as any)}>
-                                <SelectTrigger id="step-priority">
-                                    <SelectValue placeholder="Seleccione una prioridad" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="baja">Baja</SelectItem>
-                                    <SelectItem value="media">Media</SelectItem>
-                                    <SelectItem value="alta">Alta</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Protocolos Existentes</CardTitle>
+                                <CardDescription>Seleccione un protocolo para editarlo.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {equipmentsWithProtocol.length > 0 ? (
+                                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                                        {equipmentsWithProtocol.map(eq => {
+                                            const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
+                                            return (
+                                                <button 
+                                                    key={identifier} 
+                                                    onClick={() => handleEquipmentTypeChange(identifier)}
+                                                    className="w-full text-left p-2 rounded-md hover:bg-muted"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <ListChecks className="h-5 w-5 text-primary"/>
+                                                        <div>
+                                                            <p className="font-semibold">{eq.name}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                            Tipo: {eq.type}, Marca: {eq.brand}, Modelo: {eq.model}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No hay protocolos existentes.</p>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setStepToEdit(null)}>Cancelar</Button>
-                        <Button onClick={handleSaveEditedStep}>Guardar Cambios</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-            
-            <AlertDialog open={stepToDeleteIndex !== null} onOpenChange={() => setStepToDeleteIndex(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Está seguro de eliminar este paso?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. El paso será eliminado de la lista actual.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-            
-            <AlertDialog open={showDeleteAllAlert} onOpenChange={setShowDeleteAllAlert}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {existingProtocol ? '¿Eliminar este Protocolo Base?' : '¿Limpiar todos los pasos?'}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                        {existingProtocol 
-                            ? 'Esta acción eliminará permanentemente este protocolo base. Los equipos que lo usaban ya no tendrán un protocolo asignado y deberá crear uno nuevo para ellos. Esta acción no se puede deshacer.'
-                            : 'Esto eliminará todos los pasos que ha añadido o modificado en esta sesión. No se guardará ningún cambio.'
-                        }
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={existingProtocol ? handleDeleteProtocol : () => { setSteps([]); setShowDeleteAllAlert(false) }} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                            {existingProtocol ? 'Sí, eliminar Protocolo' : 'Sí, limpiar todo'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+
+                    <div className="lg:col-span-2">
+                        {loading && <p>Cargando...</p>}
+
+                        {!selectedEquipmentIdentifier ? (
+                             <Card className="flex flex-col items-center justify-center h-full min-h-96">
+                                <CardContent className="text-center">
+                                    <ListChecks className="h-16 w-16 text-muted-foreground mx-auto mb-4"/>
+                                    <h3 className="text-lg font-semibold">Seleccione un Equipo</h3>
+                                    <p className="text-muted-foreground">Elija un equipo de las listas para empezar a gestionar su protocolo.</p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="space-y-8">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Detalles del Equipo Seleccionado</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid md:grid-cols-3 gap-4 border rounded-lg p-4">
+                                            <div className="grid gap-1">
+                                                <Label className="text-muted-foreground">Tipo de Equipo</Label>
+                                                <p className="font-semibold">{type}</p>
+                                            </div>
+                                            <div className="grid gap-1">
+                                                <Label className="text-muted-foreground">Marca</Label>
+                                                <p className="font-semibold">{brand}</p>
+                                            </div>
+                                            <div className="grid gap-1">
+                                                <Label className="text-muted-foreground">Modelo</Label>
+                                                <p className="font-semibold">{model}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <div>
+                                            <CardTitle>Pasos del Protocolo Base</CardTitle>
+                                            <CardDescription>
+                                                {steps.length > 0 ? "Estos son los pasos actuales para esta combinación de equipo." : "Este protocolo está vacío. Añada pasos manualmente o con IA."}
+                                            </CardDescription>
+                                        </div>
+                                        {steps.length > 0 && (
+                                            <Button variant="destructive" size="sm" onClick={() => setShowDeleteAllAlert(true)}>
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                {existingProtocol ? "Eliminar Protocolo" : "Limpiar Pasos"}
+                                            </Button>
+                                        )}
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        {steps.map((step, index) => (
+                                            <div key={index}>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg">
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="space-y-1">
+                                                                <Label className="text-base font-semibold">Paso del Protocolo</Label>
+                                                                <p className="text-muted-foreground">{step.step}</p>
+                                                            </div>
+                                                            <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <Button variant="outline" size="sm" onClick={() => openEditDialog(step, index)}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Editar
+                                                            </Button>
+                                                            <Button variant="destructive" size="sm" onClick={() => setStepToDeleteIndex(index)}>
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Eliminar
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid gap-3">
+                                                        <Label>Evidencia Fotográfica del Paso</Label>
+                                                        <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                                            {generatingImageIndex === index ? (
+                                                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                                                    <Loader2 className="h-10 w-10 animate-spin" />
+                                                                    <p>Generando imagen...</p>
+                                                                </div>
+                                                            ) : step.imageUrl ? (
+                                                                <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                                            ) : (
+                                                                <div className="text-center text-muted-foreground">
+                                                                    <Camera className="h-10 w-10 mx-auto" />
+                                                                    <p className="text-sm mt-2">Sin imagen</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Button type="button" variant="outline" size="sm" onClick={() => fileInputRefs.current[index]?.click()}>
+                                                                <Camera className="mr-2 h-4 w-4" />
+                                                                {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                                                            </Button>
+                                                            <Button type="button" size="sm" onClick={() => handleGenerateStepImage(step, index)} disabled={generatingImageIndex !== null}>
+                                                                {generatingImageIndex === index ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                                                                Generar con IA
+                                                            </Button>
+                                                            {step.imageUrl && (
+                                                                <Button type="button" variant="destructive" size="icon" onClick={() => handleStepImageDelete(index)}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                    <span className="sr-only">Eliminar Foto</span>
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        <Input
+                                                            id={`image-upload-${index}`}
+                                                            ref={el => fileInputRefs.current[index] = el}
+                                                            type="file"
+                                                            accept="image/*"
+                                                            capture="environment"
+                                                            onChange={(e) => handleStepImageChange(e, index)}
+                                                            className="hidden"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                {index < steps.length - 1 && <Separator className="mt-6" />}
+                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <form action={formAction}>
+                                        <CardHeader>
+                                            <CardTitle>Sugerir Pasos con IA</CardTitle>
+                                            <CardDescription>La IA sugerirá pasos basados en el tipo, marca y modelo del equipo.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <input name="isSubmit" value="true" type="hidden" />
+                                            <Input name="type" value={type} type="hidden" />
+                                            <Input name="brand" value={brand} type="hidden" />
+                                            <Input name="model" value={model} type="hidden" />
+                                            <p className="text-sm text-muted-foreground">
+                                                Haga clic en el botón para generar un protocolo sugerido para esta combinación de equipo.
+                                            </p>
+                                        </CardContent>
+                                        <CardFooter className="border-t px-6 py-4">
+                                            <SubmitButton />
+                                        </CardFooter>
+                                    </form>
+                                </Card>
+
+                                {aiState.error && (
+                                    <Alert variant="destructive">
+                                    <Terminal className="h-4 w-4" />
+                                    <AlertTitle>Error</AlertTitle>
+                                    <AlertDescription>{aiState.error}</AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {aiState.result && (
+                                    <Card>
+                                    <CardHeader>
+                                        <CardTitle>Protocolo Sugerido por IA</CardTitle>
+                                        <CardDescription>Seleccione los pasos que desea añadir al protocolo base.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                            <TableHead className="w-10">
+                                                <Checkbox
+                                                onCheckedChange={(checked) => setSelectedSteps(checked && aiState.result ? aiState.result : [])}
+                                                checked={isAllSelected}
+                                                aria-label="Seleccionar todos los pasos"
+                                                />
+                                            </TableHead>
+                                            <TableHead className="w-[60%]">Paso</TableHead>
+                                            <TableHead>Prioridad</TableHead>
+                                            <TableHead className="text-right">% Estimado</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {aiState.result.map((item, index) => (
+                                            <TableRow key={index} data-state={selectedSteps.some(s => s.step === item.step) ? "selected" : ""}>
+                                                <TableCell>
+                                                <Checkbox
+                                                    onCheckedChange={(checked) => setSelectedSteps(prev => checked ? [...prev, item] : prev.filter(s => s.step !== item.step))}
+                                                    checked={selectedSteps.some(s => s.step === item.step)}
+                                                    aria-label={`Seleccionar paso: ${item.step}`}
+                                                />
+                                                </TableCell>
+                                                <TableCell className="font-medium">{item.step}</TableCell>
+                                                <TableCell>
+                                                <Badge variant={getPriorityBadgeVariant(item.priority)} className="capitalize">
+                                                    {item.priority}
+                                                </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">{item.percentage}%</TableCell>
+                                            </TableRow>
+                                            ))}
+                                        </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                    <CardFooter className="border-t px-6 py-4">
+                                        <Button onClick={handleAddSelectedSteps} disabled={selectedSteps.length === 0}>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        Añadir Pasos Seleccionados a la Lista
+                                        </Button>
+                                    </CardFooter>
+                                    </Card>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
+        <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar Paso del Protocolo</DialogTitle>
+                    <DialogDescription>
+                        Modifique la descripción y la prioridad de este paso.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="step-text">Descripción del Paso</Label>
+                        <Textarea 
+                            id="step-text"
+                            value={editedStepText}
+                            onChange={(e) => setEditedStepText(e.target.value)}
+                            className="min-h-32"
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="step-priority">Prioridad</Label>
+                        <Select value={editedStepPriority} onValueChange={(v) => setEditedStepPriority(v as any)}>
+                            <SelectTrigger id="step-priority">
+                                <SelectValue placeholder="Seleccione una prioridad" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="baja">Baja</SelectItem>
+                                <SelectItem value="media">Media</SelectItem>
+                                <SelectItem value="alta">Alta</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setStepToEdit(null)}>Cancelar</Button>
+                    <Button onClick={handleSaveEditedStep}>Guardar Cambios</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <AlertDialog open={stepToDeleteIndex !== null} onOpenChange={() => setStepToDeleteIndex(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Está seguro de eliminar este paso?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción no se puede deshacer. El paso será eliminado de la lista actual.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        
+        <AlertDialog open={showDeleteAllAlert} onOpenChange={setShowDeleteAllAlert}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        {existingProtocol ? '¿Eliminar este Protocolo Base?' : '¿Limpiar todos los pasos?'}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                    {existingProtocol 
+                        ? 'Esta acción eliminará permanentemente este protocolo base. Los equipos que lo usaban ya no tendrán un protocolo asignado y deberá crear uno nuevo para ellos. Esta acción no se puede deshacer.'
+                        : 'Esto eliminará todos los pasos que ha añadido o modificado en esta sesión. No se guardará ningún cambio.'
+                    }
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={existingProtocol ? handleDeleteProtocol : () => { setSteps([]); setShowDeleteAllAlert(false) }} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                        {existingProtocol ? 'Sí, eliminar Protocolo' : 'Sí, limpiar todo'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
