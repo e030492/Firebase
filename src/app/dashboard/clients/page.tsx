@@ -148,6 +148,7 @@ export default function ClientsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">#</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
                         Nombre
@@ -172,9 +173,10 @@ export default function ClientsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedClients.map((client) => (
+                {sortedClients.map((client, index) => (
                   <Fragment key={client.id}>
                     <TableRow onClick={() => handleToggleDetails(client.id)} className="cursor-pointer">
+                        <TableCell>{index + 1}</TableCell>
                         <TableCell className="font-medium">{client.name}</TableCell>
                         <TableCell className="hidden md:table-cell">{client.responsable}</TableCell>
                         <TableCell className="hidden lg:table-cell">{client.direccion}</TableCell>
@@ -209,7 +211,7 @@ export default function ClientsPage() {
                     </TableRow>
                      {expandedClientId === client.id && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={5} className="p-0">
+                            <TableCell colSpan={6} className="p-0">
                                 <div className="p-4">
                                 <Card className="shadow-inner">
                                     <CardHeader>

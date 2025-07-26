@@ -404,6 +404,7 @@ function CedulasReportGenerator() {
                             <TableHead className="w-[50px]">
                                 <Checkbox onClick={(e) => e.stopPropagation()} onCheckedChange={handleSelectAll} checked={selectionState} aria-label="Seleccionar todo" />
                             </TableHead>
+                            <TableHead className="w-[50px]">#</TableHead>
                             <TableHead><Button variant="ghost" onClick={() => requestSort('folio')}>Folio{getSortIcon('folio')}</Button></TableHead>
                             <TableHead><Button variant="ghost" onClick={() => requestSort('client')}>Cliente{getSortIcon('client')}</Button></TableHead>
                             <TableHead><Button variant="ghost" onClick={() => requestSort('warehouse' as SortableCedulaKey)}>Almacén{getSortIcon('warehouse' as SortableCedulaKey)}</Button></TableHead>
@@ -415,12 +416,13 @@ function CedulasReportGenerator() {
                     </TableHeader>
                     <TableBody>
                         {filteredAndSortedCedulas.length > 0 ? (
-                            filteredAndSortedCedulas.map(cedula => (
+                            filteredAndSortedCedulas.map((cedula, index) => (
                                 <Fragment key={cedula.id}>
                                 <TableRow data-state={selectedCedulaIds.includes(cedula.id) ? "selected" : ""} className="cursor-pointer">
                                     <TableCell onClick={(e) => e.stopPropagation()}>
                                         <Checkbox onCheckedChange={checked => handleSelectCedula(cedula.id, !!checked)} checked={selectedCedulaIds.includes(cedula.id)} aria-label={`Seleccionar cédula ${cedula.folio}`} />
                                     </TableCell>
+                                    <TableCell onClick={() => handleToggleDetails(cedula.id)}>{index + 1}</TableCell>
                                     <TableCell className="font-medium" onClick={() => handleToggleDetails(cedula.id)}>{cedula.folio}</TableCell>
                                     <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.client}</TableCell>
                                     <TableCell onClick={() => handleToggleDetails(cedula.id)}>{cedula.warehouse}</TableCell>
@@ -436,7 +438,7 @@ function CedulasReportGenerator() {
                                 </TableRow>
                                 {expandedCedulaId === cedula.id && (
                                      <TableRow className="bg-muted/30 hover:bg-muted/30">
-                                        <TableCell colSpan={8} className="p-0">
+                                        <TableCell colSpan={9} className="p-0">
                                             <div className="p-4">
                                             <Card className="shadow-inner">
                                                 <CardHeader><CardTitle>Detalles de la Cédula: {cedula.folio}</CardTitle></CardHeader>
@@ -486,7 +488,7 @@ function CedulasReportGenerator() {
                                 </Fragment>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={8} className="h-24 text-center">No se encontraron cédulas con los filtros aplicados.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={9} className="h-24 text-center">No se encontraron cédulas con los filtros aplicados.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -647,6 +649,7 @@ function UpcomingMaintenanceReport() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[50px]">#</TableHead>
                                 <TableHead className="w-24">Estado</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Equipo{getSortIcon('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('client')}>Cliente{getSortIcon('client')}</Button></TableHead>
@@ -657,10 +660,11 @@ function UpcomingMaintenanceReport() {
                         </TableHeader>
                         <TableBody>
                             {filteredAndSortedEquipments.length > 0 ? (
-                                filteredAndSortedEquipments.map(eq => {
+                                filteredAndSortedEquipments.map((eq, index) => {
                                     const urgency = getUrgencyIndicator(eq.nextMaintenanceDate);
                                     return (
                                         <TableRow key={eq.id}>
+                                            <TableCell>{index + 1}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <span className={cn("h-2.5 w-2.5 rounded-full", urgency.color)} />
@@ -676,7 +680,7 @@ function UpcomingMaintenanceReport() {
                                     )
                                 })
                             ) : (
-                                <TableRow><TableCell colSpan={6} className="h-24 text-center">No se encontraron equipos con los filtros aplicados.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={7} className="h-24 text-center">No se encontraron equipos con los filtros aplicados.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>

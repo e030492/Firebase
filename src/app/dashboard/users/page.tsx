@@ -145,6 +145,7 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                   <TableHead className="w-[50px]">#</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
                         Nombre
@@ -171,8 +172,9 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedUsers.map((user) => (
+                {sortedUsers.map((user, index) => (
                   <TableRow key={user.id}>
+                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{user.email}</TableCell>
                     <TableCell className="hidden lg:table-cell">{user.role}</TableCell>

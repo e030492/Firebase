@@ -138,6 +138,7 @@ export default function SystemsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">#</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('name')}>
                         Nombre
@@ -156,8 +157,9 @@ export default function SystemsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedSystems.map((system) => (
+                {sortedSystems.map((system, index) => (
                   <TableRow key={system.id}>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
                         <span className="h-3 w-3 rounded-full border" style={{ backgroundColor: system.color }} />

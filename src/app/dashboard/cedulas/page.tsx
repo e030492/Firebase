@@ -301,6 +301,7 @@ export default function CedulasPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">#</TableHead>
                   <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('folio')}>
                       Folio
@@ -358,9 +359,10 @@ export default function CedulasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAndSortedCedulas.map((cedula) => (
+                {filteredAndSortedCedulas.map((cedula, index) => (
                   <Fragment key={cedula.id}>
                     <TableRow className="cursor-pointer" onClick={() => handleToggleDetails(cedula.id)}>
+                      <TableCell>{index + 1}</TableCell>
                       <TableCell className="font-medium">{cedula.folio}</TableCell>
                       <TableCell>{cedula.client}</TableCell>
                       <TableCell className="hidden sm:table-cell">
@@ -417,7 +419,7 @@ export default function CedulasPage() {
                     </TableRow>
                     {expandedCedulaId === cedula.id && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={10} className="p-0">
+                            <TableCell colSpan={11} className="p-0">
                                 <div className="p-4">
                                 <Card className="shadow-inner">
                                     <CardHeader>

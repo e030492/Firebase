@@ -445,6 +445,7 @@ export default function ProtocolsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12"></TableHead>
+                    <TableHead className="w-[50px]">#</TableHead>
                     <TableHead>
                         <Button variant="ghost" onClick={() => requestSort('name')}>
                             Equipo
@@ -469,7 +470,7 @@ export default function ProtocolsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredEquipments.length > 0 ? (
-                    filteredEquipments.map(equipment => {
+                    filteredEquipments.map((equipment, index) => {
                       const equipmentProtocol = getProtocolForEquipment(equipment.id);
                       const equipmentProtocolSteps = equipmentProtocol?.steps || [];
                       return (
@@ -478,6 +479,7 @@ export default function ProtocolsPage() {
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <RadioGroupItem value={equipment.id} id={`radio-${equipment.id}`} />
                             </TableCell>
+                            <TableCell>{index + 1}</TableCell>
                             <TableCell>
                               <div className="font-medium">
                                 <span className={cn(equipmentProtocolSteps.length === 0 && "text-destructive")}>{equipment.name}</span>
@@ -543,7 +545,7 @@ export default function ProtocolsPage() {
                           </TableRow>
                           {expandedEquipmentId === equipment.id && equipmentProtocolSteps.length > 0 && (
                             <TableRow>
-                                <TableCell colSpan={6} className="p-0">
+                                <TableCell colSpan={7} className="p-0">
                                     <div className="p-4 bg-muted/50">
                                         <h4 className="font-semibold px-4 pb-2">Pasos del Protocolo</h4>
                                         <Table>
@@ -575,7 +577,7 @@ export default function ProtocolsPage() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         No se encontraron equipos que coincidan con los filtros seleccionados.
                       </TableCell>
                     </TableRow>
