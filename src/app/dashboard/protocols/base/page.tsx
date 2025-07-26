@@ -119,7 +119,7 @@ function SubmitButton() {
 function BaseProtocolManager() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments, uploadImageAndGetURL } = useData();
+  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments } = useData();
   const [aiState, formAction] = useActionState(generateProtocolAction, { result: null, error: null });
   const [isTransitioning, startTransition] = useTransition();
   const { toast } = useToast();
@@ -227,9 +227,9 @@ function BaseProtocolManager() {
     setSteps(uniqueSteps);
     setSelectedSteps([]);
     startTransition(() => {
-        const formData = new FormData();
-        formData.set('isSubmit', 'false');
-        formAction(formData);
+      const formData = new FormData();
+      formData.set('isSubmit', 'false');
+      formAction(formData);
     });
     toast({ title: "Pasos Añadidos", description: "Los pasos seleccionados se han añadido a la lista. No olvide guardar los cambios." });
   };
@@ -312,24 +312,14 @@ function BaseProtocolManager() {
     setIsSaving(true);
     
     try {
-        const stepsWithUploadedImages = await Promise.all(
-            steps.map(async (step) => {
-                if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                    const downloadURL = await uploadImageAndGetURL(step.imageUrl);
-                    return { ...step, imageUrl: downloadURL };
-                }
-                return step;
-            })
-        );
-
         const protocolId = existingProtocol?.id || `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-        const protocolData = { type, brand, model, steps: stepsWithUploadedImages };
+        const protocolData = { type, brand, model, steps: steps };
 
         if (existingProtocol) {
             await updateProtocol(protocolId, protocolData);
             toast({ title: "Protocolo Actualizado", description: "Los cambios al protocolo base han sido guardados."});
         } else {
-            await createProtocol({ type, brand, model, steps: stepsWithUploadedImages }, protocolId);
+            await createProtocol({ type, brand, model, steps }, protocolId);
             toast({ title: "Protocolo Creado", description: "El nuevo protocolo base ha sido guardado."});
         }
     } catch (error) {
@@ -367,8 +357,8 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
 
   return (
-    <div className="relative p-6">
-       <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm -mx-6 -mt-6 mb-6 px-6 py-4 border-b">
+    <div className="relative">
+       <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm -mx-6 px-6 pt-4 pb-2 border-b">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
@@ -390,7 +380,7 @@ function BaseProtocolManager() {
                 </div>
             </div>
         </div>
-      <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8 p-6">
         <Card>
             <CardHeader>
                 <CardTitle>Selección del Equipo Base</CardTitle>

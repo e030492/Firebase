@@ -130,10 +130,10 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 
 // --- Image Upload Service ---
 export async function uploadImageAndGetURL(base64DataUrl: string): Promise<string> {
-  const storageRef = ref(storage, `protocol-steps/${uuidv4()}`);
-  await uploadString(storageRef, base64DataUrl, 'data_url');
-  const downloadURL = await getDownloadURL(storageRef);
-  return downloadURL;
+    // This function is being kept as a placeholder but will not be used
+    // until the freezing issue is resolved.
+    console.warn("Image upload to Firebase Storage is currently disabled.");
+    return base64DataUrl; // Return the base64 string directly
 }
 
 
