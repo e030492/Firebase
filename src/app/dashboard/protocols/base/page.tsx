@@ -34,7 +34,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Search, Edit } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit } from 'lucide-react';
 import { Protocol, Equipment, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -62,12 +62,19 @@ type State = {
 
 // Server Action
 async function generateProtocolAction(prevState: State, formData: FormData): Promise<State> {
+  // This hidden input tells us if the action was triggered by the actual submit button
+  const isSubmit = formData.get('isSubmit') === 'true';
   const type = formData.get('type') as string;
   const brand = formData.get('brand') as string;
   const model = formData.get('model') as string;
-
-  if (!type || !brand || !model) {
+  
+  // Only validate if it's a real submission, not a state reset.
+  if (isSubmit && (!type || !brand || !model)) {
     return { ...prevState, error: 'Por favor, complete el tipo, marca y modelo del equipo.', result: null };
+  }
+  
+  if (!isSubmit) {
+      return { result: null, error: null };
   }
 
   try {
@@ -121,10 +128,7 @@ function BaseProtocolManager() {
 
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Form states
-  const [type, setType] = useState('');
-  const [brand, setBrand] = useState('');
-  const [model, setModel] = useState('');
+  const [equipmentData, setEquipmentData] = useState({ type: '', brand: '', model: '' });
   const [selectedEquipmentIdentifier, setSelectedEquipmentIdentifier] = useState('');
 
 
@@ -145,9 +149,12 @@ function BaseProtocolManager() {
   const uniqueEquipmentTypes = useMemo(() => {
     const unique = new Map<string, Equipment>();
     equipments.forEach(eq => {
-      const identifier = `${eq.name}|${eq.type}|${eq.brand}|${eq.model}`;
-      if (!unique.has(identifier)) {
-        unique.set(identifier, eq);
+      // Ensure the equipment has the necessary data before being considered "unique" and valid for protocol creation
+      if (eq.name && eq.type && eq.brand && eq.model) {
+        const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
+        if (!unique.has(identifier)) {
+          unique.set(identifier, eq);
+        }
       }
     });
     return Array.from(unique.values());
@@ -159,19 +166,18 @@ function BaseProtocolManager() {
       const brandParam = searchParams.get('brand');
       const modelParam = searchParams.get('model');
       if (typeParam && brandParam && modelParam) {
-        const foundEq = uniqueEquipmentTypes.find(eq => eq.type === typeParam && eq.brand === brandParam && eq.model === modelParam);
+        const identifier = `${typeParam}|${brandParam}|${modelParam}`;
+        const foundEq = uniqueEquipmentTypes.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === identifier);
         if (foundEq) {
-            const identifier = `${foundEq.name}|${foundEq.type}|${foundEq.brand}|${foundEq.model}`;
             setSelectedEquipmentIdentifier(identifier);
-            setType(typeParam);
-            setBrand(brandParam);
-            setModel(modelParam);
+            setEquipmentData({ type: typeParam, brand: brandParam, model: modelParam });
         }
       }
     }
   }, [searchParams, loading, uniqueEquipmentTypes]);
 
   useEffect(() => {
+    const { type, brand, model } = equipmentData;
     if (type && brand && model) {
       const found = protocols.find(p => p.type === type && p.brand === brand && p.model === model);
       setExistingProtocol(found || null);
@@ -181,21 +187,18 @@ function BaseProtocolManager() {
       setSteps([]);
     }
      startTransition(() => {
-        formAction(new FormData()); // Resets the AI form state
+        // This call is just to reset the AI results, not to show an error.
+        formAction(new FormData());
     });
-  }, [type, brand, model, protocols]);
+  }, [equipmentData, protocols]);
   
   const handleEquipmentTypeChange = (identifier: string) => {
     setSelectedEquipmentIdentifier(identifier);
     if (identifier) {
-        const [, typeVal, brandVal, modelVal] = identifier.split('|');
-        setType(typeVal);
-        setBrand(brandVal);
-        setModel(modelVal);
+        const [typeVal, brandVal, modelVal] = identifier.split('|');
+        setEquipmentData({ type: typeVal, brand: brandVal, model: modelVal });
     } else {
-        setType('');
-        setBrand('');
-        setModel('');
+        setEquipmentData({ type: '', brand: '', model: '' });
     }
   };
 
@@ -214,7 +217,6 @@ function BaseProtocolManager() {
     
     const allSteps = [...steps, ...newSteps];
     
-    // Remove duplicates based on the step text
     const uniqueSteps = allSteps.filter((step, index, self) => 
         index === self.findIndex((s) => s.step === step.step)
     );
@@ -267,11 +269,15 @@ function BaseProtocolManager() {
 
   const handleGenerateStepImage = async (step: ProtocolStep, index: number) => {
       setGeneratingImageIndex(index);
+      const { type, brand, model } = equipmentData;
       try {
+          if (!type || !brand || !model) {
+              throw new Error("Datos del equipo incompletos para generar la imagen.");
+          }
           const result = await generateProtocolStepImage({
               name: `${type} ${brand}`,
-              brand: brand || '',
-              model: model || '',
+              brand: brand,
+              model: model,
               step: step.step,
           });
           const newSteps = [...steps];
@@ -292,6 +298,7 @@ function BaseProtocolManager() {
   };
 
   const handleSaveProtocol = async () => {
+    const { type, brand, model } = equipmentData;
     if (!type || !brand || !model) {
       toast({ title: "Información Incompleta", description: "Debe especificar Tipo, Marca y Modelo.", variant: "destructive" });
       return;
@@ -340,6 +347,7 @@ function BaseProtocolManager() {
   };
 
   const isAllSelected = aiState.result ? selectedSteps.length === aiState.result.length && aiState.result.length > 0 : false;
+  const { type, brand, model } = equipmentData;
   const isFormDisabled = !type || !brand || !model;
 
   return (
@@ -359,7 +367,10 @@ function BaseProtocolManager() {
             </div>
         </div>
         <div className="flex gap-2">
-            <Button onClick={handleSaveProtocol} disabled={isFormDisabled}><Save className="mr-2 h-4 w-4"/>Guardar Cambios</Button>
+            <Button onClick={handleSaveProtocol} disabled={isFormDisabled || steps.length === 0}>
+                <Save className="mr-2 h-4 w-4"/>
+                Guardar Cambios
+            </Button>
         </div>
       </div>
 
@@ -371,12 +382,12 @@ function BaseProtocolManager() {
         <CardContent>
             <div className="grid md:grid-cols-1 gap-4">
                 <div className="grid gap-2">
-                    <Label>Seleccionar un tipo de equipo por nombre</Label>
+                    <Label>Seleccionar un tipo de equipo</Label>
                     <Select value={selectedEquipmentIdentifier} onValueChange={handleEquipmentTypeChange}>
                         <SelectTrigger><SelectValue placeholder="Seleccione un equipo..." /></SelectTrigger>
                         <SelectContent>
                             {uniqueEquipmentTypes.map(eq => {
-                                const identifier = `${eq.name}|${eq.type}|${eq.brand}|${eq.model}`;
+                                const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
                                 return (<SelectItem key={identifier} value={identifier}>{`${eq.name} (Tipo: ${eq.type}, Marca: ${eq.brand}, Modelo: ${eq.model})`}</SelectItem>)
                             })}
                         </SelectContent>
@@ -501,6 +512,7 @@ function BaseProtocolManager() {
                         <CardDescription>La IA sugerirá pasos basados en el tipo, marca y modelo del equipo.</CardDescription>
                     </CardHeader>
                     <CardContent>
+                        <input name="isSubmit" value="true" type="hidden" />
                         <Input name="type" value={type} type="hidden" />
                         <Input name="brand" value={brand} type="hidden" />
                         <Input name="model" value={model} type="hidden" />
