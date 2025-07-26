@@ -211,25 +211,30 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 // PROTOCOLS
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
-export const createProtocol = (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
-    // Deep copy and sanitize the data to ensure it's a POJO
-    const sanitizedData = JSON.parse(JSON.stringify({
-        ...data,
-        steps: data.steps.map(step => ({
-            step: step.step || '',
-            priority: step.priority || 'baja',
-            percentage: step.percentage || 0,
-            completion: step.completion || 0,
-            notes: step.notes || '',
-            imageUrl: step.imageUrl || '',
-        }))
+const sanitizeStepsForFirestore = (steps: ProtocolStep[]): any[] => {
+    return steps.map(step => ({
+        step: step.step || '',
+        priority: step.priority || 'baja',
+        percentage: step.percentage || 0,
+        completion: step.completion || 0,
+        notes: step.notes || '',
+        imageUrl: step.imageUrl || '',
     }));
+};
+
+export const createProtocol = (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
+    const sanitizedData = {
+        ...data,
+        steps: sanitizeStepsForFirestore(data.steps)
+    };
     return createDocument<Protocol>(collections.protocols, sanitizedData, id);
 };
 
 export const updateProtocol = (id: string, data: Partial<Protocol>): Promise<Protocol> => {
-    // Deep copy and sanitize for updates as well
-    const sanitizedData = JSON.parse(JSON.stringify(data));
+    const sanitizedData: Partial<Protocol> = { ...data };
+    if (data.steps) {
+        sanitizedData.steps = sanitizeStepsForFirestore(data.steps);
+    }
     return updateDocument<Protocol>(collections.protocols, id, sanitizedData);
 };
 
@@ -243,3 +248,5 @@ export const createCedula = async (data: Omit<Cedula, 'id'>) => {
 }
 export const updateCedula = (id: string, data: Partial<Cedula>) => updateDocument<Cedula>(collections.cedulas, id, data);
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
+
+    

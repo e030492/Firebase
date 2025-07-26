@@ -211,10 +211,12 @@ function BaseProtocolManager() {
     }
 
     const newSteps = selectedSteps.map(s => ({ 
-        ...s, 
-        imageUrl: s.imageUrl || '', 
-        notes: '', 
-        completion: 0 
+        step: s.step,
+        priority: s.priority,
+        percentage: s.percentage,
+        imageUrl: '',
+        notes: '',
+        completion: 0
     }));
     
     const allSteps = [...steps, ...newSteps];
@@ -358,7 +360,6 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
 
   return (
-    <>
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-2 border-b">
         <div className="flex items-center justify-between">
@@ -383,7 +384,7 @@ function BaseProtocolManager() {
         </div>
       </div>
 
-      <div className="grid auto-rows-max items-start gap-4 md:gap-8 mt-4 flex-1 overflow-auto">
+      <div className="grid auto-rows-max items-start gap-4 md:gap-8 mt-4 flex-1">
         <Card>
             <CardHeader>
                 <CardTitle>Selección del Equipo Base</CardTitle>
@@ -622,84 +623,83 @@ function BaseProtocolManager() {
             </>
         )}
       </div>
+    
+        <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar Paso del Protocolo</DialogTitle>
+                    <DialogDescription>
+                        Modifique la descripción y la prioridad de este paso.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="step-text">Descripción del Paso</Label>
+                        <Textarea 
+                            id="step-text"
+                            value={editedStepText}
+                            onChange={(e) => setEditedStepText(e.target.value)}
+                            className="min-h-32"
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="step-priority">Prioridad</Label>
+                        <Select value={editedStepPriority} onValueChange={(v) => setEditedStepPriority(v as any)}>
+                            <SelectTrigger id="step-priority">
+                                <SelectValue placeholder="Seleccione una prioridad" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="baja">Baja</SelectItem>
+                                <SelectItem value="media">Media</SelectItem>
+                                <SelectItem value="alta">Alta</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setStepToEdit(null)}>Cancelar</Button>
+                    <Button onClick={handleSaveEditedStep}>Guardar Cambios</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <AlertDialog open={stepToDeleteIndex !== null} onOpenChange={() => setStepToDeleteIndex(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Está seguro de eliminar este paso?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción no se puede deshacer. El paso será eliminado de la lista actual.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        
+        <AlertDialog open={showDeleteAllAlert} onOpenChange={setShowDeleteAllAlert}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        {existingProtocol ? '¿Eliminar este Protocolo Base?' : '¿Limpiar todos los pasos?'}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                    {existingProtocol 
+                        ? 'Esta acción eliminará permanentemente este protocolo base. Los equipos que lo usaban ya no tendrán un protocolo asignado y deberá crear uno nuevo para ellos. Esta acción no se puede deshacer.'
+                        : 'Esto eliminará todos los pasos que ha añadido o modificado en esta sesión. No se guardará ningún cambio.'
+                    }
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={existingProtocol ? handleDeleteProtocol : () => { setSteps([]); setShowDeleteAllAlert(false) }} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                        {existingProtocol ? 'Sí, eliminar Protocolo' : 'Sí, limpiar todo'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
-    
-    <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Editar Paso del Protocolo</DialogTitle>
-                <DialogDescription>
-                    Modifique la descripción y la prioridad de este paso.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                    <Label htmlFor="step-text">Descripción del Paso</Label>
-                    <Textarea 
-                        id="step-text"
-                        value={editedStepText}
-                        onChange={(e) => setEditedStepText(e.target.value)}
-                        className="min-h-32"
-                    />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="step-priority">Prioridad</Label>
-                    <Select value={editedStepPriority} onValueChange={(v) => setEditedStepPriority(v as any)}>
-                        <SelectTrigger id="step-priority">
-                            <SelectValue placeholder="Seleccione una prioridad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="baja">Baja</SelectItem>
-                            <SelectItem value="media">Media</SelectItem>
-                            <SelectItem value="alta">Alta</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setStepToEdit(null)}>Cancelar</Button>
-                <Button onClick={handleSaveEditedStep}>Guardar Cambios</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-    
-    <AlertDialog open={stepToDeleteIndex !== null} onOpenChange={() => setStepToDeleteIndex(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>¿Está seguro de eliminar este paso?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta acción no se puede deshacer. El paso será eliminado de la lista actual.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-    
-    <AlertDialog open={showDeleteAllAlert} onOpenChange={setShowDeleteAllAlert}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>
-                    {existingProtocol ? '¿Eliminar este Protocolo Base?' : '¿Limpiar todos los pasos?'}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {existingProtocol 
-                    ? 'Esta acción eliminará permanentemente este protocolo base. Los equipos que lo usaban ya no tendrán un protocolo asignado y deberá crear uno nuevo para ellos. Esta acción no se puede deshacer.'
-                    : 'Esto eliminará todos los pasos que ha añadido o modificado en esta sesión. No se guardará ningún cambio.'
-                  }
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={existingProtocol ? handleDeleteProtocol : () => { setSteps([]); setShowDeleteAllAlert(false) }} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                    {existingProtocol ? 'Sí, eliminar Protocolo' : 'Sí, limpiar todo'}
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-    </>
   );
 }
 
@@ -731,3 +731,5 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
+
+    
