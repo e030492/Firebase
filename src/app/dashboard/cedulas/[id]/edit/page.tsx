@@ -118,13 +118,23 @@ export default function EditCedulaPage() {
             const foundSystem = systems.find(s => s.name === foundEquipment.system);
             if (foundSystem) setSystemId(foundSystem.id);
 
-            if (cedula.protocolSteps && cedula.protocolSteps.length > 0) {
-                setProtocolSteps(cedula.protocolSteps.map(s => ({ ...s, notes: s.notes || '', imageUrl: s.imageUrl || '' })));
-            } else {
-                const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
-                const baseProtocolSteps = equipmentProtocol?.steps || [];
-                setProtocolSteps(baseProtocolSteps.map(s => ({...s, imageUrl: '', notes: ''})));
-            }
+            const getSafeProtocolSteps = (): ProtocolStep[] => {
+              if (cedula.protocolSteps && cedula.protocolSteps.length > 0) {
+                return cedula.protocolSteps.map(s => ({
+                  ...s,
+                  notes: s.notes || '',
+                  imageUrl: s.imageUrl || '',
+                }));
+              }
+              const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
+              return (equipmentProtocol?.steps || []).map(s => ({
+                ...s,
+                notes: '',
+                imageUrl: '',
+                completion: 0,
+              }));
+            };
+            setProtocolSteps(getSafeProtocolSteps());
         } else {
             setProtocolSteps([]);
         }
@@ -631,5 +641,3 @@ export default function EditCedulaPage() {
     </form>
   );
 }
-
-    
