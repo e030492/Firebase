@@ -105,8 +105,9 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
 }
 
 async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
-    const docRef = await addDoc(collection(db, collectionName), data);
-    return { ...data, id: docRef.id } as T;
+    const sanitizedData = JSON.parse(JSON.stringify(data));
+    const docRef = await addDoc(collection(db, collectionName), sanitizedData);
+    return { ...sanitizedData, id: docRef.id } as T;
 }
 
 async function updateDocument<T>(collectionName: string, id: string, data: Partial<T>): Promise<T> {
