@@ -83,7 +83,7 @@ List of available base protocols:
   - Type: {{{this.type}}}
   - Brand: {{{this.brand}}}
   - Model: {{{this.model}}}
-  - Steps: {{jsonEncode this.steps}}
+  - Steps: (A list of {{this.steps.length}} maintenance steps)
 {{/each}}
 
 Based on the provided list, identify the single best protocol for the given equipment.
