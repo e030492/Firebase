@@ -64,7 +64,7 @@ const isValidImageUrl = (url: string | null | undefined): boolean => {
 
 // Main Page Component
 function BaseProtocolManager() {
-  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments: allEquipments, clients, systems } = useData();
+  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments: allEquipments, clients, systems } from useData();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -443,7 +443,7 @@ function BaseProtocolManager() {
                     {similarEquipments.length > 0 && (
                         <Card>
                             <CardHeader>
-                                <CardTitle>Equipos Similares Encontrados</CardTitle>
+                                <CardTitle>Equipos Similares Encontrados ({similarEquipments.length})</CardTitle>
                                 <CardDescription>La IA sugiere que estos equipos pueden compartir el mismo protocolo. Desmarque los que no desee incluir.</CardDescription>
                             </CardHeader>
                             <CardContent>
