@@ -35,7 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle } from 'lucide-react';
 import { Protocol, Equipment, ProtocolStep, Client, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -50,7 +50,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
@@ -59,13 +59,11 @@ import { cn } from '@/lib/utils';
 
 const isValidImageUrl = (url: string | null | undefined): boolean => {
     if (!url) return false;
-    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image');
+    return url.startsWith('http') || url.startsWith('data:image');
 };
 
 // Main Page Component
 function BaseProtocolManager() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments: allEquipments, clients, systems } = useData();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -85,6 +83,7 @@ function BaseProtocolManager() {
   const [editedStepText, setEditedStepText] = useState('');
   const [editedStepPriority, setEditedStepPriority] = useState<'baja' | 'media' | 'alta'>('baja');
   const [stepToDeleteIndex, setStepToDeleteIndex] = useState<number | null>(null);
+  const [isAddEquipmentDialogOpen, setIsAddEquipmentDialogOpen] = useState(false);
 
   // Filters
   const [clientFilter, setClientFilter] = useState('');
@@ -153,6 +152,16 @@ function BaseProtocolManager() {
         setConfirmedEquipments(prev => prev.filter(e => e.id !== equipmentId));
     }
   };
+
+  const handleManualAddEquipment = (equipmentToAdd: Equipment) => {
+    if (!confirmedEquipments.some(e => e.id === equipmentToAdd.id)) {
+        setConfirmedEquipments(prev => [...prev, equipmentToAdd]);
+    }
+    if (!similarEquipments.some(e => e.id === equipmentToAdd.id)) {
+        setSimilarEquipments(prev => [...prev, equipmentToAdd]);
+    }
+    setIsAddEquipmentDialogOpen(false);
+  };
   
   const generateProtocolForGroup = async () => {
     if (confirmedEquipments.length === 0) {
@@ -190,7 +199,9 @@ function BaseProtocolManager() {
     
     setIsSaving(true);
     
-    const { type, brand, model } = selectedEquipment;
+    // Create a representative ID from the first confirmed equipment
+    const representativeEquipment = confirmedEquipments[0];
+    const { type, brand, model } = representativeEquipment;
     const protocolId = `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
 
     try {
@@ -454,6 +465,10 @@ function BaseProtocolManager() {
                                         </div>
                                     ))}
                                 </div>
+                                <Button variant="outline" size="sm" className="mt-4" onClick={() => setIsAddEquipmentDialogOpen(true)}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Añadir Equipo Manualmente
+                                </Button>
                             </CardContent>
                             <CardFooter>
                                 <Button onClick={generateProtocolForGroup} disabled={confirmedEquipments.length === 0 || isGeneratingProtocol}>
@@ -595,6 +610,38 @@ function BaseProtocolManager() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={isAddEquipmentDialogOpen} onOpenChange={setIsAddEquipmentDialogOpen}>
+            <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Añadir Equipo Manualmente al Grupo</DialogTitle>
+                    <DialogDescription>
+                        Seleccione un equipo del inventario para añadirlo al grupo que compartirá el protocolo.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-96 mt-4">
+                    <div className="space-y-2 pr-4">
+                        {allEquipments
+                            .filter(eq => !confirmedEquipments.some(confirmed => confirmed.id === eq.id))
+                            .map(eq => (
+                                <button 
+                                    key={eq.id}
+                                    onClick={() => handleManualAddEquipment(eq)}
+                                    className="w-full text-left p-2 border rounded-md flex items-center gap-3 transition-colors hover:bg-muted/50"
+                                >
+                                    <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
+                                    <div className="flex-1">
+                                        <p className="font-semibold">{eq.name}</p>
+                                        <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
+                                    </div>
+                                </button>
+                            ))
+                        }
+                    </div>
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
+
     </div>
   );
 }

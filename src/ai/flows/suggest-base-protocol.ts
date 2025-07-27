@@ -95,6 +95,7 @@ Primary Equipment to find matches for:
 - Type: {{{equipment.type}}}
 - Brand: {{{equipment.brand}}}
 - Model: {{{equipment.model}}}
+- Description: {{{equipment.description}}}
 
 List of all other available equipment to search through:
 {{#each allEquipments}}
@@ -103,6 +104,7 @@ List of all other available equipment to search through:
   - Type: {{{this.type}}}
   - Brand: {{{this.brand}}}
   - Model: {{{this.model}}}
+  - Description: {{{this.description}}}
 {{/each}}
 
 Based on the provided list, return a JSON array of complete equipment objects that are suitable to share a protocol. The final list MUST include the primary equipment object.`,
