@@ -451,8 +451,12 @@ function BaseProtocolManager() {
                                                         />
                                                         <div>
                                                             <p className="font-semibold">{eq.name}</p>
-                                                            <p className="text-xs text-muted-foreground">{eq.type}</p>
-                                                            <p className="text-xs text-muted-foreground">{eq.brand} - {eq.model}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Tipo: <span className="text-foreground font-normal">{eq.type}</span>
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {eq.brand} - Modelo: <span className="text-foreground font-normal">{eq.model}</span>
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 </Button>
@@ -494,7 +498,7 @@ function BaseProtocolManager() {
                                                             )}
                                                             <div className="flex flex-col text-left">
                                                                 <p className="font-semibold">{index + 1}. {eq.name}</p>
-                                                                <p className="text-xs text-muted-foreground">Tipo: {eq.type}</p>
+                                                                <p className="text-xs text-muted-foreground">Tipo: <span className="text-foreground">{eq.type}</span></p>
                                                                 <p className="text-xs text-muted-foreground">Marca: {eq.brand} | Modelo: {eq.model}</p>
                                                             </div>
                                                         </div>
