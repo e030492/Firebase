@@ -119,5 +119,4 @@ const suggestBaseProtocolFlow = ai.defineFlow(
     return response.output;
   }
 );
-
     

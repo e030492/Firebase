@@ -84,6 +84,7 @@ function BaseProtocolManager() {
   const [editedStepPriority, setEditedStepPriority] = useState<'baja' | 'media' | 'alta'>('baja');
   const [stepToDeleteIndex, setStepToDeleteIndex] = useState<number | null>(null);
   const [isAddEquipmentDialogOpen, setIsAddEquipmentDialogOpen] = useState(false);
+  const [manualSelectionIds, setManualSelectionIds] = useState<string[]>([]);
 
   // Filters
   const [clientFilter, setClientFilter] = useState('');
@@ -175,15 +176,35 @@ function BaseProtocolManager() {
     }
   };
 
-  const handleManualAddEquipment = (equipmentToAdd: Equipment) => {
-    if (!confirmedEquipments.some(e => e.id === equipmentToAdd.id)) {
-        setConfirmedEquipments(prev => [...prev, equipmentToAdd]);
-    }
-    if (!similarEquipments.some(e => e.id === equipmentToAdd.id)) {
-        setSimilarEquipments(prev => [...prev, equipmentToAdd]);
-    }
-    setIsAddEquipmentDialogOpen(false);
-  };
+    const handleManualAddConfirm = () => {
+        const equipmentsToAdd = allEquipments.filter(eq => manualSelectionIds.includes(eq.id));
+        const newConfirmed = [...confirmedEquipments];
+        const newSimilar = [...similarEquipments];
+
+        equipmentsToAdd.forEach(eq => {
+            if (!newConfirmed.some(c => c.id === eq.id)) {
+                newConfirmed.push(eq);
+            }
+            if (!newSimilar.some(s => s.id === eq.id)) {
+                newSimilar.push(eq);
+            }
+        });
+
+        setConfirmedEquipments(newConfirmed);
+        setSimilarEquipments(newSimilar);
+        setManualSelectionIds([]);
+        setIsAddEquipmentDialogOpen(false);
+    };
+
+    const handleManualSelectionToggle = (equipmentId: string, checked: boolean) => {
+        setManualSelectionIds(prev => {
+            if (checked) {
+                return [...prev, equipmentId];
+            } else {
+                return prev.filter(id => id !== equipmentId);
+            }
+        });
+    };
   
   const generateProtocolForGroup = async () => {
     if (confirmedEquipments.length === 0) {
@@ -627,9 +648,9 @@ function BaseProtocolManager() {
         <Dialog open={isAddEquipmentDialogOpen} onOpenChange={setIsAddEquipmentDialogOpen}>
             <DialogContent className="max-w-3xl">
                 <DialogHeader>
-                    <DialogTitle>Añadir Equipo Manualmente al Grupo</DialogTitle>
+                    <DialogTitle>Añadir Equipos Manualmente al Grupo</DialogTitle>
                     <DialogDescription>
-                        Seleccione un equipo del inventario para añadirlo al grupo que compartirá el protocolo.
+                        Seleccione los equipos del inventario para añadirlos al grupo que compartirá el protocolo.
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-96 mt-4">
@@ -637,21 +658,30 @@ function BaseProtocolManager() {
                         {allEquipments
                             .filter(eq => !confirmedEquipments.some(confirmed => confirmed.id === eq.id))
                             .map(eq => (
-                                <button 
-                                    key={eq.id}
-                                    onClick={() => handleManualAddEquipment(eq)}
-                                    className="w-full text-left p-2 border rounded-md flex items-center gap-3 transition-colors hover:bg-muted/50"
-                                >
-                                    <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
-                                    <div className="flex-1">
-                                        <p className="font-semibold">{eq.name}</p>
-                                        <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
-                                    </div>
-                                </button>
+                                <div key={eq.id} className="flex items-center gap-3 p-2 border rounded-md">
+                                    <Checkbox
+                                        id={`manual-add-${eq.id}`}
+                                        checked={manualSelectionIds.includes(eq.id)}
+                                        onCheckedChange={(checked) => handleManualSelectionToggle(eq.id, !!checked)}
+                                    />
+                                    <Label htmlFor={`manual-add-${eq.id}`} className="flex items-center gap-3 cursor-pointer flex-1">
+                                        <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
+                                        <div className="flex-1">
+                                            <p className="font-semibold">{eq.name}</p>
+                                            <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
+                                        </div>
+                                    </Label>
+                                </div>
                             ))
                         }
                     </div>
                 </ScrollArea>
+                 <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddEquipmentDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleManualAddConfirm} disabled={manualSelectionIds.length === 0}>
+                       Añadir Seleccionados ({manualSelectionIds.length})
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
 
@@ -666,5 +696,3 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
-
-    
