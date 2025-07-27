@@ -72,82 +72,80 @@ export default function EditCedulaPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const dataLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!loading && cedulaId) {
-      const cedulaData = cedulas.find(c => c.id === cedulaId);
-      if (cedulaData) {
-        setCedula(cedulaData);
-      } else {
-        setNotFound(true);
-      }
-    }
-  }, [cedulaId, cedulas, loading]);
+    if (loading) return;
   
-  useEffect(() => {
-    if (cedula && !dataLoadedRef.current) {
-        setFolio(cedula.folio);
-        setDescription(cedula.description);
-        setStatus(cedula.status);
-        setSemaforo(cedula.semaforo || '');
-
-        if (cedula.creationDate) {
-            const dateObj = new Date(cedula.creationDate);
-            setCreationDate(dateObj);
-            setCreationTime(format(dateObj, 'HH:mm'));
-        }
-
-        const foundClient = clients.find(c => c.name === cedula.client);
-        if (foundClient) setClientId(foundClient.id);
-        
-        const currentTechnicians = users.filter(u => u.role === 'Técnico');
-        const currentSupervisors = users.filter(u => u.role === 'Supervisor');
-        setTechnicians(currentTechnicians);
-        setSupervisors(currentSupervisors);
-
-        const foundTechnician = currentTechnicians.find(u => u.name === cedula.technician);
-        if (foundTechnician) setTechnicianId(foundTechnician.id);
-
-        const foundSupervisor = currentSupervisors.find(u => u.name === cedula.supervisor);
-        if (foundSupervisor) setSupervisorId(foundSupervisor.id);
-
-        const foundEquipment = allEquipments.find(e => e.name === cedula.equipment && e.client === cedula.client);
-        if (foundEquipment) {
-            setEquipmentId(foundEquipment.id);
-            const foundSystem = systems.find(s => s.name === foundEquipment.system);
-            if (foundSystem) setSystemId(foundSystem.id);
-
-            const getSafeProtocolSteps = (): ProtocolStep[] => {
-              if (cedula.protocolSteps && cedula.protocolSteps.length > 0) {
-                return cedula.protocolSteps.map(s => ({
-                  ...s,
-                  completion: s.completion || 0,
-                  notes: s.notes || '',
-                  imageUrl: s.imageUrl || '',
-                  percentage: s.percentage || 0,
-                  priority: s.priority || 'baja',
-                }));
-              }
-              const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
-              return (equipmentProtocol?.steps || []).map(s => ({
-                ...s,
-                completion: 0,
-                notes: '',
-                imageUrl: '',
-                percentage: s.percentage || 0,
-                priority: s.priority || 'baja',
-              }));
-            };
-            setProtocolSteps(getSafeProtocolSteps());
-        } else {
-            setProtocolSteps([]);
-        }
-        
-        dataLoadedRef.current = true;
-        setPageLoading(false);
+    const cedulaData = cedulas.find(c => c.id === cedulaId);
+    if (!cedulaData) {
+      setNotFound(true);
+      setPageLoading(false);
+      return;
     }
-  }, [cedula, clients, allEquipments, users, systems, protocols]);
+  
+    setCedula(cedulaData);
+    setFolio(cedulaData.folio);
+    setDescription(cedulaData.description);
+    setStatus(cedulaData.status);
+    setSemaforo(cedulaData.semaforo || '');
+  
+    if (cedulaData.creationDate) {
+      const dateObj = new Date(cedulaData.creationDate);
+      setCreationDate(dateObj);
+      setCreationTime(format(dateObj, 'HH:mm'));
+    }
+  
+    const currentTechnicians = users.filter(u => u.role === 'Técnico');
+    const currentSupervisors = users.filter(u => u.role === 'Supervisor');
+    setTechnicians(currentTechnicians);
+    setSupervisors(currentSupervisors);
+  
+    const foundClient = clients.find(c => c.name === cedulaData.client);
+    if (foundClient) setClientId(foundClient.id);
+  
+    const foundTechnician = currentTechnicians.find(u => u.name === cedulaData.technician);
+    if (foundTechnician) setTechnicianId(foundTechnician.id);
+  
+    const foundSupervisor = currentSupervisors.find(s => s.name === cedulaData.supervisor);
+    if (foundSupervisor) setSupervisorId(foundSupervisor.id);
+  
+    const foundEquipment = allEquipments.find(e => e.name === cedulaData.equipment && e.client === cedulaData.client);
+    if (foundEquipment) {
+      setEquipmentId(foundEquipment.id);
+      
+      const foundSystem = systems.find(s => s.name === foundEquipment.system);
+      if (foundSystem) setSystemId(foundSystem.id);
+      
+      const getSafeProtocolSteps = (): ProtocolStep[] => {
+        if (cedulaData.protocolSteps && cedulaData.protocolSteps.length > 0) {
+          return cedulaData.protocolSteps.map(s => ({
+            ...s,
+            completion: s.completion || 0,
+            notes: s.notes || '',
+            imageUrl: s.imageUrl || '',
+            percentage: s.percentage || 0,
+            priority: s.priority || 'baja',
+          }));
+        }
+        const equipmentProtocol = protocols.find(p => p.type === foundEquipment.type && p.brand === foundEquipment.brand && p.model === foundEquipment.model);
+        return (equipmentProtocol?.steps || []).map(s => ({
+          ...s,
+          completion: 0,
+          notes: '',
+          imageUrl: '',
+          percentage: s.percentage || 0,
+          priority: s.priority || 'baja',
+        }));
+      };
+      setProtocolSteps(getSafeProtocolSteps());
+    } else {
+      setProtocolSteps([]);
+    }
+  
+    setPageLoading(false);
+  
+  }, [cedulaId, cedulas, clients, allEquipments, users, systems, protocols, loading]);
+  
 
   useEffect(() => {
     if (clientId && systemId) {

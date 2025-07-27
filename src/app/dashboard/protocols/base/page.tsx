@@ -151,63 +151,50 @@ function BaseProtocolManager() {
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   
   const { equipmentsWithProtocol, equipmentsWithoutProtocol } = useMemo(() => {
-    const withProtocolGroups = new Map<string, Equipment[]>();
-    const withoutProtocolGroups = new Map<string, {
-        representative: Equipment;
-        count: number;
-        indices: number[];
-    }>();
+    const withProtocol = new Map<string, Equipment[]>();
+    const withoutProtocolGroups = new Map<string, Equipment[]>();
 
-    // Group equipments by a unique identifier (type|brand|model)
     const equipmentGroups = new Map<string, Equipment[]>();
-    equipments.forEach((eq) => {
-        if (eq.type && eq.brand && eq.model) {
-            const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-            if (!equipmentGroups.has(identifier)) {
-                equipmentGroups.set(identifier, []);
-            }
-            equipmentGroups.get(identifier)!.push(eq);
+    equipments.forEach(eq => {
+      if (eq.type && eq.brand && eq.model) {
+        const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
+        if (!equipmentGroups.has(identifier)) {
+          equipmentGroups.set(identifier, []);
         }
+        equipmentGroups.get(identifier)!.push(eq);
+      }
     });
 
-    // Check each group against existing protocols with fuzzy logic
     equipmentGroups.forEach((group, identifier) => {
-        const representative = group[0];
-        // A group has a protocol if a protocol's type is a substring of the group's type.
-        const foundProtocol = protocols.find(p => 
-            representative.type.toLowerCase().includes(p.type.toLowerCase())
-        );
+      const representative = group[0];
+      const foundProtocol = protocols.find(p => 
+        representative.type.toLowerCase().includes(p.type.toLowerCase())
+      );
 
-        if (foundProtocol) {
-            if (!withProtocolGroups.has(foundProtocol.id)) {
-                withProtocolGroups.set(foundProtocol.id, []);
-            }
-            withProtocolGroups.get(foundProtocol.id)!.push(...group);
-        } else {
-            const indices = group.map(eq => equipments.findIndex(e => e.id === eq.id) + 1);
-            withoutProtocolGroups.set(identifier, {
-                representative: representative,
-                count: group.length,
-                indices: indices
-            });
+      if (foundProtocol) {
+        if (!withProtocol.has(foundProtocol.id)) {
+          withProtocol.set(foundProtocol.id, []);
         }
+        withProtocol.get(foundProtocol.id)!.push(...group);
+      } else {
+        withoutProtocolGroups.set(identifier, group);
+      }
     });
 
-    const equipmentsWithProtocol = Array.from(withProtocolGroups.entries()).map(([protocolId, equipmentList]) => {
-        const protocol = protocols.find(p => p.id === protocolId)!;
-        return { protocol, equipments: equipmentList };
+    const withProtocolResult = Array.from(withProtocol.entries()).map(([protocolId, equipmentList]) => {
+      const protocol = protocols.find(p => p.id === protocolId)!;
+      return { protocol, equipments: equipmentList };
     });
+
+    const withoutProtocolResult = Array.from(withoutProtocolGroups.values())
+      .map(group => group[0])
+      .sort((a, b) => a.name.localeCompare(b.name));
     
-    const equipmentsWithoutProtocol = Array.from(withoutProtocolGroups.values())
-        .map(group => group.representative)
-        .sort((a,b) => a.name.localeCompare(b.name));
-
     return { 
-        equipmentsWithProtocol, 
-        equipmentsWithoutProtocol 
+      equipmentsWithProtocol: withProtocolResult,
+      equipmentsWithoutProtocol: withoutProtocolResult 
     };
-}, [equipments, protocols]);
-
+  }, [equipments, protocols]);
 
 
   useEffect(() => {
@@ -417,6 +404,7 @@ function BaseProtocolManager() {
   const isAllSelected = aiState.result ? selectedSteps.length === aiState.result.length && aiState.result.length > 0 : false;
   const { type, brand, model } = equipmentData;
   const isFormDisabled = !type || !brand || !model;
+  
   const selectedEquipmentInfo = useMemo(() => {
     if (!selectedEquipmentIdentifier) return null;
     return equipments.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
@@ -467,7 +455,7 @@ function BaseProtocolManager() {
                          <Card>
                             <CardHeader>
                                 <CardTitle>Equipos sin Protocolo</CardTitle>
-                                <CardDescription>Seleccione un equipo para crear un nuevo protocolo base.</CardDescription>
+                                <CardDescription>Seleccione un tipo de equipo para crear un nuevo protocolo base.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid gap-2">
@@ -483,9 +471,9 @@ function BaseProtocolManager() {
                                         <SelectContent>
                                             {equipmentsWithoutProtocol.map((eq, index) => {
                                                 const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-                                                const groupInfo = equipments.filter(e => `${e.type}|${e.brand}|${e.model}` === identifier);
-                                                const count = groupInfo.length;
-                                                const indices = groupInfo.map(e => equipments.findIndex(i => i.id === e.id) + 1);
+                                                const group = equipments.filter(e => `${e.type}|${e.brand}|${e.model}` === identifier);
+                                                const count = group.length;
+                                                const indices = group.map(e => equipments.findIndex(i => i.id === e.id) + 1);
 
                                                 return (
                                                 <SelectItem key={identifier} value={identifier}>
@@ -500,13 +488,13 @@ function BaseProtocolManager() {
                                                             )}
                                                             <div className="flex flex-col text-left">
                                                                 <p className="font-semibold">{index + 1}. {eq.name}</p>
-                                                                <p className="text-xs text-muted-foreground">Tipo: <span className="text-foreground">{eq.type}</span></p>
-                                                                <p className="text-xs text-muted-foreground">Marca: {eq.brand} | Modelo: {eq.model}</p>
+                                                                <p className="text-xs text-muted-foreground">Tipo: <span className="text-foreground font-normal">{eq.type}</span> | Modelo: <span className="font-normal text-foreground">{eq.model}</span></p>
+                                                                <p className="text-xs text-muted-foreground">Marca: {eq.brand}</p>
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-1">
                                                             <Badge variant="outline">x{count} Equipos</Badge>
-                                                            <Badge variant="secondary" className="text-xs">Regs: {indices.join(', ')}</Badge>
+                                                            {indices.length > 0 && <Badge variant="secondary" className="text-xs">Regs: {indices.map(i => `#${i}`).join(', ')}</Badge>}
                                                         </div>
                                                     </div>
                                                 </SelectItem>
@@ -570,7 +558,7 @@ function BaseProtocolManager() {
                                             {selectedGroupInfo && (
                                               <div className="flex items-center gap-4 pt-2">
                                                   <Badge variant="outline">x{selectedGroupInfo.count} Equipos</Badge>
-                                                  <Badge variant="secondary" className="text-xs">Registros: {selectedGroupInfo.indices.map(i => `#${i}`).join(', ')}</Badge>
+                                                  {selectedGroupInfo.indices.length > 0 && <Badge variant="secondary" className="text-xs">Registros: {selectedGroupInfo.indices.map(i => `#${i}`).join(', ')}</Badge>}
                                               </div>
                                             )}
                                          </div>
@@ -853,7 +841,8 @@ function BaseProtocolManager() {
                                                                     />
                                                                     <div>
                                                                         <p className="font-semibold">{eq.name}</p>
-                                                                        <p className="text-xs text-muted-foreground">{eq.type} | {eq.brand} | {eq.model}</p>
+                                                                        <p className="text-xs text-muted-foreground">Tipo: <span className="font-normal text-foreground">{eq.type}</span> | Modelo: <span className="font-normal text-foreground">{eq.model}</span></p>
+                                                                        <p className="text-xs text-muted-foreground">Marca: {eq.brand}</p>
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -944,9 +933,8 @@ function BaseProtocolManager() {
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction onClick={() => {
-                        const protocolToHandle = existingProtocol;
-                        if (protocolToHandle) {
-                            setProtocolToDelete(protocolToHandle);
+                        if (existingProtocol) {
+                            setProtocolToDelete(existingProtocol);
                         } else {
                             setSteps([]);
                         }

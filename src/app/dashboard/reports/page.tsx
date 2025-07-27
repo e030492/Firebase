@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Printer, ChevronDown, Camera, ArrowLeft, ShieldCheck, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Printer, ChevronDown, Camera, ArrowLeft, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Cedula, Client, Equipment, System } from '@/lib/services';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
