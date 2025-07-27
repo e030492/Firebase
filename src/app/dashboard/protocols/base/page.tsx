@@ -11,6 +11,7 @@ import {
   type SuggestMaintenanceProtocolOutput,
 } from '@/ai/flows/suggest-maintenance-protocol';
 import { generateProtocolStepImage } from '@/ai/flows/generate-protocol-step-image';
+import { suggestBaseProtocol, SuggestBaseProtocolOutput } from '@/ai/flows/suggest-base-protocol';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -55,7 +56,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { suggestBaseProtocol } from '@/ai/flows/suggest-base-protocol';
 
 
 type State = {
@@ -150,10 +150,10 @@ function BaseProtocolManager() {
 
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   
-  const { equipmentsWithProtocol, equipmentsWithoutProtocol } = useMemo(() => {
-    const withProtocol = new Map<string, Equipment[]>();
-    const withoutProtocolGroups = new Map<string, Equipment[]>();
+  const [isSuggestingProtocol, setIsSuggestingProtocol] = useState(false);
+  const [suggestedProtocol, setSuggestedProtocol] = useState<SuggestBaseProtocolOutput | null>(null);
 
+  const uniqueEquipmentTypes = useMemo(() => {
     const equipmentGroups = new Map<string, Equipment[]>();
     equipments.forEach(eq => {
       if (eq.type && eq.brand && eq.model) {
@@ -164,37 +164,11 @@ function BaseProtocolManager() {
         equipmentGroups.get(identifier)!.push(eq);
       }
     });
-
-    equipmentGroups.forEach((group, identifier) => {
-      const representative = group[0];
-      const foundProtocol = protocols.find(p => 
-        representative.type.toLowerCase().includes(p.type.toLowerCase())
-      );
-
-      if (foundProtocol) {
-        if (!withProtocol.has(foundProtocol.id)) {
-          withProtocol.set(foundProtocol.id, []);
-        }
-        withProtocol.get(foundProtocol.id)!.push(...group);
-      } else {
-        withoutProtocolGroups.set(identifier, group);
-      }
-    });
-
-    const withProtocolResult = Array.from(withProtocol.entries()).map(([protocolId, equipmentList]) => {
-      const protocol = protocols.find(p => p.id === protocolId)!;
-      return { protocol, equipments: equipmentList };
-    });
-
-    const withoutProtocolResult = Array.from(withoutProtocolGroups.values())
+    return Array.from(equipmentGroups.values())
       .map(group => group[0])
-      .sort((a, b) => a.name.localeCompare(b.name));
-    
-    return { 
-      equipmentsWithProtocol: withProtocolResult,
-      equipmentsWithoutProtocol: withoutProtocolResult 
-    };
-  }, [equipments, protocols]);
+      .sort((a,b) => a.name.localeCompare(b.name));
+
+  }, [equipments]);
 
 
   useEffect(() => {
@@ -237,6 +211,64 @@ function BaseProtocolManager() {
         formAction(formData);
     });
   };
+  
+  const handleAnalyzeWithAI = async () => {
+    if (!selectedEquipmentIdentifier) return;
+    
+    setIsSuggestingProtocol(true);
+    setSuggestedProtocol(null);
+    const selectedEquipment = uniqueEquipmentTypes.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
+    if (!selectedEquipment || protocols.length === 0) {
+      setSuggestedProtocol({
+        protocol: null,
+        reason: protocols.length === 0 ? "No hay protocolos base en el sistema para comparar." : "No se encontró el equipo seleccionado."
+      });
+      setIsSuggestingProtocol(false);
+      return;
+    }
+    
+    try {
+      const suggestion = await suggestBaseProtocol({
+        equipment: {
+          name: selectedEquipment.name,
+          type: selectedEquipment.type,
+          brand: selectedEquipment.brand,
+          model: selectedEquipment.model,
+        },
+        existingProtocols: protocols,
+      });
+      setSuggestedProtocol(suggestion);
+    } catch (error) {
+      console.error("Error suggesting protocol:", error);
+      toast({
+        title: "Error de IA",
+        description: "No se pudo obtener una sugerencia de protocolo.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSuggestingProtocol(false);
+    }
+  };
+  
+  const handleConfirmSuggestedProtocol = () => {
+    if (suggestedProtocol?.protocol) {
+      setEquipmentData({
+        type: suggestedProtocol.protocol.type,
+        brand: suggestedProtocol.protocol.brand,
+        model: suggestedProtocol.protocol.model
+      });
+      const identifier = `${suggestedProtocol.protocol.type}|${suggestedProtocol.protocol.brand}|${suggestedProtocol.protocol.model}`;
+      setSelectedEquipmentIdentifier(identifier);
+      setSteps(suggestedProtocol.protocol.steps);
+      setExistingProtocol(suggestedProtocol.protocol);
+      toast({
+        title: "Protocolo Cargado",
+        description: "Se han cargado los datos del protocolo base sugerido."
+      })
+    }
+    setSuggestedProtocol(null);
+  };
+
 
   const handleAddSelectedSteps = () => {
     if (selectedSteps.length === 0) {
@@ -407,8 +439,8 @@ function BaseProtocolManager() {
   
   const selectedEquipmentInfo = useMemo(() => {
     if (!selectedEquipmentIdentifier) return null;
-    return equipments.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
-  }, [selectedEquipmentIdentifier, equipments]);
+    return uniqueEquipmentTypes.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
+  }, [selectedEquipmentIdentifier, uniqueEquipmentTypes]);
 
    const selectedGroupInfo = useMemo(() => {
     if (!selectedEquipmentIdentifier) return null;
@@ -423,6 +455,15 @@ function BaseProtocolManager() {
       indices: indices
     }
   }, [selectedEquipmentIdentifier, equipments]);
+  
+  const equipmentsWithProtocol = useMemo(() => {
+    return protocols.map(protocol => {
+      const associatedEquipments = equipments.filter(eq => {
+        return eq.type.toLowerCase().includes(protocol.type.toLowerCase());
+      });
+      return { protocol, equipments: associatedEquipments };
+    });
+  }, [protocols, equipments]);
 
   return (
     <div className="flex flex-col h-full p-4 md:p-6">
@@ -454,22 +495,22 @@ function BaseProtocolManager() {
                     <div className="lg:col-span-1 space-y-8">
                          <Card>
                             <CardHeader>
-                                <CardTitle>Equipos sin Protocolo</CardTitle>
-                                <CardDescription>Seleccione un tipo de equipo para crear un nuevo protocolo base.</CardDescription>
+                                <CardTitle>Selección de Equipo</CardTitle>
+                                <CardDescription>Seleccione un tipo de equipo para crear o editar su protocolo base.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid gap-2">
-                                    <Label>Seleccionar un tipo de equipo</Label>
+                                    <Label>Tipos de Equipo Disponibles</Label>
                                     <Select 
                                       value={selectedEquipmentIdentifier} 
                                       onValueChange={handleEquipmentTypeChange}
-                                      disabled={equipmentsWithoutProtocol.length === 0}
+                                      disabled={uniqueEquipmentTypes.length === 0}
                                     >
                                         <SelectTrigger className="h-auto">
                                             <SelectValue placeholder="Seleccione un equipo..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {equipmentsWithoutProtocol.map((eq, index) => {
+                                            {uniqueEquipmentTypes.map((eq, index) => {
                                                 const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
                                                 const group = equipments.filter(e => `${e.type}|${e.brand}|${e.model}` === identifier);
                                                 const count = group.length;
@@ -487,7 +528,7 @@ function BaseProtocolManager() {
                                                                 </div>
                                                             )}
                                                             <div className="flex flex-col text-left">
-                                                                <p className="font-semibold">{index + 1}. {eq.name}</p>
+                                                                <p className="font-semibold">{eq.name}</p>
                                                                 <p className="text-xs text-muted-foreground">Tipo: <span className="text-foreground font-normal">{eq.type}</span> | Modelo: <span className="font-normal text-foreground">{eq.model}</span></p>
                                                                 <p className="text-xs text-muted-foreground">Marca: {eq.brand}</p>
                                                             </div>
@@ -524,7 +565,7 @@ function BaseProtocolManager() {
                                     <CardHeader>
                                         <CardTitle>Detalles del Equipo Seleccionado</CardTitle>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="space-y-4">
                                       <div className="grid md:grid-cols-3 gap-6 border rounded-lg p-4">
                                          <div className="md:col-span-1">
                                              <Image 
@@ -562,6 +603,12 @@ function BaseProtocolManager() {
                                               </div>
                                             )}
                                          </div>
+                                      </div>
+                                      <div>
+                                        <Button onClick={handleAnalyzeWithAI} disabled={isSuggestingProtocol || protocols.length === 0}>
+                                            {isSuggestingProtocol ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4"/>}
+                                            Buscar Protocolo Existente con IA
+                                        </Button>
                                       </div>
                                     </CardContent>
                                 </Card>
@@ -863,6 +910,66 @@ function BaseProtocolManager() {
                 </Card>
             </div>
         </div>
+        
+        <Dialog open={!!suggestedProtocol} onOpenChange={(open) => !open && setSuggestedProtocol(null)}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <div className='flex items-center gap-2 mb-2'>
+                        <Wand2 className="h-6 w-6 text-primary" />
+                        <DialogTitle>Sugerencia de Protocolo Base por IA</DialogTitle>
+                    </div>
+                    <DialogDescription>
+                        {suggestedProtocol?.reason}
+                    </DialogDescription>
+                </DialogHeader>
+                {suggestedProtocol?.protocol ? (
+                    <div className="mt-4 space-y-4">
+                        <div className="grid md:grid-cols-3 gap-4 border rounded-lg p-4 bg-muted/50">
+                            <div className="grid gap-1">
+                                <Label className="text-muted-foreground">Tipo de Equipo</Label>
+                                <p className="font-semibold">{suggestedProtocol.protocol.type}</p>
+                            </div>
+                            <div className="grid gap-1">
+                                <Label className="text-muted-foreground">Marca</Label>
+                                <p className="font-semibold">{suggestedProtocol.protocol.brand}</p>
+                            </div>
+                            <div className="grid gap-1">
+                                <Label className="text-muted-foreground">Modelo</Label>
+                                <p className="font-semibold">{suggestedProtocol.protocol.model}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold mb-2">Pasos del Protocolo:</h4>
+                            <div className="border rounded-md max-h-60 overflow-y-auto">
+                                {suggestedProtocol.protocol.steps.map((step, index) => (
+                                    <div key={index} className={cn("p-3", index < suggestedProtocol.protocol!.steps.length - 1 && "border-b")}>
+                                        <div className="flex justify-between items-start">
+                                            <p className="text-sm text-foreground pr-4">{step.step}</p>
+                                            <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-8 border-dashed border-2 rounded-lg">
+                        <ListChecks className="h-12 w-12 text-muted-foreground mb-4"/>
+                        <h3 className="font-semibold">No se encontraron protocolos</h3>
+                        <p className="text-sm text-muted-foreground">
+                            No hay un protocolo base existente que la IA considere una buena coincidencia.
+                        </p>
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setSuggestedProtocol(null)}>Cancelar</Button>
+                    <Button onClick={handleConfirmSuggestedProtocol} disabled={!suggestedProtocol?.protocol}>
+                        Cargar Protocolo Sugerido
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
         <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
             <DialogContent>
                 <DialogHeader>
@@ -992,3 +1099,4 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
+
