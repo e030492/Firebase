@@ -64,7 +64,7 @@ const isValidImageUrl = (url: string | null | undefined): boolean => {
 
 // Main Page Component
 function BaseProtocolManager() {
-  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments: allEquipments, clients, systems } from useData();
+  const { protocols, loading, createProtocol, updateProtocol, equipments: allEquipments, clients, systems } = useData();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -150,13 +150,12 @@ function BaseProtocolManager() {
             allEquipments: simplifiedAllEquipments.filter(e => e.id !== selectedEquipment.id)
         });
         
-        // The result contains simplified equipment, so we need to map back to the full equipment objects
         const fullResultEquipments = result.map(simplifiedEq => 
             allEquipments.find(fullEq => fullEq.id === simplifiedEq.id)
         ).filter((eq): eq is Equipment => !!eq);
 
         setSimilarEquipments(fullResultEquipments);
-        setConfirmedEquipments(fullResultEquipments); // Pre-select all suggested
+        setConfirmedEquipments(fullResultEquipments);
     } catch (error) {
         console.error("Error finding similar equipments:", error);
         toast({ title: "Error de IA", description: "No se pudieron encontrar equipos similares.", variant: "destructive" });
@@ -193,8 +192,7 @@ function BaseProtocolManager() {
     }
     setIsGeneratingProtocol(true);
     
-    // Use the initially selected equipment as the reference for generation
-    const referenceEquipment = selectedEquipment!;
+    const referenceEquipment = confirmedEquipments[0];
     
     try {
         const result = await suggestMaintenanceProtocol({
@@ -215,14 +213,13 @@ function BaseProtocolManager() {
 
 
   const handleSaveProtocol = async () => {
-    if (steps.length === 0 || confirmedEquipments.length === 0 || !selectedEquipment) {
+    if (steps.length === 0 || confirmedEquipments.length === 0) {
         toast({ title: "Información Incompleta", description: "Faltan pasos o equipos para crear el protocolo.", variant: "destructive" });
         return;
     }
     
     setIsSaving(true);
     
-    // Create a representative ID from the first confirmed equipment
     const representativeEquipment = confirmedEquipments[0];
     const { type, brand, model } = representativeEquipment;
     const protocolId = `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
@@ -264,7 +261,6 @@ function BaseProtocolManager() {
   };
 
 
-  // --- Step Management Functions ---
   const openEditDialog = (step: ProtocolStep, index: number) => {
     setStepToEdit({ ...step, index });
     setEditedStepText(step.step);
@@ -362,7 +358,6 @@ function BaseProtocolManager() {
         </div>
         
         <div className="grid lg:grid-cols-3 gap-8 mt-6">
-            {/* Column 1: Equipment List */}
             <div className="lg:col-span-1">
                 <Card>
                     <CardHeader>
@@ -424,7 +419,6 @@ function BaseProtocolManager() {
                 </Card>
             </div>
 
-            {/* Column 2: Workflow */}
             <div className="lg:col-span-2 space-y-8">
                 {!selectedEquipment ? (
                     <Card className="flex flex-col items-center justify-center text-center min-h-[30rem]">
@@ -436,7 +430,6 @@ function BaseProtocolManager() {
                     </Card>
                 ) : (
                 <>
-                    {/* Step 1: Confirm selected equipment */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Equipo de Referencia Seleccionado</CardTitle>
@@ -457,17 +450,16 @@ function BaseProtocolManager() {
                         <CardFooter>
                             <Button onClick={findSimilarEquipments} disabled={isFindingSimilar}>
                                 {isFindingSimilar ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4" />}
-                                {isFindingSimilar ? "Buscando..." : "IA: Encontrar Equipos Similares para Protocolo"}
+                                {isFindingSimilar ? "Buscando..." : "IA: Encontrar Equipos Similares"}
                             </Button>
                         </CardFooter>
                     </Card>
 
-                    {/* Step 2: Show similar equipments */}
                     {similarEquipments.length > 0 && (
                         <Card>
                             <CardHeader>
-                                <CardTitle>Equipos Similares Encontrados ({similarEquipments.length})</CardTitle>
-                                <CardDescription>La IA sugiere que estos equipos pueden compartir el mismo protocolo. Desmarque los que no desee incluir.</CardDescription>
+                                <CardTitle>Equipos Similares Encontrados ({confirmedEquipments.length})</CardTitle>
+                                <CardDescription>La IA sugiere estos equipos para compartir protocolo. Desmarque los que no desee incluir.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
@@ -502,7 +494,6 @@ function BaseProtocolManager() {
                         </Card>
                     )}
                     
-                    {/* Step 3: Show generated protocol steps */}
                     {steps.length > 0 && (
                         <Card>
                             <CardHeader>
@@ -592,7 +583,6 @@ function BaseProtocolManager() {
             </div>
         </div>
         
-        {/* Dialogs and Alerts */}
         <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
             <DialogContent>
                 <DialogHeader>
@@ -676,3 +666,5 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
+
+    

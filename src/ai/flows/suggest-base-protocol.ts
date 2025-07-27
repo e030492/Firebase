@@ -18,7 +18,6 @@ const SimplifiedEquipmentSchema = z.object({
   brand: z.string(),
   model: z.string(),
   type: z.string(),
-  // Omit other fields for a cleaner prompt
 });
 type SimplifiedEquipment = z.infer<typeof SimplifiedEquipmentSchema>;
 
@@ -36,29 +35,6 @@ const SuggestBaseProtocolInputSchema = z.object({
 export type SuggestBaseProtocolInput = z.infer<
   typeof SuggestBaseProtocolInputSchema
 >;
-
-// The output should be the full equipment object, so we use the more detailed schema here.
-const EquipmentSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  alias: z.string().optional(),
-  description: z.string(),
-  brand: z.string(),
-  model: z.string(),
-  type: z.string(),
-  serial: z.string().optional(),
-  client: z.string(),
-  system: z.string(),
-  location: z.string(),
-  status: z.enum(['Activo', 'Inactivo', 'En Mantenimiento']),
-  maintenanceStartDate: z.string().optional(),
-  maintenancePeriodicity: z.string().optional(),
-  imageUrl: z.string().nullable().optional(),
-  ipAddress: z.string().optional(),
-  configUser: z.string().optional(),
-  configPassword: z.string().optional(),
-});
-
 
 const SuggestBaseProtocolOutputSchema = z
   .array(SimplifiedEquipmentSchema)
@@ -79,6 +55,10 @@ export async function suggestBaseProtocol(
   
   const result = await suggestBaseProtocolFlow(input);
 
+  if (!result) {
+    return [input.equipment];
+  }
+
   // Ensure the original equipment is always included in the final list.
   const resultMap = new Map(result.map(e => [e.id, e]));
   if (!resultMap.has(input.equipment.id)) {
@@ -97,7 +77,7 @@ You will be given a primary piece of equipment and a list of all other available
 
 The selection should be based on a fuzzy match of the equipment's characteristics. The most important fields for matching are 'type', 'brand', and 'model'. However, the match should not be strictly identical. For example, different types of cameras like 'Domo PTZ', 'Bala', or 'Mini Domo' can likely share the same base protocol. Similarly, models that only differ slightly in version numbers or minor features (e.g., 'DS-2CD2543G0-IS' vs 'DS-2CD2543G2-I') could also be grouped together.
 
-Critically, analyze the 'name' and 'description' to understand the equipment's function. If the function is the same, they are strong candidates for grouping.
+Critically, analyze the 'name' and 'description' to understand the equipment's function. If the function is the same, they are strong candidates for grouping. For example "Camara IP 8 MP" and "Camara IP 4 MP" should be grouped together.
 
 If no other equipment is similar, return an array containing only the primary equipment.
 
@@ -130,11 +110,14 @@ const suggestBaseProtocolFlow = ai.defineFlow(
   },
   async input => {
     const response = await prompt(input);
+    
     // Handle cases where the model doesn't return a valid structured output.
-    if (!response.output) {
+    if (!response || !response.output) {
       // If the AI fails to return a valid list, return at least the original equipment.
       return [input.equipment];
     }
     return response.output;
   }
 );
+
+    
