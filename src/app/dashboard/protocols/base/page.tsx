@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useActionState, useState, useEffect, Suspense, useRef, useTransition, useMemo } from 'react';
+import { useActionState, useState, useEffect, Suspense, useRef, useTransition, useMemo, Fragment } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -34,7 +34,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown } from 'lucide-react';
 import { Protocol, Equipment, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -54,6 +54,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 
 type State = {
@@ -144,6 +145,7 @@ function BaseProtocolManager() {
   const [showDeleteAllAlert, setShowDeleteAllAlert] = useState(false);
   
   const [generatingImageIndex, setGeneratingImageIndex] = useState<number | null>(null);
+  const [expandedProtocolId, setExpandedProtocolId] = useState<string | null>(null);
 
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   
@@ -409,6 +411,11 @@ function BaseProtocolManager() {
   const isFormDisabled = !type || !brand || !model;
   const selectedEquipmentInfo = useMemo(() => {
     if (!selectedEquipmentIdentifier) return null;
+    return equipments.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
+  }, [selectedEquipmentIdentifier, equipments]);
+
+   const selectedGroupInfo = useMemo(() => {
+    if (!selectedEquipmentIdentifier) return null;
     return equipmentsWithoutProtocol.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
   }, [selectedEquipmentIdentifier, equipmentsWithoutProtocol]);
 
@@ -584,10 +591,12 @@ function BaseProtocolManager() {
                                                     <Label className="text-muted-foreground">Modelo</Label>
                                                     <p className="font-semibold">{model}</p>
                                             </div>
-                                            <div className="flex items-center gap-4 pt-2">
-                                                <Badge variant="outline">x{selectedEquipmentInfo?.count} Equipos</Badge>
-                                                <Badge variant="secondary" className="text-xs">Registros: {selectedEquipmentInfo?.indices.map(i => `#${i}`).join(', ')}</Badge>
-                                            </div>
+                                            {selectedGroupInfo && (
+                                              <div className="flex items-center gap-4 pt-2">
+                                                  <Badge variant="outline">x{selectedGroupInfo.count} Equipos</Badge>
+                                                  <Badge variant="secondary" className="text-xs">Registros: {selectedGroupInfo.indices.map(i => `#${i}`).join(', ')}</Badge>
+                                              </div>
+                                            )}
                                          </div>
                                       </div>
                                     </CardContent>
@@ -782,27 +791,93 @@ function BaseProtocolManager() {
                                     <TableHead>Protocolo (Tipo, Marca, Modelo)</TableHead>
                                     <TableHead>Nº de Pasos</TableHead>
                                     <TableHead>Acciones</TableHead>
+                                    <TableHead className="w-[50px]"><span className="sr-only">Detalles</span></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {protocols.map((protocol, index) => {
                                     const identifier = `${protocol.type}|${protocol.brand}|${protocol.model}`;
+                                    const representativeEquipment = equipments.find(eq => eq.type === protocol.type && eq.brand === protocol.brand && eq.model === protocol.model);
                                     return (
-                                        <TableRow key={protocol.id}>
+                                     <Fragment key={protocol.id}>
+                                        <TableRow onClick={() => setExpandedProtocolId(prev => prev === protocol.id ? null : protocol.id)} className="cursor-pointer">
                                             <TableCell>{index + 1}</TableCell>
                                             <TableCell className="font-medium">{`${protocol.type} - ${protocol.brand} (${protocol.model})`}</TableCell>
                                             <TableCell>{protocol.steps.length}</TableCell>
                                             <TableCell className="space-x-2">
-                                                <Button variant="outline" size="sm" onClick={() => handleEquipmentTypeChange(identifier)}>
+                                                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEquipmentTypeChange(identifier); }}>
                                                     <Edit className="mr-2 h-4 w-4" />
                                                     Editar
                                                 </Button>
-                                                <Button variant="destructive" size="sm" onClick={() => setProtocolToDelete(protocol)}>
+                                                <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); setProtocolToDelete(protocol); }}>
                                                     <Trash2 className="mr-2 h-4 w-4" />
                                                     Eliminar
                                                 </Button>
                                             </TableCell>
+                                            <TableCell>
+                                                <Button variant="ghost" size="icon">
+                                                  <ChevronDown className={cn("h-4 w-4 transition-transform", expandedProtocolId === protocol.id && "rotate-180")} />
+                                                  <span className="sr-only">Ver detalles</span>
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
+                                        {expandedProtocolId === protocol.id && (
+                                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                                <TableCell colSpan={5} className="p-0">
+                                                  <div className="p-4">
+                                                    <Card className="shadow-inner">
+                                                        <CardHeader>
+                                                            <div className="flex items-start gap-4">
+                                                                <Image 
+                                                                    src={representativeEquipment?.imageUrl || "https://placehold.co/80x80.png"} 
+                                                                    alt={representativeEquipment?.name || 'Equipo'} 
+                                                                    width={80} 
+                                                                    height={80} 
+                                                                    data-ai-hint="equipment photo"
+                                                                    className="rounded-lg object-cover aspect-square"
+                                                                />
+                                                                <div className="grid gap-1">
+                                                                    <CardTitle>Detalles del Protocolo</CardTitle>
+                                                                    <p className="font-semibold">{representativeEquipment?.name}</p>
+                                                                    <p className="text-sm text-muted-foreground">{protocol.type} / {protocol.brand} / {protocol.model}</p>
+                                                                </div>
+                                                            </div>
+                                                        </CardHeader>
+                                                        <CardContent>
+                                                            <Label className="text-base font-semibold">Pasos del Protocolo</Label>
+                                                            <div className="border rounded-md mt-2 divide-y">
+                                                                {protocol.steps.map((step, stepIndex) => (
+                                                                    <div key={stepIndex} className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4">
+                                                                        <div className="md:col-span-2 space-y-3">
+                                                                            <div>
+                                                                                <Label className="font-semibold">Paso del Protocolo</Label>
+                                                                                <p className="text-sm text-muted-foreground">{step.step}</p>
+                                                                            </div>
+                                                                            <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize">{step.priority}</Badge>
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            <Label className="font-semibold">Evidencia Fotográfica</Label>
+                                                                            {step.imageUrl ? (
+                                                                                <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video border w-full" />
+                                                                            ) : (
+                                                                                <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                                                                    <div className="text-center text-muted-foreground">
+                                                                                        <Camera className="h-10 w-10 mx-auto" />
+                                                                                        <p className="text-sm mt-2">Sin evidencia</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                  </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                     </Fragment>
                                     );
                                 })}
                             </TableBody>
