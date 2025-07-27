@@ -157,11 +157,9 @@ function BaseProtocolManager() {
         indices: number[];
     })[] = [];
 
-    const equipmentGroups = new Map<
-        string, { equipment: Equipment; indices: number[] }
-    >();
-    
-    // Group equipments by a strict identifier first
+    const equipmentGroups = new Map<string, { equipment: Equipment; indices: number[], count: number }>();
+
+    // Group equipments by type, brand, and model
     equipments.forEach((eq, index) => {
         if (eq.type && eq.brand && eq.model) {
             const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
@@ -169,35 +167,34 @@ function BaseProtocolManager() {
                 equipmentGroups.set(identifier, {
                     equipment: eq,
                     indices: [],
+                    count: 0
                 });
             }
-            equipmentGroups.get(identifier)!.indices.push(index + 1);
+            const group = equipmentGroups.get(identifier)!;
+            group.indices.push(index + 1);
+            group.count += 1;
         }
     });
 
-    // Now, use the AI suggestion logic to classify them
     equipmentGroups.forEach((group) => {
-        // Find if an exact protocol exists
-        const hasExactProtocol = protocols.some(
-            (p) =>
-                p.type === group.equipment.type &&
-                p.brand === group.equipment.brand &&
-                p.model === group.equipment.model
+        // A group has a protocol if a protocol exists whose 'type' is a substring of the group's 'type'.
+        // This is a simple client-side heuristic to mimic the AI's fuzzy matching.
+        // Example: Equipment type 'Cámara IP Domo' will match protocol type 'Cámara'.
+        const hasProtocol = protocols.some(p => 
+            group.equipment.type.toLowerCase().includes(p.type.toLowerCase())
         );
 
-        if (hasExactProtocol) {
+        if (hasProtocol) {
             withProtocol.push(group.equipment);
         } else {
-            // If no exact match, we add to the "without" list.
-            // The AI will handle fuzzy matching when suggesting protocols for these.
-             withoutProtocol.push({
+            withoutProtocol.push({
                 ...group.equipment,
-                count: group.indices.length,
+                count: group.count,
                 indices: group.indices,
             });
         }
     });
-
+    
     withProtocol.sort((a, b) => a.name.localeCompare(b.name));
     withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -205,7 +202,8 @@ function BaseProtocolManager() {
         equipmentsWithProtocol: withProtocol, 
         equipmentsWithoutProtocol: withoutProtocol 
     };
-}, [equipments, protocols]);
+  }, [equipments, protocols]);
+
 
   useEffect(() => {
     if (!loading) {
