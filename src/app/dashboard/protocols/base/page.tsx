@@ -122,7 +122,7 @@ type EquipmentGroup = {
   representative: Equipment;
   count: number;
   indices: number[];
-  protocol?: Protocol | null;
+  protocolId?: string | null;
 }
 
 // Main Page Component
@@ -134,7 +134,6 @@ function BaseProtocolManager() {
   const [isTransitioning, startTransition] = useTransition();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
-  const analysisCompletedRef = useRef(false);
 
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -143,7 +142,6 @@ function BaseProtocolManager() {
   
   const [equipmentsWithProtocol, setEquipmentsWithProtocol] = useState<EquipmentGroup[]>([]);
   const [equipmentsWithoutProtocol, setEquipmentsWithoutProtocol] = useState<EquipmentGroup[]>([]);
-  const [isCategorizing, setIsCategorizing] = useState(true);
 
 
   const [existingProtocol, setExistingProtocol] = useState<Protocol | null>(null);
@@ -164,9 +162,10 @@ function BaseProtocolManager() {
   
 
   useEffect(() => {
-    if (loading || analysisCompletedRef.current) return;
+    if (loading) return;
 
     const uniqueEquipmentGroups = new Map<string, { representative: Equipment, count: number, indices: number[] }>();
+    
     equipments.forEach((eq, index) => {
       if (eq.type && eq.brand && eq.model) {
         const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
@@ -179,50 +178,28 @@ function BaseProtocolManager() {
       }
     });
 
-    const categorizeEquipments = async () => {
-      if (protocols.length === 0) {
-          const without = Array.from(uniqueEquipmentGroups.values()).map(group => ({...group, identifier: `${group.representative.type}|${group.representative.brand}|${group.representative.model}`}));
-          setEquipmentsWithoutProtocol(without);
-          setEquipmentsWithProtocol([]);
-          setIsCategorizing(false);
-          analysisCompletedRef.current = true;
-          return;
+    const withProtocol: EquipmentGroup[] = [];
+    const withoutProtocol: EquipmentGroup[] = [];
+
+    uniqueEquipmentGroups.forEach((groupData, identifier) => {
+      const { type, brand, model } = groupData.representative;
+      const foundProtocol = protocols.find(p => p.type === type && p.brand === brand && p.model === model);
+      
+      const group: EquipmentGroup = {
+        identifier,
+        ...groupData,
+        protocolId: foundProtocol?.id || null,
+      };
+
+      if (foundProtocol) {
+        withProtocol.push(group);
+      } else {
+        withoutProtocol.push(group);
       }
-        
-      const withProtocol: EquipmentGroup[] = [];
-      const withoutProtocol: EquipmentGroup[] = [];
+    });
 
-      for (const [identifier, groupData] of uniqueEquipmentGroups.entries()) {
-        const suggestion = await suggestBaseProtocol({
-          equipment: {
-            name: groupData.representative.name,
-            type: groupData.representative.type,
-            brand: groupData.representative.brand,
-            model: groupData.representative.model,
-          },
-          existingProtocols: protocols,
-        });
-
-        const group: EquipmentGroup = {
-          identifier,
-          ...groupData,
-          protocol: suggestion.protocol
-        };
-
-        if (suggestion.protocol) {
-          withProtocol.push(group);
-        } else {
-          withoutProtocol.push(group);
-        }
-      }
-
-      setEquipmentsWithProtocol(withProtocol.sort((a,b) => a.representative.name.localeCompare(b.representative.name)));
-      setEquipmentsWithoutProtocol(withoutProtocol.sort((a,b) => a.representative.name.localeCompare(b.representative.name)));
-      setIsCategorizing(false);
-      analysisCompletedRef.current = true;
-    };
-
-    categorizeEquipments();
+    setEquipmentsWithProtocol(withProtocol.sort((a,b) => a.representative.name.localeCompare(b.representative.name)));
+    setEquipmentsWithoutProtocol(withoutProtocol.sort((a,b) => a.representative.name.localeCompare(b.representative.name)));
 
   }, [loading, equipments, protocols]);
 
@@ -452,9 +429,9 @@ function BaseProtocolManager() {
       });
 
       equipmentsWithProtocol.forEach(group => {
-          if (group.protocol && associationMap.has(group.protocol.id)) {
+          if (group.protocolId && associationMap.has(group.protocolId)) {
               const associatedEquipments = equipments.filter(eq => `${eq.type}|${eq.brand}|${eq.model}` === group.identifier);
-              associationMap.get(group.protocol.id)!.equipments.push(...associatedEquipments);
+              associationMap.get(group.protocolId)!.equipments.push(...associatedEquipments);
           }
       });
       return Array.from(associationMap.values());
@@ -495,10 +472,10 @@ function BaseProtocolManager() {
                                 <CardDescription>Seleccione un grupo de equipos para asignarle un protocolo.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {isCategorizing ? (
+                                {loading ? (
                                     <div className="flex items-center justify-center p-8 text-muted-foreground gap-2">
                                         <Loader2 className="h-4 w-4 animate-spin"/>
-                                        <span>Analizando equipos con IA...</span>
+                                        <span>Cargando equipos...</span>
                                     </div>
                                 ) : (
                                     <Select 
@@ -532,7 +509,7 @@ function BaseProtocolManager() {
                                                         </div>
                                                     </div>
                                                 </SelectItem>
-                                            )) : <div className="p-4 text-center text-sm text-muted-foreground">Todos los equipos tienen un protocolo base sugerido.</div>}
+                                            )) : <div className="p-4 text-center text-sm text-muted-foreground">Todos los equipos tienen un protocolo base.</div>}
                                         </SelectContent>
                                     </Select>
                                 )}
@@ -541,12 +518,12 @@ function BaseProtocolManager() {
                          <Card>
                             <CardHeader>
                                 <CardTitle>Equipos con Protocolo</CardTitle>
-                                <CardDescription>Estos equipos ya tienen un protocolo base asociado por la IA.</CardDescription>
+                                <CardDescription>Estos equipos ya tienen un protocolo base asociado.</CardDescription>
                             </CardHeader>
                              <CardContent>
                                 <ScrollArea className="h-96">
                                 <div className="space-y-2">
-                                    {isCategorizing ? (
+                                    {loading ? (
                                         <div className="flex items-center justify-center p-8 text-muted-foreground gap-2">
                                             <Loader2 className="h-4 w-4 animate-spin"/>
                                             <span>Analizando...</span>
