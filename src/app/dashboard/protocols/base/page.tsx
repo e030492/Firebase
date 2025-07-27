@@ -440,7 +440,7 @@ function BaseProtocolManager() {
                                                 onCheckedChange={(checked) => handleConfirmedEquipmentToggle(eq.id, !!checked)}
                                             />
                                             <Label htmlFor={`eq-${eq.id}`} className="flex items-center gap-3 cursor-pointer flex-1">
-                                                <Image src={eq.imageUrl || 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
+                                                <Image src={eq.imageUrl ? eq.imageUrl : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
                                                 <div>
                                                     <p className="font-semibold">{eq.name}</p>
                                                     <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
