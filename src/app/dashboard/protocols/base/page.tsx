@@ -55,6 +55,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { suggestBaseProtocol } from '@/ai/flows/suggest-base-protocol';
 
 
 type State = {
@@ -159,7 +160,8 @@ function BaseProtocolManager() {
     const equipmentGroups = new Map<
         string, { equipment: Equipment; indices: number[] }
     >();
-
+    
+    // Group equipments by a strict identifier first
     equipments.forEach((eq, index) => {
         if (eq.type && eq.brand && eq.model) {
             const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
@@ -173,20 +175,23 @@ function BaseProtocolManager() {
         }
     });
 
+    // Now, use the AI suggestion logic to classify them
     equipmentGroups.forEach((group) => {
-        const hasProtocol = protocols.some(
+        // Find if an exact protocol exists
+        const hasExactProtocol = protocols.some(
             (p) =>
                 p.type === group.equipment.type &&
                 p.brand === group.equipment.brand &&
                 p.model === group.equipment.model
         );
-        const representativeEquipment = group.equipment;
 
-        if (hasProtocol) {
-            withProtocol.push(representativeEquipment);
+        if (hasExactProtocol) {
+            withProtocol.push(group.equipment);
         } else {
-            withoutProtocol.push({
-                ...representativeEquipment,
+            // If no exact match, we add to the "without" list.
+            // The AI will handle fuzzy matching when suggesting protocols for these.
+             withoutProtocol.push({
+                ...group.equipment,
                 count: group.indices.length,
                 indices: group.indices,
             });
@@ -200,7 +205,7 @@ function BaseProtocolManager() {
         equipmentsWithProtocol: withProtocol, 
         equipmentsWithoutProtocol: withoutProtocol 
     };
-  }, [equipments, protocols]);
+}, [equipments, protocols]);
 
   useEffect(() => {
     if (!loading) {
