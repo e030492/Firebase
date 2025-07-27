@@ -53,6 +53,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 type State = {
@@ -413,13 +414,55 @@ function BaseProtocolManager() {
                     <div className="lg:col-span-1 space-y-8">
                         <Card>
                             <CardHeader>
+                                <CardTitle>Equipos con Protocolo</CardTitle>
+                                <CardDescription>Seleccione para editar un protocolo existente.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ScrollArea className="h-48">
+                                    <div className="space-y-2 pr-4">
+                                        {equipmentsWithProtocol.map(eq => {
+                                            const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
+                                            return (
+                                                <Button 
+                                                    key={identifier} 
+                                                    variant={selectedEquipmentIdentifier === identifier ? "secondary" : "outline"}
+                                                    className="w-full h-auto justify-start"
+                                                    onClick={() => handleEquipmentTypeChange(identifier)}
+                                                >
+                                                    <div className="flex items-center gap-3 py-1 text-left">
+                                                        <Image
+                                                            src={eq.imageUrl || 'https://placehold.co/40x40.png'}
+                                                            alt={eq.name}
+                                                            width={40}
+                                                            height={40}
+                                                            data-ai-hint="equipment photo"
+                                                            className="rounded-md object-cover"
+                                                        />
+                                                        <div>
+                                                            <p className="font-semibold">{eq.type}</p>
+                                                            <p className="text-xs text-muted-foreground">{eq.brand} - {eq.model}</p>
+                                                        </div>
+                                                    </div>
+                                                </Button>
+                                            )
+                                        })}
+                                    </div>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                         <Card>
+                            <CardHeader>
                                 <CardTitle>Equipos sin Protocolo</CardTitle>
                                 <CardDescription>Seleccione un equipo para crear un nuevo protocolo base.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid gap-2">
                                     <Label>Seleccionar un tipo de equipo</Label>
-                                    <Select value={selectedEquipmentIdentifier} onValueChange={handleEquipmentTypeChange}>
+                                    <Select 
+                                      value={selectedEquipmentIdentifier} 
+                                      onValueChange={handleEquipmentTypeChange}
+                                      disabled={equipmentsWithoutProtocol.length === 0}
+                                    >
                                         <SelectTrigger className="h-auto">
                                             <SelectValue placeholder="Seleccione un equipo..." />
                                         </SelectTrigger>
@@ -438,12 +481,8 @@ function BaseProtocolManager() {
                                                             className="rounded-md object-cover"
                                                         />
                                                         <div>
-                                                            <p className="font-semibold">{eq.name}</p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                            Tipo: <span className="font-semibold text-foreground">{eq.type}</span>,
-                                                            Marca: {eq.brand},
-                                                            Modelo: <span className="font-semibold text-foreground">{eq.model}</span>
-                                                            </p>
+                                                            <p className="font-semibold">{eq.type}</p>
+                                                            <p className="text-xs text-muted-foreground">{eq.brand} - {eq.model}</p>
                                                         </div>
                                                     </div>
                                                 </SelectItem>
@@ -454,6 +493,7 @@ function BaseProtocolManager() {
                                 </div>
                             </CardContent>
                         </Card>
+
                     </div>
 
                     <div className="lg:col-span-2">
