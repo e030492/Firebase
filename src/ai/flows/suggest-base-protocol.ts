@@ -118,7 +118,13 @@ const suggestBaseProtocolFlow = ai.defineFlow(
     outputSchema: SuggestBaseProtocolOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const response = await prompt(input);
+    const output = response.output;
+
+    if (!output) {
+      // If the AI fails to return a valid list, return at least the original equipment.
+      return [input.equipment];
+    }
+    return output;
   }
 );
