@@ -180,7 +180,10 @@ function BaseProtocolManager() {
 
     withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
 
-    return { equipmentsWithProtocol, equipmentsWithoutProtocol };
+    return { 
+        equipmentsWithProtocol: withProtocol, 
+        equipmentsWithoutProtocol: withoutProtocol 
+    };
   }, [equipments, protocols]);
 
   useEffect(() => {
