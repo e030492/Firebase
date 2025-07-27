@@ -179,6 +179,7 @@ function BaseProtocolManager() {
     });
 
     withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
+    withProtocol.sort((a,b) => a.name.localeCompare(b.name));
 
     return { 
         equipmentsWithProtocol: withProtocol, 
@@ -449,7 +450,8 @@ function BaseProtocolManager() {
                                                             className="rounded-md object-cover"
                                                         />
                                                         <div>
-                                                            <p className="font-semibold">{eq.type}</p>
+                                                            <p className="font-semibold">{eq.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{eq.type}</p>
                                                             <p className="text-xs text-muted-foreground">{eq.brand} - {eq.model}</p>
                                                         </div>
                                                     </div>
@@ -491,7 +493,8 @@ function BaseProtocolManager() {
                                                                 </div>
                                                             )}
                                                             <div className="flex flex-col text-left">
-                                                                <p className="font-semibold">{index + 1}. {eq.type}</p>
+                                                                <p className="font-semibold">{index + 1}. {eq.name}</p>
+                                                                <p className="text-xs text-muted-foreground">Tipo: {eq.type}</p>
                                                                 <p className="text-xs text-muted-foreground">Marca: {eq.brand} | Modelo: {eq.model}</p>
                                                             </div>
                                                         </div>
@@ -891,3 +894,5 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
+
+    
