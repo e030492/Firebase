@@ -194,9 +194,9 @@ function BaseProtocolManager() {
     withProtocol.sort((a, b) => a.name.localeCompare(b.name));
     withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
 
-    return {
-        equipmentsWithProtocol: withProtocol,
-        equipmentsWithoutProtocol: withoutProtocol,
+    return { 
+        equipmentsWithProtocol: withProtocol, 
+        equipmentsWithoutProtocol: withoutProtocol 
     };
   }, [equipments, protocols]);
 
@@ -554,29 +554,41 @@ function BaseProtocolManager() {
                                         <CardTitle>Detalles del Equipo Seleccionado</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 border rounded-lg p-4">
-                                          <div className="grid gap-1 col-span-full">
-                                              <Label className="text-muted-foreground">Nombre del Equipo</Label>
-                                              <p className="font-semibold text-lg">{selectedEquipmentInfo?.name}</p>
-                                          </div>
-                                          <div className="grid gap-1">
-                                              <Label className="text-muted-foreground">Tipo de Equipo</Label>
-                                              <p className="font-semibold">{type}</p>
-                                          </div>
-                                          <div className="grid gap-1">
-                                              <Label className="text-muted-foreground">Marca</Label>
-                                              <p className="font-semibold">{brand}</p>
-                                          </div>
-                                          <div className="grid gap-1">
-                                              <Label className="text-muted-foreground">Modelo</Label>
-                                              <p className="font-semibold">{model}</p>
-                                          </div>
-                                           <div className="grid gap-1 col-span-full">
-                                                <div className="flex items-center gap-4">
-                                                    <Badge variant="outline">x{selectedEquipmentInfo?.count} Equipos</Badge>
-                                                    <Badge variant="secondary" className="text-xs">Registros: {selectedEquipmentInfo?.indices.map(i => `#${i}`).join(', ')}</Badge>
+                                      <div className="grid md:grid-cols-3 gap-6 border rounded-lg p-4">
+                                         <div className="md:col-span-1">
+                                             <Image 
+                                                src={selectedEquipmentInfo?.imageUrl || 'https://placehold.co/400x300.png'} 
+                                                alt={selectedEquipmentInfo?.name || 'Equipo'} 
+                                                width={400} 
+                                                height={300} 
+                                                data-ai-hint="equipment photo"
+                                                className="rounded-lg object-cover w-full aspect-square"
+                                            />
+                                         </div>
+                                         <div className="md:col-span-2 space-y-4">
+                                            <div className="grid gap-1">
+                                                <Label className="text-muted-foreground">Nombre del Equipo</Label>
+                                                <p className="font-semibold text-lg">{selectedEquipmentInfo?.name}</p>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid gap-1">
+                                                    <Label className="text-muted-foreground">Tipo de Equipo</Label>
+                                                    <p className="font-semibold">{type}</p>
                                                 </div>
-                                           </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-muted-foreground">Marca</Label>
+                                                    <p className="font-semibold">{brand}</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid gap-1">
+                                                    <Label className="text-muted-foreground">Modelo</Label>
+                                                    <p className="font-semibold">{model}</p>
+                                            </div>
+                                            <div className="flex items-center gap-4 pt-2">
+                                                <Badge variant="outline">x{selectedEquipmentInfo?.count} Equipos</Badge>
+                                                <Badge variant="secondary" className="text-xs">Registros: {selectedEquipmentInfo?.indices.map(i => `#${i}`).join(', ')}</Badge>
+                                            </div>
+                                         </div>
                                       </div>
                                     </CardContent>
                                 </Card>
