@@ -57,6 +57,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
+const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image');
+};
+
 // Main Page Component
 function BaseProtocolManager() {
   const router = useRouter();
@@ -369,7 +374,7 @@ function BaseProtocolManager() {
                                             selectedEquipment?.id === eq.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "hover:bg-muted/50"
                                         )}
                                     >
-                                        <Image src={eq.imageUrl || 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
+                                        <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
                                         <div className="flex-1">
                                             <p className="font-semibold">{eq.name}</p>
                                             <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
@@ -403,7 +408,7 @@ function BaseProtocolManager() {
                             <CardTitle>Equipo de Referencia Seleccionado</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-start gap-6">
-                            <Image src={selectedEquipment.imageUrl || 'https://placehold.co/150x150.png'} alt={selectedEquipment.name} width={150} height={150} data-ai-hint="equipment photo" className="rounded-lg object-cover aspect-square"/>
+                            <Image src={isValidImageUrl(selectedEquipment.imageUrl) ? selectedEquipment.imageUrl! : 'https://placehold.co/150x150.png'} alt={selectedEquipment.name} width={150} height={150} data-ai-hint="equipment photo" className="rounded-lg object-cover aspect-square"/>
                             <div className="space-y-2 flex-1">
                                 <h3 className="text-lg font-bold">{selectedEquipment.name}</h3>
                                 <p className="text-sm text-muted-foreground">{selectedEquipment.description}</p>
@@ -440,7 +445,7 @@ function BaseProtocolManager() {
                                                 onCheckedChange={(checked) => handleConfirmedEquipmentToggle(eq.id, !!checked)}
                                             />
                                             <Label htmlFor={`eq-${eq.id}`} className="flex items-center gap-3 cursor-pointer flex-1">
-                                                <Image src={eq.imageUrl ? eq.imageUrl : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
+                                                <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
                                                 <div>
                                                     <p className="font-semibold">{eq.name}</p>
                                                     <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
@@ -497,8 +502,8 @@ function BaseProtocolManager() {
                                                             <Loader2 className="h-10 w-10 animate-spin" />
                                                             <p>Generando imagen...</p>
                                                         </div>
-                                                    ) : step.imageUrl ? (
-                                                        <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                                    ) : isValidImageUrl(step.imageUrl) ? (
+                                                        <Image src={step.imageUrl!} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
                                                     ) : (
                                                         <div className="text-center text-muted-foreground">
                                                             <Camera className="h-10 w-10 mx-auto" />
@@ -509,13 +514,13 @@ function BaseProtocolManager() {
                                                 <div className="flex items-center gap-2">
                                                     <Button type="button" variant="outline" size="sm" onClick={() => fileInputRefs.current[index]?.click()}>
                                                         <Camera className="mr-2 h-4 w-4" />
-                                                        {step.imageUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                                                        {isValidImageUrl(step.imageUrl) ? 'Cambiar Foto' : 'Subir Foto'}
                                                     </Button>
                                                     <Button type="button" size="sm" onClick={() => handleGenerateStepImage(step, index)} disabled={generatingImageIndex !== null}>
                                                         {generatingImageIndex === index ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
                                                         Generar con IA
                                                     </Button>
-                                                    {step.imageUrl && (
+                                                    {isValidImageUrl(step.imageUrl) && (
                                                         <Button type="button" variant="destructive" size="icon" onClick={() => handleStepImageDelete(index)}>
                                                             <Trash2 className="h-4 w-4" />
                                                             <span className="sr-only">Eliminar Foto</span>
