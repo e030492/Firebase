@@ -171,27 +171,28 @@ function BaseProtocolManager() {
         }
     });
 
-    equipmentGroups.forEach((group, identifier) => {
+    equipmentGroups.forEach((group) => {
         const hasProtocol = protocols.some(
             (p) =>
                 p.type === group.equipment.type &&
                 p.brand === group.equipment.brand &&
                 p.model === group.equipment.model
         );
+        const representativeEquipment = group.equipment;
 
         if (hasProtocol) {
-            withProtocol.push(group.equipment);
+            withProtocol.push(representativeEquipment);
         } else {
             withoutProtocol.push({
-                ...group.equipment,
+                ...representativeEquipment,
                 count: group.indices.length,
                 indices: group.indices,
             });
         }
     });
 
-    withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
     withProtocol.sort((a, b) => a.name.localeCompare(b.name));
+    withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
 
     return {
         equipmentsWithProtocol: withProtocol,
@@ -406,6 +407,10 @@ function BaseProtocolManager() {
   const isAllSelected = aiState.result ? selectedSteps.length === aiState.result.length && aiState.result.length > 0 : false;
   const { type, brand, model } = equipmentData;
   const isFormDisabled = !type || !brand || !model;
+  const selectedEquipmentInfo = useMemo(() => {
+    if (!selectedEquipmentIdentifier) return null;
+    return equipmentsWithoutProtocol.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
+  }, [selectedEquipmentIdentifier, equipmentsWithoutProtocol]);
 
   return (
     <div className="flex flex-col h-full p-4 md:p-6">
@@ -467,7 +472,8 @@ function BaseProtocolManager() {
                                                                 Tipo: <span className="text-foreground font-normal">{eq.type}</span>
                                                             </p>
                                                             <p className="text-xs text-muted-foreground">
-                                                                {eq.brand} - Modelo: <span className="text-foreground font-normal">{eq.model}</span>
+                                                                <span className="text-muted-foreground">Marca: {eq.brand} - </span>
+                                                                Modelo: <span className="text-foreground font-normal">{eq.model}</span>
                                                             </p>
                                                         </div>
                                                     </div>
@@ -548,20 +554,30 @@ function BaseProtocolManager() {
                                         <CardTitle>Detalles del Equipo Seleccionado</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="grid md:grid-cols-3 gap-4 border rounded-lg p-4">
-                                            <div className="grid gap-1">
-                                                <Label className="text-muted-foreground">Tipo de Equipo</Label>
-                                                <p className="font-semibold">{type}</p>
-                                            </div>
-                                            <div className="grid gap-1">
-                                                <Label className="text-muted-foreground">Marca</Label>
-                                                <p className="font-semibold">{brand}</p>
-                                            </div>
-                                            <div className="grid gap-1">
-                                                <Label className="text-muted-foreground">Modelo</Label>
-                                                <p className="font-semibold">{model}</p>
-                                            </div>
-                                        </div>
+                                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 border rounded-lg p-4">
+                                          <div className="grid gap-1 col-span-full">
+                                              <Label className="text-muted-foreground">Nombre del Equipo</Label>
+                                              <p className="font-semibold text-lg">{selectedEquipmentInfo?.name}</p>
+                                          </div>
+                                          <div className="grid gap-1">
+                                              <Label className="text-muted-foreground">Tipo de Equipo</Label>
+                                              <p className="font-semibold">{type}</p>
+                                          </div>
+                                          <div className="grid gap-1">
+                                              <Label className="text-muted-foreground">Marca</Label>
+                                              <p className="font-semibold">{brand}</p>
+                                          </div>
+                                          <div className="grid gap-1">
+                                              <Label className="text-muted-foreground">Modelo</Label>
+                                              <p className="font-semibold">{model}</p>
+                                          </div>
+                                           <div className="grid gap-1 col-span-full">
+                                                <div className="flex items-center gap-4">
+                                                    <Badge variant="outline">x{selectedEquipmentInfo?.count} Equipos</Badge>
+                                                    <Badge variant="secondary" className="text-xs">Registros: {selectedEquipmentInfo?.indices.map(i => `#${i}`).join(', ')}</Badge>
+                                                </div>
+                                           </div>
+                                      </div>
                                     </CardContent>
                                 </Card>
                                 
