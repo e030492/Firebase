@@ -332,25 +332,25 @@ function BaseProtocolManager() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid sm:grid-cols-2 gap-4">
-                            <Select onValueChange={setClientFilter} value={clientFilter}>
+                            <Select onValueChange={(value) => setClientFilter(value === 'all' ? '' : value)} value={clientFilter || 'all'}>
                                 <SelectTrigger><SelectValue placeholder="Filtrar por Cliente..." /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Todos los Clientes</SelectItem>
+                                    <SelectItem value="all">Todos los Clientes</SelectItem>
                                     {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                             <Select onValueChange={setSystemFilter} value={systemFilter}>
+                             <Select onValueChange={(value) => setSystemFilter(value === 'all' ? '' : value)} value={systemFilter || 'all'}>
                                 <SelectTrigger><SelectValue placeholder="Filtrar por Sistema..." /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Todos los Sistemas</SelectItem>
+                                    <SelectItem value="all">Todos los Sistemas</SelectItem>
                                     {systems.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
-                        <Select onValueChange={setWarehouseFilter} value={warehouseFilter} disabled={!clientFilter}>
+                        <Select onValueChange={(value) => setWarehouseFilter(value === 'all' ? '' : value)} value={warehouseFilter || 'all'} disabled={!clientFilter}>
                             <SelectTrigger><SelectValue placeholder="Filtrar por Almacén..." /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Todos los Almacenes</SelectItem>
+                                <SelectItem value="all">Todos los Almacenes</SelectItem>
                                 {clientWarehouses.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
                             </SelectContent>
                         </Select>
@@ -601,5 +601,3 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
-
-    
