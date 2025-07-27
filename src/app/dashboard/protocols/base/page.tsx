@@ -173,6 +173,8 @@ function BaseProtocolManager() {
       }
     });
 
+    withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
+
     return { equipmentsWithProtocol: withProtocol, equipmentsWithoutProtocol: withoutProtocol };
   }, [uniqueEquipmentTypes, protocols]);
 
@@ -467,23 +469,13 @@ function BaseProtocolManager() {
                                             <SelectValue placeholder="Seleccione un equipo..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {equipmentsWithoutProtocol.map(eq => {
+                                            {equipmentsWithoutProtocol.map((eq, index) => {
                                                 const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
                                                 return (
                                                 <SelectItem key={identifier} value={identifier}>
-                                                    <div className="flex items-center gap-3">
-                                                        <Image
-                                                            src={eq.imageUrl || 'https://placehold.co/40x40.png'}
-                                                            alt={eq.name}
-                                                            width={40}
-                                                            height={40}
-                                                            data-ai-hint="equipment photo"
-                                                            className="rounded-md object-cover"
-                                                        />
-                                                        <div>
-                                                            <p className="font-semibold">{eq.type}</p>
-                                                            <p className="text-xs text-muted-foreground">{eq.brand} - {eq.model}</p>
-                                                        </div>
+                                                    <div className="flex flex-col text-left">
+                                                        <p className="font-semibold">{index + 1}. {eq.name}</p>
+                                                        <p className="text-xs text-muted-foreground">Tipo: {eq.type} | Marca: {eq.brand} | Modelo: {eq.model}</p>
                                                     </div>
                                                 </SelectItem>
                                                 )
