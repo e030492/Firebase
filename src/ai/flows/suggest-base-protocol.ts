@@ -69,7 +69,7 @@ const prompt = ai.definePrompt({
   output: {schema: SuggestBaseProtocolOutputSchema},
   prompt: `You are an expert system for industrial equipment maintenance. Your task is to select the most appropriate base maintenance protocol for a given piece of equipment from a list of existing protocols.
 
-The selection should be based on a fuzzy match of the equipment's characteristics (name, type, brand, model). The goal is to find the *most relevant* existing protocol to avoid creating duplicates. The match does not need to be exact. Prioritize matching the 'type' field, as it is the most critical.
+The selection should be based on a fuzzy match of the equipment's characteristics (name, type, brand, model). The goal is to find the *most relevant* existing protocol to avoid creating duplicates. The match does not need to be exact. Prioritize matching the 'type' field, as it is the most critical. For example, different camera types like 'Domo PTZ', 'Bala', or 'Mini Domo' can likely share the same base protocol.
 
 Equipment to find protocol for:
 - Name: {{{equipment.name}}}
@@ -88,7 +88,7 @@ List of available base protocols:
 
 Based on the provided list, identify the single best protocol for the given equipment.
 
-Respond with a JSON object. In the 'protocol' field, place the complete JSON object of the chosen protocol. If no suitable protocol is found from the list, the 'protocol' field should be null. In the 'reason' field, provide a short, one-sentence explanation in Spanish for your choice. For example: "Se eligió este protocolo porque el tipo de equipo 'Domo PTZ' coincide."`,
+Respond with a JSON object. In the 'protocol' field, place the complete JSON object of the chosen protocol. If no suitable protocol is found from the list, the 'protocol' field should be null. In the 'reason' field, provide a short, one-sentence explanation in Spanish for your choice. For example: "Se eligió este protocolo porque el tipo de equipo 'Domo PTZ' es muy similar al tipo 'Cámara Bala'."`,
 });
 
 const suggestBaseProtocolFlow = ai.defineFlow(
