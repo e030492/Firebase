@@ -35,7 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle, CheckCircle, List } from 'lucide-react';
 import { Protocol, Equipment, ProtocolStep, Client, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -56,6 +56,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const isValidImageUrl = (url: string | null | undefined): boolean => {
     if (!url) return false;
@@ -103,18 +104,36 @@ function BaseProtocolManager() {
     }
   }, [clientFilter, clients]);
 
-  const filteredEquipments = useMemo(() => {
-    return allEquipments.filter(eq => {
-      const clientName = clients.find(c => c.id === clientFilter)?.name;
-      const systemName = systems.find(s => s.id === systemFilter)?.name;
+  const { equipmentsWithoutProtocol, equipmentsWithProtocol } = useMemo(() => {
+    const protocolKeys = new Set(protocols.map(p => `${p.type}-${p.brand}-${p.model}`));
+    const withProtocol: (Equipment & { protocolId: string })[] = [];
+    const withoutProtocol: Equipment[] = [];
 
-      const clientMatch = !clientFilter || eq.client === clientName;
-      const systemMatch = !systemFilter || eq.system === systemName;
-      const warehouseMatch = !warehouseFilter || eq.location === warehouseFilter;
-
-      return clientMatch && systemMatch && warehouseMatch;
+    allEquipments.forEach(eq => {
+        const key = `${eq.type}-${eq.brand}-${eq.model}`;
+        if (protocolKeys.has(key)) {
+            withProtocol.push({ ...eq, protocolId: key.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '') });
+        } else {
+            withoutProtocol.push(eq);
+        }
     });
-  }, [allEquipments, clientFilter, systemFilter, warehouseFilter, clients, systems]);
+
+    const filterFn = (eq: Equipment) => {
+        const clientName = clients.find(c => c.id === clientFilter)?.name;
+        const systemName = systems.find(s => s.id === systemFilter)?.name;
+
+        const clientMatch = !clientFilter || eq.client === clientName;
+        const systemMatch = !systemFilter || eq.system === systemName;
+        const warehouseMatch = !warehouseFilter || eq.location === warehouseFilter;
+
+        return clientMatch && systemMatch && warehouseMatch;
+    };
+    
+    return {
+        equipmentsWithoutProtocol: withoutProtocol.filter(filterFn),
+        equipmentsWithProtocol: withProtocol.filter(filterFn)
+    };
+  }, [allEquipments, protocols, clientFilter, systemFilter, warehouseFilter, clients, systems]);
 
 
   const handleEquipmentSelect = (equipment: Equipment) => {
@@ -179,7 +198,6 @@ function BaseProtocolManager() {
     const handleManualAddConfirm = () => {
         const equipmentsToAdd = allEquipments.filter(eq => manualSelectionIds.includes(eq.id));
         
-        // Add to confirmed list
         const newConfirmed = [...confirmedEquipments];
         equipmentsToAdd.forEach(eq => {
             if (!newConfirmed.some(c => c.id === eq.id)) {
@@ -188,7 +206,6 @@ function BaseProtocolManager() {
         });
         setConfirmedEquipments(newConfirmed);
 
-        // Also add to the "similar" list so they appear in the UI correctly
         const newSimilar = [...similarEquipments];
         equipmentsToAdd.forEach(eq => {
             if (!newSimilar.some(s => s.id === eq.id)) {
@@ -272,7 +289,6 @@ function BaseProtocolManager() {
 
         toast({ title: "Protocolo Guardado", description: "El protocolo base ha sido guardado y asociado a los equipos."});
 
-        // Reset state after saving
         setSelectedEquipment(null);
         setSimilarEquipments([]);
         setConfirmedEquipments([]);
@@ -384,10 +400,10 @@ function BaseProtocolManager() {
         </div>
         
         <div className="grid lg:grid-cols-3 gap-8 mt-6">
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 space-y-4">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Listado de Equipos</CardTitle>
+                        <CardTitle>Equipos Sin Protocolo Base</CardTitle>
                         <CardDescription>Filtre y seleccione un equipo para comenzar.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -415,12 +431,12 @@ function BaseProtocolManager() {
                             </SelectContent>
                         </Select>
                         <Separator />
-                        <ScrollArea className="h-96">
+                        <ScrollArea className="h-72">
                             <div className="space-y-2 pr-4">
                             {loading ? (
                                 <Skeleton className="h-40 w-full" />
-                            ) : filteredEquipments.length > 0 ? (
-                                filteredEquipments.map(eq => (
+                            ) : equipmentsWithoutProtocol.length > 0 ? (
+                                equipmentsWithoutProtocol.map(eq => (
                                     <button 
                                         key={eq.id} 
                                         onClick={() => handleEquipmentSelect(eq)}
@@ -437,11 +453,41 @@ function BaseProtocolManager() {
                                     </button>
                                 ))
                             ) : (
-                                <p className="text-sm text-muted-foreground text-center p-4">No se encontraron equipos con los filtros aplicados.</p>
+                                <p className="text-sm text-muted-foreground text-center p-4">No se encontraron equipos sin protocolo con los filtros aplicados.</p>
                             )}
                             </div>
                         </ScrollArea>
                     </CardContent>
+                </Card>
+                <Card>
+                    <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="item-1">
+                            <AccordionTrigger className="p-6">
+                                <CardTitle className="text-lg">Equipos con Protocolo Asignado ({equipmentsWithProtocol.length})</CardTitle>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-6 pb-6">
+                                <ScrollArea className="h-72">
+                                     <div className="space-y-2 pr-4">
+                                     {loading ? (
+                                        <Skeleton className="h-40 w-full" />
+                                    ) : equipmentsWithProtocol.length > 0 ? (
+                                        equipmentsWithProtocol.map(eq => (
+                                            <div key={eq.id} className="p-2 border rounded-md flex items-center gap-3 bg-muted/30">
+                                                <CheckCircle className="h-5 w-5 text-green-500" />
+                                                <div className="flex-1">
+                                                    <p className="font-semibold">{eq.name}</p>
+                                                    <p className="text-xs text-muted-foreground">Protocolo: {eq.type} / {eq.brand} / {eq.model}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground text-center p-4">No hay equipos con protocolos asignados que coincidan con los filtros.</p>
+                                    )}
+                                    </div>
+                                </ScrollArea>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
                 </Card>
             </div>
 
