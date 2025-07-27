@@ -151,58 +151,63 @@ function BaseProtocolManager() {
   const [selectedSteps, setSelectedSteps] = useState<SuggestMaintenanceProtocolOutput>([]);
   
   const { equipmentsWithProtocol, equipmentsWithoutProtocol } = useMemo(() => {
-    const withProtocol: Equipment[] = [];
-    const withoutProtocol: (Equipment & {
+    const withProtocolGroups = new Map<string, Equipment[]>();
+    const withoutProtocolGroups = new Map<string, {
+        representative: Equipment;
         count: number;
         indices: number[];
-    })[] = [];
+    }>();
 
-    const equipmentGroups = new Map<string, { equipment: Equipment; indices: number[], count: number }>();
-
-    // Group equipments by type, brand, and model
-    equipments.forEach((eq, index) => {
+    // Group equipments by a unique identifier (type|brand|model)
+    const equipmentGroups = new Map<string, Equipment[]>();
+    equipments.forEach((eq) => {
         if (eq.type && eq.brand && eq.model) {
             const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
             if (!equipmentGroups.has(identifier)) {
-                equipmentGroups.set(identifier, {
-                    equipment: eq,
-                    indices: [],
-                    count: 0
-                });
+                equipmentGroups.set(identifier, []);
             }
-            const group = equipmentGroups.get(identifier)!;
-            group.indices.push(index + 1);
-            group.count += 1;
+            equipmentGroups.get(identifier)!.push(eq);
         }
     });
 
-    equipmentGroups.forEach((group) => {
-        // A group has a protocol if a protocol exists whose 'type' is a substring of the group's 'type'.
-        // This is a simple client-side heuristic to mimic the AI's fuzzy matching.
-        // Example: Equipment type 'Cámara IP Domo' will match protocol type 'Cámara'.
-        const hasProtocol = protocols.some(p => 
-            group.equipment.type.toLowerCase().includes(p.type.toLowerCase())
+    // Check each group against existing protocols with fuzzy logic
+    equipmentGroups.forEach((group, identifier) => {
+        const representative = group[0];
+        // A group has a protocol if a protocol's type is a substring of the group's type.
+        const foundProtocol = protocols.find(p => 
+            representative.type.toLowerCase().includes(p.type.toLowerCase())
         );
 
-        if (hasProtocol) {
-            withProtocol.push(group.equipment);
+        if (foundProtocol) {
+            if (!withProtocolGroups.has(foundProtocol.id)) {
+                withProtocolGroups.set(foundProtocol.id, []);
+            }
+            withProtocolGroups.get(foundProtocol.id)!.push(...group);
         } else {
-            withoutProtocol.push({
-                ...group.equipment,
-                count: group.count,
-                indices: group.indices,
+            const indices = group.map(eq => equipments.findIndex(e => e.id === eq.id) + 1);
+            withoutProtocolGroups.set(identifier, {
+                representative: representative,
+                count: group.length,
+                indices: indices
             });
         }
     });
+
+    const equipmentsWithProtocol = Array.from(withProtocolGroups.entries()).map(([protocolId, equipmentList]) => {
+        const protocol = protocols.find(p => p.id === protocolId)!;
+        return { protocol, equipments: equipmentList };
+    });
     
-    withProtocol.sort((a, b) => a.name.localeCompare(b.name));
-    withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
+    const equipmentsWithoutProtocol = Array.from(withoutProtocolGroups.values())
+        .map(group => group.representative)
+        .sort((a,b) => a.name.localeCompare(b.name));
 
     return { 
-        equipmentsWithProtocol: withProtocol, 
-        equipmentsWithoutProtocol: withoutProtocol 
+        equipmentsWithProtocol, 
+        equipmentsWithoutProtocol 
     };
-  }, [equipments, protocols]);
+}, [equipments, protocols]);
+
 
 
   useEffect(() => {
@@ -419,8 +424,17 @@ function BaseProtocolManager() {
 
    const selectedGroupInfo = useMemo(() => {
     if (!selectedEquipmentIdentifier) return null;
-    return equipmentsWithoutProtocol.find(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
-  }, [selectedEquipmentIdentifier, equipmentsWithoutProtocol]);
+    
+    const group = equipments.filter(eq => `${eq.type}|${eq.brand}|${eq.model}` === selectedEquipmentIdentifier);
+    if (group.length === 0) return null;
+    
+    const indices = group.map(eq => equipments.findIndex(e => e.id === eq.id) + 1);
+
+    return {
+      count: group.length,
+      indices: indices
+    }
+  }, [selectedEquipmentIdentifier, equipments]);
 
   return (
     <div className="flex flex-col h-full p-4 md:p-6">
@@ -450,50 +464,6 @@ function BaseProtocolManager() {
             <div className="grid auto-rows-max items-start gap-4 md:gap-8">
                 <div className="grid lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-1 space-y-8">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Equipos con Protocolo</CardTitle>
-                                <CardDescription>Seleccione para editar un protocolo existente.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ScrollArea className="h-48">
-                                    <div className="space-y-2 pr-4">
-                                        {equipmentsWithProtocol.map(eq => {
-                                            const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-                                            return (
-                                                <Button 
-                                                    key={identifier} 
-                                                    variant={selectedEquipmentIdentifier === identifier ? "secondary" : "outline"}
-                                                    className="w-full h-auto justify-start"
-                                                    onClick={() => handleEquipmentTypeChange(identifier)}
-                                                >
-                                                    <div className="flex items-center gap-3 py-1 text-left">
-                                                        <Image
-                                                            src={eq.imageUrl || 'https://placehold.co/40x40.png'}
-                                                            alt={eq.name}
-                                                            width={40}
-                                                            height={40}
-                                                            data-ai-hint="equipment photo"
-                                                            className="rounded-md object-cover"
-                                                        />
-                                                        <div>
-                                                            <p className="font-semibold">{eq.name}</p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                Tipo: <span className="text-foreground font-normal">{eq.type}</span>
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                <span className="text-muted-foreground">Marca: {eq.brand} - </span>
-                                                                Modelo: <span className="text-foreground font-normal">{eq.model}</span>
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </Button>
-                                            )
-                                        })}
-                                    </div>
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
                          <Card>
                             <CardHeader>
                                 <CardTitle>Equipos sin Protocolo</CardTitle>
@@ -513,6 +483,10 @@ function BaseProtocolManager() {
                                         <SelectContent>
                                             {equipmentsWithoutProtocol.map((eq, index) => {
                                                 const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
+                                                const groupInfo = equipments.filter(e => `${e.type}|${e.brand}|${e.model}` === identifier);
+                                                const count = groupInfo.length;
+                                                const indices = groupInfo.map(e => equipments.findIndex(i => i.id === e.id) + 1);
+
                                                 return (
                                                 <SelectItem key={identifier} value={identifier}>
                                                     <div className="flex items-center justify-between w-full">
@@ -531,8 +505,8 @@ function BaseProtocolManager() {
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-1">
-                                                            <Badge variant="outline">x{eq.count} Equipos</Badge>
-                                                            <Badge variant="secondary" className="text-xs">Regs: {eq.indices.map(i => `#${i}`).join(', ')}</Badge>
+                                                            <Badge variant="outline">x{count} Equipos</Badge>
+                                                            <Badge variant="secondary" className="text-xs">Regs: {indices.join(', ')}</Badge>
                                                         </div>
                                                     </div>
                                                 </SelectItem>
@@ -543,7 +517,6 @@ function BaseProtocolManager() {
                                 </div>
                             </CardContent>
                         </Card>
-
                     </div>
 
                     <div className="lg:col-span-2">
@@ -554,7 +527,7 @@ function BaseProtocolManager() {
                                 <CardContent className="text-center">
                                     <ListChecks className="h-16 w-16 text-muted-foreground mx-auto mb-4"/>
                                     <h3 className="text-lg font-semibold">Seleccione un Equipo</h3>
-                                    <p className="text-muted-foreground">Elija un equipo de las listas para empezar a gestionar su protocolo.</p>
+                                    <p className="text-muted-foreground">Elija un equipo de la lista para empezar a gestionar su protocolo.</p>
                                 </CardContent>
                             </Card>
                         ) : (
@@ -791,22 +764,23 @@ function BaseProtocolManager() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[50px]">#</TableHead>
-                                    <TableHead>Protocolo (Tipo, Marca, Modelo)</TableHead>
+                                    <TableHead>Protocolo (Tipo Base)</TableHead>
                                     <TableHead>Nº de Pasos</TableHead>
+                                    <TableHead>Equipos Asociados</TableHead>
                                     <TableHead>Acciones</TableHead>
                                     <TableHead className="w-[50px]"><span className="sr-only">Detalles</span></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {protocols.map((protocol, index) => {
+                                {equipmentsWithProtocol.map(({ protocol, equipments: associatedEquipments }, index) => {
                                     const identifier = `${protocol.type}|${protocol.brand}|${protocol.model}`;
-                                    const representativeEquipment = equipments.find(eq => eq.type === protocol.type && eq.brand === protocol.brand && eq.model === protocol.model);
                                     return (
                                      <Fragment key={protocol.id}>
                                         <TableRow onClick={() => setExpandedProtocolId(prev => prev === protocol.id ? null : protocol.id)} className="cursor-pointer">
                                             <TableCell>{index + 1}</TableCell>
-                                            <TableCell className="font-medium">{`${protocol.type} - ${protocol.brand} (${protocol.model})`}</TableCell>
+                                            <TableCell className="font-medium">{`${protocol.type}`}</TableCell>
                                             <TableCell>{protocol.steps.length}</TableCell>
+                                            <TableCell>{associatedEquipments.length}</TableCell>
                                             <TableCell className="space-x-2">
                                                 <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEquipmentTypeChange(identifier); }}>
                                                     <Edit className="mr-2 h-4 w-4" />
@@ -826,28 +800,13 @@ function BaseProtocolManager() {
                                         </TableRow>
                                         {expandedProtocolId === protocol.id && (
                                             <TableRow className="bg-muted/30 hover:bg-muted/30">
-                                                <TableCell colSpan={5} className="p-0">
-                                                  <div className="p-4">
+                                                <TableCell colSpan={6} className="p-0">
+                                                  <div className="p-4 grid lg:grid-cols-2 gap-4">
                                                     <Card className="shadow-inner">
                                                         <CardHeader>
-                                                            <div className="flex items-start gap-4">
-                                                                <Image 
-                                                                    src={representativeEquipment?.imageUrl || "https://placehold.co/80x80.png"} 
-                                                                    alt={representativeEquipment?.name || 'Equipo'} 
-                                                                    width={80} 
-                                                                    height={80} 
-                                                                    data-ai-hint="equipment photo"
-                                                                    className="rounded-lg object-cover aspect-square"
-                                                                />
-                                                                <div className="grid gap-1">
-                                                                    <CardTitle>Detalles del Protocolo</CardTitle>
-                                                                    <p className="font-semibold">{representativeEquipment?.name}</p>
-                                                                    <p className="text-sm text-muted-foreground">{protocol.type} / {protocol.brand} / {protocol.model}</p>
-                                                                </div>
-                                                            </div>
+                                                            <CardTitle>Pasos del Protocolo Base</CardTitle>
                                                         </CardHeader>
                                                         <CardContent>
-                                                            <Label className="text-base font-semibold">Pasos del Protocolo</Label>
                                                             <div className="border rounded-md mt-2 divide-y">
                                                                 {protocol.steps.map((step, stepIndex) => (
                                                                     <div key={stepIndex} className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 p-4">
@@ -874,6 +833,32 @@ function BaseProtocolManager() {
                                                                     </div>
                                                                 ))}
                                                             </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                    <Card className="shadow-inner">
+                                                        <CardHeader>
+                                                            <CardTitle>Equipos Vinculados</CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent>
+                                                            <ScrollArea className="h-96">
+                                                            <div className="space-y-2">
+                                                            {associatedEquipments.map(eq => (
+                                                                <div key={eq.id} className="flex items-center gap-3 p-2 border rounded-md">
+                                                                    <Image 
+                                                                        src={eq.imageUrl || 'https://placehold.co/40x40.png'} 
+                                                                        alt={eq.name}
+                                                                        width={40} height={40}
+                                                                        data-ai-hint="equipment photo"
+                                                                        className="rounded-md object-cover"
+                                                                    />
+                                                                    <div>
+                                                                        <p className="font-semibold">{eq.name}</p>
+                                                                        <p className="text-xs text-muted-foreground">{eq.type} | {eq.brand} | {eq.model}</p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            </div>
+                                                            </ScrollArea>
                                                         </CardContent>
                                                     </Card>
                                                   </div>
