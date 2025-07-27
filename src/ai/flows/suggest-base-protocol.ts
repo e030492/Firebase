@@ -55,14 +55,16 @@ export async function suggestBaseProtocol(
   
   const result = await suggestBaseProtocolFlow(input);
 
-  if (!result) {
+  // Fallback in case the AI returns an empty or invalid result
+  if (!result || result.length === 0) {
     return [input.equipment];
   }
 
   // Ensure the original equipment is always included in the final list.
-  const resultMap = new Map(result.map(e => [e.id, e]));
+  const resultMap = new Map(result.map(e => e.id, e));
   if (!resultMap.has(input.equipment.id)) {
-    return [input.equipment, ...result];
+    // Add the original equipment to the beginning of the list if it's not already there.
+    return [input.equipment, ...result.filter(e => e.id !== input.equipment.id)];
   }
   return result;
 }
@@ -71,15 +73,17 @@ const prompt = ai.definePrompt({
   name: 'suggestBaseProtocolPrompt',
   input: {schema: SuggestBaseProtocolInputSchema},
   output: {schema: SuggestBaseProtocolOutputSchema},
-  prompt: `You are an expert system for industrial equipment maintenance. Your task is to identify a group of equipment that can share the same maintenance protocol.
+  prompt: `You are an expert system for industrial equipment maintenance. Your task is to identify a group of equipment that can share the same maintenance protocol based on FUZZY/SIMILARITY matching, not exact matching.
 
 You will be given a primary piece of equipment and a list of all other available equipment in the inventory. Your goal is to return a list of all equipment (including the primary one) that are similar enough to use the same maintenance protocol.
 
-The selection should be based on a fuzzy match of the equipment's characteristics. The most important fields for matching are 'type', 'brand', and 'model'. However, the match should not be strictly identical. For example, different types of cameras like 'Domo PTZ', 'Bala', or 'Mini Domo' can likely share the same base protocol. Similarly, models that only differ slightly in version numbers or minor features (e.g., 'DS-2CD2543G0-IS' vs 'DS-2CD2543G2-I') could also be grouped together.
+CRITICAL INSTRUCTIONS:
+1.  **Prioritize Function Over Exact Text:** The most important factor is the equipment's function. Analyze the 'name' and 'description' to understand what the equipment does. If the function is the same, they are strong candidates for grouping.
+2.  **Embrace Variations in Names:** Do not require names to be identical. For example, "Camara IP 8 MP", "Camara IP 4 MP", and "Camara IP 6 MP" should absolutely be grouped together because they are all IP cameras, despite the megapixel difference.
+3.  **Tolerate Model Differences:** Group models that are slight variations of each other. For example, 'DS-2CD2543G0-IS' vs 'DS-2CD2543G2-I' should be grouped.
+4.  **Tolerate Type Differences:** Group different but related types if their function is similar. For example, camera types like 'Domo PTZ', 'Bala', or 'Mini Domo' can likely share the same base protocol. They are all cameras.
 
-Critically, analyze the 'name' and 'description' to understand the equipment's function. If the function is the same, they are strong candidates for grouping. For example "Camara IP 8 MP" and "Camara IP 4 MP" should be grouped together.
-
-If no other equipment is similar, return an array containing only the primary equipment.
+If no other equipment is similar, return an array containing only the primary equipment. The final list MUST always include the primary equipment object.
 
 Primary Equipment to find matches for:
 - ID: {{{equipment.id}}}
@@ -99,7 +103,7 @@ List of all other available equipment to search through:
   - Description: {{{this.description}}}
 {{/each}}
 
-Based on the provided list, return a JSON array of equipment objects that are suitable to share a protocol. The final list MUST include the primary equipment object.`,
+Based on the provided list, return a JSON array of equipment objects that are suitable to share a protocol.`,
 });
 
 const suggestBaseProtocolFlow = ai.defineFlow(

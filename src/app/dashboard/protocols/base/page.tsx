@@ -178,20 +178,25 @@ function BaseProtocolManager() {
 
     const handleManualAddConfirm = () => {
         const equipmentsToAdd = allEquipments.filter(eq => manualSelectionIds.includes(eq.id));
+        
+        // Add to confirmed list
         const newConfirmed = [...confirmedEquipments];
-        const newSimilar = [...similarEquipments];
-
         equipmentsToAdd.forEach(eq => {
             if (!newConfirmed.some(c => c.id === eq.id)) {
                 newConfirmed.push(eq);
             }
+        });
+        setConfirmedEquipments(newConfirmed);
+
+        // Also add to the "similar" list so they appear in the UI correctly
+        const newSimilar = [...similarEquipments];
+        equipmentsToAdd.forEach(eq => {
             if (!newSimilar.some(s => s.id === eq.id)) {
                 newSimilar.push(eq);
             }
         });
-
-        setConfirmedEquipments(newConfirmed);
         setSimilarEquipments(newSimilar);
+        
         setManualSelectionIds([]);
         setIsAddEquipmentDialogOpen(false);
     };
@@ -656,7 +661,7 @@ function BaseProtocolManager() {
                 <ScrollArea className="max-h-96 mt-4">
                     <div className="space-y-2 pr-4">
                         {allEquipments
-                            .filter(eq => !confirmedEquipments.some(confirmed => confirmed.id === eq.id))
+                            .filter(eq => !similarEquipments.some(similar => similar.id === eq.id))
                             .map(eq => (
                                 <div key={eq.id} className="flex items-center gap-3 p-2 border rounded-md">
                                     <Checkbox
