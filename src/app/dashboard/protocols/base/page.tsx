@@ -128,12 +128,35 @@ function BaseProtocolManager() {
     if (!selectedEquipment) return;
     setIsFindingSimilar(true);
     try {
+        const simplifiedEquipment = {
+            id: selectedEquipment.id,
+            name: selectedEquipment.name,
+            description: selectedEquipment.description,
+            brand: selectedEquipment.brand,
+            model: selectedEquipment.model,
+            type: selectedEquipment.type,
+        };
+        const simplifiedAllEquipments = allEquipments.map(eq => ({
+             id: eq.id,
+             name: eq.name,
+             description: eq.description,
+             brand: eq.brand,
+             model: eq.model,
+             type: eq.type,
+        }));
+        
         const result = await suggestBaseProtocol({ 
-            equipment: selectedEquipment, 
-            allEquipments 
+            equipment: simplifiedEquipment, 
+            allEquipments: simplifiedAllEquipments.filter(e => e.id !== selectedEquipment.id)
         });
-        setSimilarEquipments(result);
-        setConfirmedEquipments(result); // Pre-select all suggested
+        
+        // The result contains simplified equipment, so we need to map back to the full equipment objects
+        const fullResultEquipments = result.map(simplifiedEq => 
+            allEquipments.find(fullEq => fullEq.id === simplifiedEq.id)
+        ).filter((eq): eq is Equipment => !!eq);
+
+        setSimilarEquipments(fullResultEquipments);
+        setConfirmedEquipments(fullResultEquipments); // Pre-select all suggested
     } catch (error) {
         console.error("Error finding similar equipments:", error);
         toast({ title: "Error de IA", description: "No se pudieron encontrar equipos similares.", variant: "destructive" });

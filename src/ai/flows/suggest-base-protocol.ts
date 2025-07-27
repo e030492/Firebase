@@ -9,9 +9,35 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {Protocol, ProtocolStep, Equipment} from '@/lib/services';
 import {z} from 'genkit';
 
+const SimplifiedEquipmentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  brand: z.string(),
+  model: z.string(),
+  type: z.string(),
+  // Omit other fields for a cleaner prompt
+});
+type SimplifiedEquipment = z.infer<typeof SimplifiedEquipmentSchema>;
+
+
+const SuggestBaseProtocolInputSchema = z.object({
+  equipment: SimplifiedEquipmentSchema.describe(
+    'The specific piece of equipment for which to find similar items.'
+  ),
+  allEquipments: z
+    .array(SimplifiedEquipmentSchema)
+    .describe(
+      'A list of all available equipments in the inventory to search through.'
+    ),
+});
+export type SuggestBaseProtocolInput = z.infer<
+  typeof SuggestBaseProtocolInputSchema
+>;
+
+// The output should be the full equipment object, so we use the more detailed schema here.
 const EquipmentSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -33,22 +59,9 @@ const EquipmentSchema = z.object({
   configPassword: z.string().optional(),
 });
 
-const SuggestBaseProtocolInputSchema = z.object({
-  equipment: EquipmentSchema.describe(
-    'The specific piece of equipment for which to find similar items.'
-  ),
-  allEquipments: z
-    .array(EquipmentSchema)
-    .describe(
-      'A list of all available equipments in the inventory to search through.'
-    ),
-});
-export type SuggestBaseProtocolInput = z.infer<
-  typeof SuggestBaseProtocolInputSchema
->;
 
 const SuggestBaseProtocolOutputSchema = z
-  .array(EquipmentSchema)
+  .array(SimplifiedEquipmentSchema)
   .describe(
     'A list of equipment, including the original, that are similar enough to share a maintenance protocol.'
   );
@@ -59,17 +72,13 @@ export type SuggestBaseProtocolOutput = z.infer<
 export async function suggestBaseProtocol(
   input: SuggestBaseProtocolInput
 ): Promise<SuggestBaseProtocolOutput> {
-  // Ensure the original equipment is always in the list and we don't duplicate it.
-  const otherEquipments = input.allEquipments.filter(
-    e => e.id !== input.equipment.id
-  );
-  if (otherEquipments.length === 0) {
+  // If there are no other equipments to compare with, just return the original one.
+  if (!input.allEquipments || input.allEquipments.length === 0) {
     return [input.equipment];
   }
-  const result = await suggestBaseProtocolFlow({
-    ...input,
-    allEquipments: otherEquipments,
-  });
+  
+  const result = await suggestBaseProtocolFlow(input);
+
   // Ensure the original equipment is always included in the final list.
   const resultMap = new Map(result.map(e => [e.id, e]));
   if (!resultMap.has(input.equipment.id)) {
@@ -90,6 +99,8 @@ The selection should be based on a fuzzy match of the equipment's characteristic
 
 Critically, analyze the 'name' and 'description' to understand the equipment's function. If the function is the same, they are strong candidates for grouping.
 
+If no other equipment is similar, return an array containing only the primary equipment.
+
 Primary Equipment to find matches for:
 - ID: {{{equipment.id}}}
 - Name: {{{equipment.name}}}
@@ -108,7 +119,7 @@ List of all other available equipment to search through:
   - Description: {{{this.description}}}
 {{/each}}
 
-Based on the provided list, return a JSON array of complete equipment objects that are suitable to share a protocol. The final list MUST include the primary equipment object.`,
+Based on the provided list, return a JSON array of equipment objects that are suitable to share a protocol. The final list MUST include the primary equipment object.`,
 });
 
 const suggestBaseProtocolFlow = ai.defineFlow(
