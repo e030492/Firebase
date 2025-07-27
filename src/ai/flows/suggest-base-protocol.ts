@@ -73,33 +73,39 @@ const prompt = ai.definePrompt({
   name: 'suggestBaseProtocolPrompt',
   input: {schema: SuggestBaseProtocolInputSchema},
   output: {schema: SuggestBaseProtocolOutputSchema},
-  prompt: `You are an expert system for industrial equipment maintenance. Your task is to identify a group of equipment that can share the same maintenance protocol based on FUZZY/SIMILARITY matching, not exact matching.
+  prompt: `You are an expert system for industrial equipment maintenance. Your task is to identify a group of equipment that can share the same maintenance protocol based on a flexible similarity analysis.
 
-You will be given a primary piece of equipment and a list of all other available equipment in the inventory. Your goal is to return a list of all equipment (including the primary one) that are similar enough to use the same maintenance protocol.
+You will be given a primary piece of equipment and a list of all other available equipment in the inventory.
 
-CRITICAL INSTRUCTIONS:
-1.  **Prioritize Function Over Exact Text:** The most important factor is the equipment's function. Analyze the 'name' and 'description' to understand what the equipment does. If the function is the same, they are strong candidates for grouping.
-2.  **Embrace Variations in Names:** Do not require names to be identical. For example, "Camara IP 8 MP", "Camara IP 4 MP", and "Camara IP 6 MP" should absolutely be grouped together because they are all IP cameras, despite the megapixel difference.
-3.  **Tolerate Model Differences:** Group models that are slight variations of each other. For example, 'DS-2CD2543G0-IS' vs 'DS-2CD2543G2-I' should be grouped.
-4.  **Tolerate Type Differences:** Group different but related types if their function is similar. For example, camera types like 'Domo PTZ', 'Bala', or 'Mini Domo' can likely share the same base protocol. They are all cameras.
+**CRITICAL INSTRUCTIONS:**
 
-If no other equipment is similar, return an array containing only the primary equipment. The final list MUST always include the primary equipment object.
+1.  **Similarity Focus:** Your main goal is to find equipment that is functionally similar. The decision should be based almost exclusively on two fields: \`name\` and \`brand\`.
+2.  **Flexible Name Matching:** The \`name\` field does not need to be an exact match. You must group items even if their names differ by up to 40%. This means you should group them if they share the same core function, even with different specifications (like megapixels, sizes, or version numbers).
+3.  **De-prioritize Other Fields:** Do NOT require \`model\` or \`type\` to be the same. These fields can vary. For example, a "Domo" camera and a "Bala" camera from the same brand and product line should be grouped together.
+4.  **Guiding Principle:** Ask yourself: "Would a technician find it reasonable to apply the same base maintenance checklist to these two items?" If yes, group them.
+
+**EXAMPLES of correct grouping:**
+*   "Camara IP 8 MP" and "Camara IP 4 MP" -> **GROUP THEM**. They are both IP cameras.
+*   "Camara Domo PTZ" and "Camara Bala" -> **GROUP THEM**. They are both cameras, likely sharing cleaning and inspection protocols.
+*   "Lector RFID DS-2CD2543G0-IS" and "Lector RFID DS-2CD2543G2-I" -> **GROUP THEM**. The model variation is minor.
+
+If no other equipment is similar, return an array containing ONLY the primary equipment. The final list MUST always include the primary equipment object.
 
 Primary Equipment to find matches for:
 - ID: {{{equipment.id}}}
 - Name: {{{equipment.name}}}
-- Type: {{{equipment.type}}}
 - Brand: {{{equipment.brand}}}
 - Model: {{{equipment.model}}}
+- Type: {{{equipment.type}}}
 - Description: {{{equipment.description}}}
 
 List of all other available equipment to search through:
 {{#each allEquipments}}
 - ID: {{{this.id}}}
   - Name: {{{this.name}}}
-  - Type: {{{this.type}}}
   - Brand: {{{this.brand}}}
   - Model: {{{this.model}}}
+  - Type: {{{this.type}}}
   - Description: {{{this.description}}}
 {{/each}}
 
