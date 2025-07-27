@@ -149,41 +149,53 @@ function BaseProtocolManager() {
   
   const { equipmentsWithProtocol, equipmentsWithoutProtocol } = useMemo(() => {
     const withProtocol: Equipment[] = [];
-    const withoutProtocol: (Equipment & { count: number })[] = [];
-    
-    const equipmentCounts = new Map<string, number>();
-    equipments.forEach(eq => {
+    const withoutProtocol: (Equipment & {
+        count: number;
+        indices: number[];
+    })[] = [];
+
+    const equipmentGroups = new Map<
+        string, { equipment: Equipment; indices: number[] }
+    >();
+
+    equipments.forEach((eq, index) => {
         if (eq.type && eq.brand && eq.model) {
             const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-            equipmentCounts.set(identifier, (equipmentCounts.get(identifier) || 0) + 1);
+            if (!equipmentGroups.has(identifier)) {
+                equipmentGroups.set(identifier, {
+                    equipment: eq,
+                    indices: [],
+                });
+            }
+            equipmentGroups.get(identifier)!.indices.push(index + 1);
         }
     });
 
-    const uniqueEquipmentTypes = new Map<string, Equipment>();
-    equipments.forEach(eq => {
-      if (eq.type && eq.brand && eq.model) {
-        const identifier = `${eq.type}|${eq.brand}|${eq.model}`;
-        if (!uniqueEquipmentTypes.has(identifier)) {
-          uniqueEquipmentTypes.set(identifier, eq);
-        }
-      }
-    });
+    equipmentGroups.forEach((group, identifier) => {
+        const hasProtocol = protocols.some(
+            (p) =>
+                p.type === group.equipment.type &&
+                p.brand === group.equipment.brand &&
+                p.model === group.equipment.model
+        );
 
-    uniqueEquipmentTypes.forEach((eq, identifier) => {
-      const hasProtocol = protocols.some(p => p.type === eq.type && p.brand === eq.brand && p.model === eq.model);
-      if (hasProtocol) {
-        withProtocol.push(eq);
-      } else {
-        withoutProtocol.push({ ...eq, count: equipmentCounts.get(identifier) || 0 });
-      }
+        if (hasProtocol) {
+            withProtocol.push(group.equipment);
+        } else {
+            withoutProtocol.push({
+                ...group.equipment,
+                count: group.indices.length,
+                indices: group.indices,
+            });
+        }
     });
 
     withoutProtocol.sort((a, b) => a.name.localeCompare(b.name));
-    withProtocol.sort((a,b) => a.name.localeCompare(b.name));
+    withProtocol.sort((a, b) => a.name.localeCompare(b.name));
 
-    return { 
-        equipmentsWithProtocol: withProtocol, 
-        equipmentsWithoutProtocol: withoutProtocol 
+    return {
+        equipmentsWithProtocol: withProtocol,
+        equipmentsWithoutProtocol: withoutProtocol,
     };
   }, [equipments, protocols]);
 
@@ -502,7 +514,10 @@ function BaseProtocolManager() {
                                                                 <p className="text-xs text-muted-foreground">Marca: {eq.brand} | Modelo: {eq.model}</p>
                                                             </div>
                                                         </div>
-                                                        <Badge variant="outline">x{eq.count} Equipos</Badge>
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <Badge variant="outline">x{eq.count} Equipos</Badge>
+                                                            <Badge variant="secondary" className="text-xs">Regs: {eq.indices.map(i => `#${i}`).join(', ')}</Badge>
+                                                        </div>
                                                     </div>
                                                 </SelectItem>
                                                 )
@@ -898,5 +913,3 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
-
-    
