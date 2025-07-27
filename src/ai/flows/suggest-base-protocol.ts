@@ -119,12 +119,11 @@ const suggestBaseProtocolFlow = ai.defineFlow(
   },
   async input => {
     const response = await prompt(input);
-    const output = response.output;
-
-    if (!output) {
+    // Handle cases where the model doesn't return a valid structured output.
+    if (!response.output) {
       // If the AI fails to return a valid list, return at least the original equipment.
       return [input.equipment];
     }
-    return output;
+    return response.output;
   }
 );
