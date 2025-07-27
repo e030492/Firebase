@@ -61,7 +61,7 @@ export async function suggestBaseProtocol(
   }
 
   // Ensure the original equipment is always included in the final list.
-  const resultMap = new Map(result.map(e => e.id, e));
+  const resultMap = new Map(result.map(e => [e.id, e]));
   if (!resultMap.has(input.equipment.id)) {
     // Add the original equipment to the beginning of the list if it's not already there.
     return [input.equipment, ...result.filter(e => e.id !== input.equipment.id)];
