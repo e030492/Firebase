@@ -30,12 +30,12 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   
   useEffect(() => {
-    // This effect runs once on mount to ensure mock users are in Firebase Auth
+    // This effect runs once on mount to ensure mock users are in Firebase Auth & Firestore
     const seedData = async () => {
         setIsSeeding(true);
         try {
             await seedMockUsers();
-            console.log("Mock users seeded successfully in Firebase Auth and Firestore.");
+            console.log("Mock users seeded successfully.");
         } catch (error) {
             console.error("Could not seed mock users:", error);
             setError("Error al sincronizar usuarios de prueba.");
@@ -43,8 +43,11 @@ export default function LoginPage() {
             setIsSeeding(false);
         }
     };
-    seedData();
-  }, []);
+    
+    if (isAuthReady) {
+      seedData();
+    }
+  }, [isAuthReady]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,7 +141,7 @@ export default function LoginPage() {
                   ) : !isAuthReady ? (
                      <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Inicializando autenticación...</span>
+                      <span>Inicializando...</span>
                      </>
                   ) : 'Acceder'}
                 </Button>

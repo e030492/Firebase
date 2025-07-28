@@ -63,6 +63,8 @@ export async function loginUser(email: string, pass: string): Promise<User | nul
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
+        // This case might happen if a user exists in Auth but not in Firestore.
+        // For this app's logic, we sign them out and deny access.
         await signOut(auth);
         throw new Error("No user document found for this email.");
     }
@@ -138,15 +140,19 @@ export async function seedMockUsers() {
             const q = query(collection(db, "users"), where("email", "==", mockUser.email), limit(1));
             const querySnapshot = await getDocs(q);
             
-            // If user does not exist, create them in Auth and Firestore
+            // If user does not exist in Firestore, create them in Auth and then Firestore
             if (querySnapshot.empty) {
-                console.log(`User ${mockUser.email} not found. Creating...`);
+                console.log(`User ${mockUser.email} not found in Firestore. Creating...`);
+                // This will create the user in Auth and Firestore
                 await createUser(mockUser);
             }
         } catch (error: any) {
-            // This will fail if user already exists in Auth, which is fine.
+            // This will fail if user already exists in Auth, which is fine if they also exist in Firestore.
+            // But if they exist in Auth and not Firestore, it's an inconsistent state we don't handle here.
             if (error.code !== 'auth/email-already-in-use') {
                  console.error(`Error seeding user ${mockUser.email}:`, error);
+            } else {
+                 console.log(`User ${mockUser.email} already exists in Auth.`);
             }
         }
     }
