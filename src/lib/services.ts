@@ -3,11 +3,11 @@ import {
     collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit, onSnapshot
 } from "firebase/firestore";
 import { 
-    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    signInWithEmailAndPassword, createUserWithEmailAndPassword,
     signOut
 } from "firebase/auth";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { db } from './firebase';
+import { db, auth } from './firebase';
 
 // Interfaces for our data structures
 export type Plano = { url: string; name: string; size: number };
@@ -34,7 +34,6 @@ export type MediaFile = { id: string; name: string; url: string; type: string; s
 
 
 const storage = getStorage();
-export const auth = getAuth();
 
 // --- Firestore Collection Getters ---
 const getCollectionData = async <T extends { id: string }>(collectionName: string): Promise<T[]> => {

@@ -3,8 +3,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged } from "firebase/auth";
+import { auth } from '@/lib/firebase';
 import { 
-    auth,
     loginUser as apiLoginUser,
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as apiCreateUser,
