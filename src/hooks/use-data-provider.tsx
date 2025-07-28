@@ -2,7 +2,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import { 
+    auth,
     loginUser as firebaseLogin,
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as firebaseCreateUser,
@@ -27,8 +29,7 @@ import {
     getCompanySettings,
     subscribeToMediaLibrary as firebaseSubscribeToMediaLibrary,
     uploadFile as firebaseUploadFile,
-    deleteMediaFile as firebaseDeleteMediaFile,
-    onFirebaseAuthStateChanged
+    deleteMediaFile as firebaseDeleteMediaFile
 } from '@/lib/services';
 
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
@@ -88,15 +89,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
-  const [mediaLibrary, setMediaLibrary] = useState<MediaFile[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onFirebaseAuthStateChanged(async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAuthInitialized(true);
       if (user) {
         try {
           setLoading(true);
@@ -131,7 +131,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setCompanySettings(null);
         setLoading(false);
       }
-      setAuthInitialized(true);
     });
     
     return () => unsubscribe();

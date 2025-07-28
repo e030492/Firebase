@@ -1,7 +1,7 @@
 
 import { 
     collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, 
-    query, where, writeBatch, documentId 
+    query, where, writeBatch, documentId, onSnapshot 
 } from "firebase/firestore"; 
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { 
@@ -10,7 +10,6 @@ import {
 } from "firebase/auth";
 import { v4 as uuidv4 } from 'uuid';
 import { db, storage } from './firebase';
-import { mockUsers } from './mock-data';
 
 // Interfaces for our data structures
 export type Plano = { url: string; name: string; size: number };
@@ -18,18 +17,26 @@ export type Almacen = { nombre: string; direccion: string; };
 export type Client = { id: string; name: string; responsable: string; direccion: string; phone1?: string; phone2?: string; almacenes: Almacen[] };
 export type Equipment = { id: string; name: string; alias?: string; description: string; brand: string; model: string; type: string; serial: string; client: string; system: string; location: string; status: 'Activo' | 'Inactivo' | 'En Mantenimiento'; maintenanceStartDate?: string; maintenancePeriodicity?: string; imageUrl?: string | null; ipAddress?: string; configUser?: string; configPassword?: string; protocolId?: string | null; };
 export type System = { id: string; name: string; description: string; color: string; };
-export type User = typeof mockUsers[0] & { id: string; clientId?: string, photoUrl?: string | null, signatureUrl?: string | null };
+export type User = { 
+    id: string; 
+    name: string; 
+    email: string; 
+    role: 'Administrador' | 'Supervisor' | 'Técnico' | 'Cliente'; 
+    password?: string; 
+    permissions: any; 
+    clientId?: string; 
+    photoUrl?: string | null; 
+    signatureUrl?: string | null; 
+};
 export type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; completion: number; notes: string; imageUrl?: string | null; };
 export type Protocol = { id: string; type: string; brand: string; model: string; steps: ProtocolStep[]; };
 export type Cedula = { id: string; folio: string; client: string; equipment: string; technician: string; supervisor: string; creationDate: string; status: 'Pendiente' | 'En Progreso' | 'Completada'; description: string; protocolSteps: ProtocolStep[]; semaforo: 'Verde' | 'Naranja' | 'Rojo' | ''; };
 export type CompanySettings = { id: string; logoUrl: string | null };
 export type MediaFile = { id: string; name: string; url: string; type: string; size: number; createdAt: string; };
 
-const auth = getAuth();
+export const auth = getAuth();
 
 // --- AUTH ---
-export const onFirebaseAuthStateChanged = onAuthStateChanged;
-
 export async function loginUser(email: string, pass: string): Promise<User | null> {
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     if (userCredential.user) {
@@ -62,9 +69,9 @@ export const getCompanySettings = async (): Promise<CompanySettings | null> => {
         return { id: docSnap.id, ...docSnap.data() } as CompanySettings;
     }
     // If it doesn't exist, create a default one
-    const defaultSettings: CompanySettings = { id: 'companyProfile', logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' };
+    const defaultSettings: Omit<CompanySettings, 'id'> = { logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' };
     await updateDoc(docRef, defaultSettings);
-    return defaultSettings;
+    return { id: 'companyProfile', ...defaultSettings };
 };
 
 // --- USER MUTATIONS ---
@@ -166,9 +173,10 @@ export async function createCedula(cedulaData: Omit<Cedula, 'id'>): Promise<Cedu
     return { id: docRef.id, ...cedulaData };
 }
 
-export async function updateCedula(cedulaId: string, cedulaData: Partial<Cedula>): Promise<void> {
+export async function updateCedula(cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void): Promise<void> {
     await updateDoc(doc(db, "cedulas", cedulaId), cedulaData);
 }
+
 
 export async function deleteCedula(cedulaId: string): Promise<void> {
     await deleteDoc(doc(db, "cedulas", cedulaId));
@@ -181,54 +189,61 @@ export async function updateCompanySettings(settingsData: Partial<CompanySetting
 
 // --- MEDIA LIBRARY ---
 export function subscribeToMediaLibrary(setFiles: (files: MediaFile[]) => void): () => void {
-  // This would be a realtime listener in a real app
-  const getMedia = async () => {
-    const files = await getCollectionData<MediaFile>('mediaLibrary');
-    setFiles(files);
-  };
-  getMedia();
-  // Return a mock unsubscribe function
-  return () => {};
+    const q = query(collection(db, "mediaLibrary"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const files: MediaFile[] = [];
+        querySnapshot.forEach((doc) => {
+            files.push({ id: doc.id, ...doc.data() } as MediaFile);
+        });
+        setFiles(files);
+    });
+    return unsubscribe;
 }
 
 export async function uploadFile(files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void): Promise<void> {
     logAudit(`Starting upload for ${files.length} files.`);
-    const uploadPromises = files.map(file => new Promise<void>((resolve, reject) => {
+    let totalBytes = files.reduce((acc, file) => acc + file.size, 0);
+    let totalBytesTransferred = 0;
+
+    const uploadPromises = files.map(file => {
         const storageRef = ref(storage, `media/${uuidv4()}-${file.name}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                logAudit(`File ${file.name} progress: ${progress.toFixed(2)}%`);
-                // Note: onProgress would need to be aggregated for total progress.
-                // This simplified version just reports individual progress.
-            },
-            (error) => {
-                logAudit(`ERROR uploading ${file.name}: ${error.message}`);
-                reject(error);
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                logAudit(`File ${file.name} uploaded successfully. URL: ${downloadURL}`);
-                const mediaFileData = {
-                    name: file.name,
-                    url: downloadURL,
-                    type: file.type,
-                    size: file.size,
-                    createdAt: new Date().toISOString(),
-                };
-                await addDoc(collection(db, "mediaLibrary"), mediaFileData);
-                resolve();
-            }
-        );
-    }));
+        return new Promise<void>((resolve, reject) => {
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    // This reports individual progress, we need to aggregate.
+                },
+                (error) => {
+                    logAudit(`ERROR uploading ${file.name}: ${error.message}`);
+                    reject(error);
+                },
+                async () => {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    logAudit(`File ${file.name} uploaded successfully. URL: ${downloadURL}`);
+                    const mediaFileData = {
+                        name: file.name,
+                        url: downloadURL,
+                        type: file.type,
+                        size: file.size,
+                        createdAt: new Date().toISOString(),
+                    };
+                    await addDoc(collection(db, "mediaLibrary"), mediaFileData);
+                    
+                    totalBytesTransferred += file.size;
+                    const progress = (totalBytesTransferred / totalBytes) * 100;
+                    onProgress(progress);
+                    logAudit(`Total progress: ${progress.toFixed(2)}%`);
+                    
+                    resolve();
+                }
+            );
+        });
+    });
 
     await Promise.all(uploadPromises);
-
-    // For simplicity, we'll just set total progress to 100 at the end.
-    onProgress(100);
 }
+
 
 export async function deleteMediaFile(file: MediaFile): Promise<void> {
     const fileRef = ref(storage, file.url);
