@@ -54,7 +54,7 @@ type DataContextType = {
   loginUser: (email: string, pass: string) => Promise<User | null>;
   // Media Library
   subscribeToMediaLibrary: (setFiles: (files: MediaFile[]) => void) => () => void;
-  uploadFile: (file: File) => Promise<MediaFile>;
+  uploadFile: (files: File[], onProgress: (percentage: number) => void) => Promise<void>;
   deleteMediaFile: (file: MediaFile) => Promise<void>;
   // Settings
   updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;
@@ -149,8 +149,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     error,
     loginUser,
     subscribeToMediaLibrary,
-    uploadFile: async (file) => {
-        return await uploadFileService(file);
+    uploadFile: async (files, onProgress) => {
+        await uploadFileService(files, onProgress);
     },
     deleteMediaFile: async (file) => {
         await deleteMediaFileService(file);

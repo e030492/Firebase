@@ -1,7 +1,7 @@
 
 
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
 import { db, storage } from './firebase';
 import { 
@@ -110,9 +110,11 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
             
             // Re-hydrate image URLs for cedulas from separate fields
             if (collectionName === collections.cedulas && docData.protocolSteps) {
-                const stepImagePromises = docData.protocolSteps.map((step, index) => {
-                     const imageUrl = (docData as any)[`stepImage_${index}`] || '';
-                     return { ...step, imageUrl };
+                 const stepImagePromises = docData.protocolSteps.map(async (step, index) => {
+                    const stepImageRef = doc(db, `${collectionName}/${doc.id}/stepImages`, `${index}`);
+                    const stepImageSnap = await getDoc(stepImageRef);
+                    const imageUrl = stepImageSnap.exists() ? stepImageSnap.data().imageUrl : '';
+                    return { ...step, imageUrl };
                 });
                 docData.protocolSteps = await Promise.all(stepImagePromises);
             }
@@ -256,19 +258,16 @@ export const updateCedula = async (id: string, data: Partial<Cedula>, onStep?: (
 
     if (dataToSave.protocolSteps) {
         onStep?.(`Procesando ${dataToSave.protocolSteps.length} pasos del protocolo...`);
-        const processedSteps = [...dataToSave.protocolSteps]; 
-
-        processedSteps.forEach((step: ProtocolStep, index: number) => {
+        
+        dataToSave.protocolSteps.forEach((step: ProtocolStep, index: number) => {
             if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                onStep?.(`Paso ${index + 1}: Imagen detectada. Guardando en campo principal.`);
+                onStep?.(`Paso ${index + 1}: Imagen detectada. Guardando en campo separado.`);
                 dataToSave[`stepImage_${index}`] = step.imageUrl;
-                step.imageUrl = ''; 
-            } else {
-                 onStep?.(`Paso ${index + 1}: Sin imagen nueva.`);
             }
+            // Ensure imageUrl is not saved inside the array
+            delete step.imageUrl;
         });
 
-        dataToSave.protocolSteps = processedSteps;
         onStep?.('Protocolo procesado.');
     } else {
         onStep?.('No hay protocolo para procesar.');
@@ -294,26 +293,72 @@ export const subscribeToMediaLibrary = (setFiles: (files: MediaFile[]) => void) 
     return unsubscribe;
 };
 
-export async function uploadFile(file: File): Promise<MediaFile> {
-  const fileId = uuidv4();
-  const storageRef = ref(storage, `${collections.mediaLibrary}/${fileId}-${file.name}`);
-  
-  const snapshot = await uploadBytes(storageRef, file);
-  const downloadURL = await getDownloadURL(snapshot.ref);
+async function uploadFileToStorage(file: File, onProgress: (percentage: number) => void): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const fileId = uuidv4();
+        const storageRef = ref(storage, `${collections.mediaLibrary}/${fileId}-${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
-  const fileData: Omit<MediaFile, 'id'> = {
-    name: file.name,
-    url: downloadURL,
-    type: file.type,
-    size: file.size,
-    createdAt: new Date().toISOString(),
-  };
-
-  const docRef = doc(db, collections.mediaLibrary, fileId);
-  await setDoc(docRef, fileData);
-
-  return { id: fileId, ...fileData };
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                onProgress(progress);
+            },
+            (error) => {
+                console.error("Upload failed:", error);
+                reject(error);
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadURL);
+            }
+        );
+    });
 }
+
+export async function uploadFile(files: File[], onProgress: (percentage: number) => void) {
+    const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+    let totalUploaded = 0;
+
+    const uploadPromises = files.map(file => {
+        const fileId = uuidv4();
+        const storageRef = ref(storage, `${collections.mediaLibrary}/${fileId}-${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        return new Promise<void>((resolve, reject) => {
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    // This reports progress for a single file, we need to aggregate it.
+                },
+                (error) => {
+                    console.error("Upload failed for file:", file.name, error);
+                    reject(error);
+                },
+                async () => {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    const fileData: Omit<MediaFile, 'id'> = {
+                        name: file.name,
+                        url: downloadURL,
+                        type: file.type,
+                        size: file.size,
+                        createdAt: new Date().toISOString(),
+                    };
+                    const docRef = doc(db, collections.mediaLibrary, fileId);
+                    await setDoc(docRef, fileData);
+
+                    // Update total progress
+                    totalUploaded += file.size;
+                    const overallProgress = (totalUploaded / totalSize) * 100;
+                    onProgress(overallProgress);
+                    resolve();
+                }
+            );
+        });
+    });
+
+    await Promise.all(uploadPromises);
+}
+
 
 export async function deleteMediaFile(file: MediaFile): Promise<void> {
     const storageRef = ref(storage, file.url);

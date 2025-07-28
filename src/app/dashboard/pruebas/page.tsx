@@ -54,19 +54,13 @@ export default function PruebasPage() {
         setIsUploading(true);
         setUploadProgress(0);
 
-        const totalSize = files.reduce((acc, file) => acc + file.size, 0);
-        let uploadedSize = 0;
-
-        for (const file of files) {
-            try {
-                await uploadFile(file);
-                uploadedSize += file.size;
-                setUploadProgress((uploadedSize / totalSize) * 100);
-            } catch (error) {
-                console.error("Error uploading file:", error);
-                alert(`Error al subir el archivo: ${file.name}`);
-                break;
-            }
+        try {
+            await uploadFile(files, (progress) => {
+                setUploadProgress(progress);
+            });
+        } catch (error) {
+            console.error("Error during bulk upload:", error);
+            alert(`Error al subir los archivos.`);
         }
         
         setIsUploading(false);
