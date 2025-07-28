@@ -90,19 +90,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
-  useEffect(() => {
-    // This effect runs once on mount to ensure mock users are in Firebase Auth
-    const seedData = async () => {
-        try {
-            await seedMockUsers();
-            console.log("Mock users seeded successfully in Firebase Auth and Firestore.");
-        } catch (error) {
-            console.error("Could not seed mock users:", error);
-        }
-    };
-    seedData();
-  }, []);
-
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
     setLoadingStatus('loading_data');
     try {
@@ -257,5 +244,3 @@ export function useData() {
   }
   return context;
 }
-
-    

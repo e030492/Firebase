@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -18,16 +18,34 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useData } from '@/hooks/use-data-provider';
+import { seedMockUsers } from '@/lib/services';
 
 export default function LoginPage() {
   const router = useRouter();
-  // Obtener isAuthReady del hook useData
   const { loginUser, loading: dataLoading, companySettings, isAuthReady } = useData(); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(true);
   const [error, setError] = useState('');
   
+  useEffect(() => {
+    // This effect runs once on mount to ensure mock users are in Firebase Auth
+    const seedData = async () => {
+        setIsSeeding(true);
+        try {
+            await seedMockUsers();
+            console.log("Mock users seeded successfully in Firebase Auth and Firestore.");
+        } catch (error) {
+            console.error("Could not seed mock users:", error);
+            setError("Error al sincronizar usuarios de prueba.");
+        } finally {
+            setIsSeeding(false);
+        }
+    };
+    seedData();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -46,12 +64,10 @@ export default function LoginPage() {
       if (user) {
         router.push('/dashboard/dashboard');
       } else {
-        // This case might not be reached if loginUser always throws on failure.
         setError('Usuario o contraseña incorrectos.');
       }
     } catch (err: any) {
         console.error("Login failed:", err);
-        // Check for the specific Firebase auth error code
         if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
             setError('Usuario o contraseña incorrectos.');
         } else {
@@ -63,8 +79,7 @@ export default function LoginPage() {
     }
   };
 
-  // Deshabilitar el formulario si está cargando o la autenticación no está lista
-  const isFormDisabled = isLoading || dataLoading || !isAuthReady;
+  const isFormDisabled = isLoading || dataLoading || !isAuthReady || isSeeding;
 
   return (
     <>
@@ -72,8 +87,6 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
             <div className="mb-4 flex items-center justify-center h-72 w-72">
-              {/* Usa la imagen de la compañía si está disponible, de lo contrario un placeholder */}
-              {/* Añadida la propiedad priority */}
               <Image 
                 src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} 
                 alt="Escuadra Technology Logo" 
@@ -106,9 +119,13 @@ export default function LoginPage() {
                 {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
               </CardContent>
               <CardFooter className="flex-col gap-4">
-                {/* Deshabilitar el botón si el formulario está deshabilitado */}
                 <Button type="submit" className="w-full" disabled={isFormDisabled}>
-                  {dataLoading ? (
+                  {isSeeding ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Sincronizando usuarios...</span>
+                    </>
+                  ) : dataLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>Cargando datos...</span>
@@ -118,7 +135,7 @@ export default function LoginPage() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>Accediendo...</span>
                     </>
-                  ) : !isAuthReady ? ( // Mostrar estado si la autenticación no está lista
+                  ) : !isAuthReady ? (
                      <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>Inicializando autenticación...</span>
