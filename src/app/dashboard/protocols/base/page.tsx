@@ -125,10 +125,17 @@ function BaseProtocolManager() {
     }
   }, [clientFilter, clients]);
 
-  const { equipmentsWithoutProtocol, equipmentsWithProtocol } = useMemo(() => {
+  const { equipmentsWithoutProtocol, equipmentsWithProtocol, globalEquipmentIndexMap } = useMemo(() => {
     const protocolMap = new Map(protocols.map(p => [p.id, p]));
     const withoutProtocol: Equipment[] = [];
     const withProtocol: EquipmentWithProtocol[] = [];
+    
+    // Create a stable, sorted index map for all equipments
+    const sortedAllEquipments = [...allEquipments].sort((a, b) => a.name.localeCompare(b.name));
+    const globalIndexMap = new Map<string, number>();
+    sortedAllEquipments.forEach((eq, index) => {
+        globalIndexMap.set(eq.id, index + 1);
+    });
 
     allEquipments.forEach(eq => {
       if (eq.protocolId && protocolMap.has(eq.protocolId)) {
@@ -151,7 +158,8 @@ function BaseProtocolManager() {
     
     return {
         equipmentsWithoutProtocol: withoutProtocol.filter(filterFn),
-        equipmentsWithProtocol: withProtocol.filter(filterFn)
+        equipmentsWithProtocol: withProtocol.filter(filterFn),
+        globalEquipmentIndexMap: globalIndexMap,
     };
   }, [allEquipments, protocols, clientFilter, systemFilter, warehouseFilter, clients, systems]);
   
@@ -597,13 +605,12 @@ function BaseProtocolManager() {
                                     >
                                         <CommandInput 
                                             placeholder="Buscar por nombre, marca, modelo..."
-                                            value={searchQuery}
                                             onValueChange={setSearchQuery}
                                         />
                                         <CommandList ref={commandListRef}>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
                                             <CommandGroup>
-                                                {equipmentsWithoutProtocol.map((eq, index) => (
+                                                {equipmentsWithoutProtocol.map((eq) => (
                                                 <CommandItem
                                                     key={eq.id}
                                                     value={eq.id}
@@ -625,7 +632,7 @@ function BaseProtocolManager() {
                                                             <span className="font-semibold">{eq.name}</span>
                                                             <span className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</span>
                                                             <span className="text-xs text-muted-foreground">
-                                                                No. de Registro: {index + 1} | N/S: {eq.serial || 'N/A'}
+                                                                No. de Registro: {globalEquipmentIndexMap.get(eq.id)} | N/S: {eq.serial || 'N/A'}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -685,7 +692,7 @@ function BaseProtocolManager() {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
-                                    {similarEquipments.map((eq, index) => (
+                                    {similarEquipments.map((eq) => (
                                         <div key={eq.id} className="flex items-center gap-4 p-2 border rounded-md">
                                             <Checkbox 
                                                 id={`eq-${eq.id}`}
@@ -697,7 +704,7 @@ function BaseProtocolManager() {
                                                 <div className="flex-1">
                                                     <p className="font-semibold">{eq.name}</p>
                                                     <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
-                                                    <p className="text-xs text-muted-foreground">No. de Registro: {index + 1} | N/S: {eq.serial || 'N/A'}</p>
+                                                    <p className="text-xs text-muted-foreground">No. de Registro: {globalEquipmentIndexMap.get(eq.id)} | N/S: {eq.serial || 'N/A'}</p>
                                                 </div>
                                             </Label>
                                         </div>
