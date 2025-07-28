@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -118,16 +118,14 @@ export default function NewUserPage() {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
 
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEmail = e.target.value;
-    setEmail(newEmail);
-    if (newEmail && users.some(user => user.email === newEmail)) {
-      setEmailError('Este correo electrónico ya está en uso.');
+  useEffect(() => {
+    if (email && users.some(user => user.email === email)) {
+      setEmailError('Este correo electrónico ya está registrado.');
     } else {
       setEmailError('');
     }
-  };
-  
+  }, [email, users]);
+
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
     setPermissions(prev => ({
       ...prev,
@@ -222,6 +220,8 @@ export default function NewUserPage() {
     }
   };
 
+  const isSubmitDisabled = loading || !!emailError;
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="mx-auto grid max-w-4xl auto-rows-max items-start gap-4 lg:gap-8">
@@ -274,7 +274,7 @@ export default function NewUserPage() {
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="ejemplo@correo.com" value={email} onChange={handleEmailChange} required disabled={loading} />
+                <Input id="email" type="email" placeholder="ejemplo@correo.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
                 {emailError && <p className="text-sm text-destructive">{emailError}</p>}
               </div>
               <div className="grid md:grid-cols-2 gap-4">
@@ -393,7 +393,7 @@ export default function NewUserPage() {
                 </Table>
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={isSubmitDisabled}>
                   {loading ? "Guardando..." : "Guardar Usuario"}
                 </Button>
             </CardFooter>
