@@ -83,7 +83,7 @@ export default function LoginPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="admin@escuadra.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isFormDisabled} />
+                  <Input id="email" type="email" placeholder="erick@escuadramx.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isFormDisabled} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
@@ -122,3 +122,5 @@ export default function LoginPage() {
     </>
   );
 }
+
+    

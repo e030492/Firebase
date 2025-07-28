@@ -4,6 +4,23 @@ export const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
 export const mockUsers = [
   {
     id: '1',
+    name: 'Erick (Admin)',
+    email: 'erick@escuadramx.com',
+    role: 'Administrador',
+    password: 'admin123',
+    signatureUrl: '',
+    photoUrl: 'https://placehold.co/100x100.png',
+    permissions: {
+        clients: { create: true, update: true, delete: true },
+        equipments: { create: true, update: true, delete: true },
+        systems: { create: true, update: true, delete: true },
+        users: { create: true, update: true, delete: true },
+        protocols: { create: true, update: true, delete: true },
+        cedulas: { create: true, update: true, delete: true },
+    }
+  },
+  {
+    id: '5',
     name: 'Admin User',
     email: 'admin@escuadra.com',
     role: 'Administrador',
@@ -20,23 +37,6 @@ export const mockUsers = [
     }
   },
   {
-    id: '5',
-    name: 'Root Administrator',
-    email: 'root@escuadra.com',
-    role: 'Administrador',
-    password: 'admin123',
-    signatureUrl: '',
-    photoUrl: 'https://placehold.co/100x100.png',
-    permissions: {
-        clients: { create: true, update: true, delete: true },
-        equipments: { create: true, update: true, delete: true },
-        systems: { create: true, update: true, delete: true },
-        users: { create: true, update: true, delete: true },
-        protocols: { create: true, update: true, delete: true },
-        cedulas: { create: true, update: true, delete: true },
-    }
-  },
-    {
     id: '6',
     name: 'Super Admin',
     email: 'super@escuadra.com',
@@ -386,3 +386,5 @@ export const mockCedulas = [
     semaforo: '' as const,
   },
 ];
+
+    

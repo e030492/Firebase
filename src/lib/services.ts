@@ -148,7 +148,7 @@ export async function seedMockUsers() {
             }
         } catch (error: any) {
             // This will fail if user already exists in Auth, which is fine if they also exist in Firestore.
-            // But if they exist in Auth and not Firestore, it's an inconsistent state we don't handle here.
+            // But if they exist in Auth and not in Firestore, it's an inconsistent state we don't handle here.
             if (error.code !== 'auth/email-already-in-use') {
                  console.error(`Error seeding user ${mockUser.email}:`, error);
             } else {
@@ -160,27 +160,27 @@ export async function seedMockUsers() {
 
 // --- CLIENT MUTATIONS ---
 export const createClient = (clientData: Omit<Client, 'id'>) => createDocument<Client>('clients', clientData);
-export const updateClient = (clientId: string, clientData: Partial<Client>) => updateDocument<Client>('clients', clientId, clientData);
+export const updateClient = (clientId: string, clientData: Partial<Client>) => apiUpdateClient(clientId, clientData);
 export const deleteClient = (clientId: string) => deleteDocument('clients', clientId);
 
 // --- SYSTEM MUTATIONS ---
 export const createSystem = (systemData: Omit<System, 'id'>) => createDocument<System>('systems', systemData);
-export const updateSystem = (systemId: string, systemData: Partial<System>) => updateDocument<System>('systems', systemId, systemData);
+export const updateSystem = (systemId: string, systemData: Partial<System>) => apiUpdateSystem(systemId, systemData);
 export const deleteSystem = (systemId: string) => deleteDocument('systems', systemId);
 
 // --- EQUIPMENT MUTATIONS ---
 export const createEquipment = (equipmentData: Omit<Equipment, 'id'>) => createDocument<Equipment>('equipments', equipmentData);
-export const updateEquipment = (equipmentId: string, equipmentData: Partial<Equipment>) => updateDocument<Equipment>('equipments', equipmentId, equipmentData);
+export const updateEquipment = (equipmentId: string, equipmentData: Partial<Equipment>) => apiUpdateEquipment(equipmentId, equipmentData);
 export const deleteEquipment = (equipmentId: string) => deleteDocument('equipments', equipmentId);
 
 // --- PROTOCOL MUTATIONS ---
 export const createProtocol = (protocolData: Omit<Protocol, 'id'>, id?: string) => createDocument<Protocol>('protocols', protocolData, id);
-export const updateProtocol = (protocolId: string, protocolData: Partial<Protocol>) => updateDocument<Protocol>('protocols', protocolId, protocolData);
+export const updateProtocol = (protocolId: string, protocolData: Partial<Protocol>) => apiUpdateProtocol(protocolId, protocolData);
 export const deleteProtocol = (protocolId: string) => deleteDocument('protocols', protocolId);
 
 // --- CEDULA MUTATIONS ---
 export const createCedula = (cedulaData: Omit<Cedula, 'id'>) => createDocument<Cedula>('cedulas', cedulaData);
-export const updateCedula = (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => updateDocument<Cedula>('cedulas', cedulaId, cedulaData);
+export const updateCedula = (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => apiUpdateCedula(cedulaId, cedulaData, onStep);
 export const deleteCedula = (cedulaId: string) => deleteDocument('cedulas', cedulaId);
 
 // --- MEDIA LIBRARY ---
