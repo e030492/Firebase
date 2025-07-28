@@ -96,40 +96,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoadingStatus('loading_data');
-      const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
-        getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
-      ]);
-      setUsers(usersData);
-      setClients(clientsData);
-      setSystems(systemsData);
-      setEquipments(equipmentsData);
-      setProtocols(protocolsData);
-      setCedulas(cedulasData);
-      setCompanySettings(settingsData);
-      setError(null);
-      setLoadingStatus('ready');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-      setError(errorMessage);
-      setLoadingStatus('error');
-      console.error(err);
-    }
-  }, []);
-
   useEffect(() => {
     setLoadingStatus('authenticating');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        setLoadingStatus('loading_data');
         try {
-          await user.getIdToken(true); // Force refresh the token
-          fetchData();
-        } catch (error) {
-            console.error("Error refreshing token:", error);
-            setError("Error de autenticación");
+          // Force refresh the token to ensure permissions are up to date
+          await user.getIdToken(true); 
+
+          const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
+            getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
+          ]);
+          setUsers(usersData);
+          setClients(clientsData);
+          setSystems(systemsData);
+          setEquipments(equipmentsData);
+          setProtocols(protocolsData);
+          setCedulas(cedulasData);
+          setCompanySettings(settingsData);
+          setError(null);
+          setLoadingStatus('ready');
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during data fetching";
+            setError(errorMessage);
             setLoadingStatus('error');
+            console.error("Data fetching error:", err);
         }
       } else {
         setLoadingStatus('idle');
@@ -139,10 +131,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setEquipments([]);
         setProtocols([]);
         setCedulas([]);
+        setCompanySettings(null);
       }
     });
     return () => unsubscribe();
-  }, [fetchData]);
+  }, []); // Empty dependency array ensures this runs only once.
 
 
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
@@ -304,5 +297,3 @@ export function useData() {
   }
   return context;
 }
-
-    
