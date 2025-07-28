@@ -3,11 +3,36 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { 
-    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas
+    loginUser as firebaseLogin,
+    getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
+    createUser as firebaseCreateUser,
+    updateUser as firebaseUpdateUser,
+    deleteUser as firebaseDeleteUser,
+    createClient as firebaseCreateClient,
+    updateClient as firebaseUpdateClient,
+    deleteClient as firebaseDeleteClient,
+    createSystem as firebaseCreateSystem,
+    updateSystem as firebaseUpdateSystem,
+    deleteSystem as firebaseDeleteSystem,
+    createEquipment as firebaseCreateEquipment,
+    updateEquipment as firebaseUpdateEquipment,
+    deleteEquipment as firebaseDeleteEquipment,
+    createProtocol as firebaseCreateProtocol,
+    updateProtocol as firebaseUpdateProtocol,
+    deleteProtocol as firebaseDeleteProtocol,
+    createCedula as firebaseCreateCedula,
+    updateCedula as firebaseUpdateCedula,
+    deleteCedula as firebaseDeleteCedula,
+    updateCompanySettings as firebaseUpdateCompanySettings,
+    getCompanySettings,
+    subscribeToMediaLibrary as firebaseSubscribeToMediaLibrary,
+    uploadFile as firebaseUploadFile,
+    deleteMediaFile as firebaseDeleteMediaFile,
+    onFirebaseAuthStateChanged
 } from '@/lib/services';
-import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
+
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
-import { v4 as uuidv4 } from 'uuid';
+import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 
 type DataContextType = {
   users: User[];
@@ -21,7 +46,7 @@ type DataContextType = {
   error: string | null;
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
-  // Media Library - Mock implementation
+  // Media Library
   subscribeToMediaLibrary: (setFiles: (files: MediaFile[]) => void) => () => void;
   uploadFile: (files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void) => Promise<void>;
   deleteMediaFile: (file: MediaFile) => Promise<void>;
@@ -55,31 +80,6 @@ type DataContextType = {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY_PREFIX = 'guardian_shield_';
-
-// Helper to get data from localStorage
-const getFromStorage = <T>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    const item = window.localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}${key}`);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error reading from localStorage for key "${key}":`, error);
-    return defaultValue;
-  }
-};
-
-// Helper to set data to localStorage
-const setToStorage = <T>(key: string, value: T) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}${key}`, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error writing to localStorage for key "${key}":`, error);
-  }
-};
-
-
 export function DataProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -91,215 +91,60 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [mediaLibrary, setMediaLibrary] = useState<MediaFile[]>([]);
   
   const [loading, setLoading] = useState(true);
-  const [error] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize data from localStorage or mockData
+  const [authInitialized, setAuthInitialized] = useState(false);
+
   useEffect(() => {
-    setUsers(getFromStorage('users', mockUsers));
-    setClients(getFromStorage('clients', mockClients));
-    setSystems(getFromStorage('systems', mockSystems));
-    setEquipments(getFromStorage('equipments', mockEquipments));
-    setProtocols(getFromStorage('protocols', mockProtocols));
-    setCedulas(getFromStorage('cedulas', mockCedulas));
-    setCompanySettings(getFromStorage('companySettings', { id: 'companyProfile', logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' }));
-    setMediaLibrary(getFromStorage('mediaLibrary', []));
-    setLoading(false);
+    const unsubscribe = onFirebaseAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          setLoading(true);
+          const [
+              usersData, clientsData, systemsData, equipmentsData, 
+              protocolsData, cedulasData, settingsData
+          ] = await Promise.all([
+              getUsers(), getClients(), getSystems(), getEquipments(), 
+              getProtocols(), getCedulas(), getCompanySettings()
+          ]);
+          setUsers(usersData);
+          setClients(clientsData);
+          setSystems(systemsData);
+          setEquipments(equipmentsData);
+          setProtocols(protocolsData);
+          setCedulas(cedulasData);
+          setCompanySettings(settingsData);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to load data from Firebase.");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+      } else {
+        // No user logged in, clear data and finish loading.
+        setUsers([]);
+        setClients([]);
+        setSystems([]);
+        setEquipments([]);
+        setProtocols([]);
+        setCedulas([]);
+        setCompanySettings(null);
+        setLoading(false);
+      }
+      setAuthInitialized(true);
+    });
+    
+    return () => unsubscribe();
   }, []);
 
-  // Persist data to localStorage whenever it changes
-  useEffect(() => { setToStorage('users', users); }, [users]);
-  useEffect(() => { setToStorage('clients', clients); }, [clients]);
-  useEffect(() => { setToStorage('systems', systems); }, [systems]);
-  useEffect(() => { setToStorage('equipments', equipments); }, [equipments]);
-  useEffect(() => { setToStorage('protocols', protocols); }, [protocols]);
-  useEffect(() => { setToStorage('cedulas', cedulas); }, [cedulas]);
-  useEffect(() => { setToStorage('companySettings', companySettings); }, [companySettings]);
-  useEffect(() => { setToStorage('mediaLibrary', mediaLibrary); }, [mediaLibrary]);
-
-  
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
-      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
+      const user = await firebaseLogin(email, pass);
       if (user) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-          return user;
       }
-      return null;
+      return user;
   };
   
-  const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
-    const newUser = { id: uuidv4(), ...userData } as User;
-    setUsers(prev => [...prev, newUser]);
-    return newUser;
-  };
-
-  const updateUser = async (userId: string, userData: Partial<User>): Promise<User> => {
-    let updatedUser: User | null = null;
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        updatedUser = { ...u, ...userData };
-        return updatedUser;
-      }
-      return u;
-    }));
-    if (!updatedUser) throw new Error("User not found");
-    return updatedUser;
-  };
-
-  const deleteUser = async (userId: string) => {
-    setUsers(prev => prev.filter(u => u.id !== userId));
-  };
-  
-  const createClient = async (clientData: Omit<Client, 'id'>): Promise<Client> => {
-    const newClient = { id: uuidv4(), ...clientData };
-    setClients(prev => [...prev, newClient]);
-    return newClient;
-  };
-
-  const updateClient = async (clientId: string, clientData: Partial<Client>): Promise<Client> => {
-      let updatedClient: Client | null = null;
-      setClients(prev => prev.map(c => {
-          if (c.id === clientId) {
-              updatedClient = { ...c, ...clientData };
-              return updatedClient;
-          }
-          return c;
-      }));
-      if (!updatedClient) throw new Error("Client not found");
-      return updatedClient;
-  };
-  
-  const deleteClient = async (clientId: string) => {
-    setClients(prev => prev.filter(c => c.id !== clientId));
-  };
-  
-  const createSystem = async (systemData: Omit<System, 'id'>): Promise<System> => {
-    const newSystem = { id: uuidv4(), ...systemData };
-    setSystems(prev => [...prev, newSystem]);
-    return newSystem;
-  };
-
-  const updateSystem = async (systemId: string, systemData: Partial<System>): Promise<System> => {
-    let updatedSystem: System | null = null;
-    setSystems(prev => prev.map(s => {
-        if (s.id === systemId) {
-            updatedSystem = { ...s, ...systemData };
-            return updatedSystem;
-        }
-        return s;
-    }));
-    if (!updatedSystem) throw new Error("System not found");
-    return updatedSystem;
-  };
-  
-  const deleteSystem = async (systemId: string) => {
-    setSystems(prev => prev.filter(s => s.id !== systemId));
-  };
-
-  const createEquipment = async (equipmentData: Omit<Equipment, 'id'>): Promise<Equipment> => {
-    const newEquipment = { id: uuidv4(), ...equipmentData };
-    setEquipments(prev => [...prev, newEquipment]);
-    return newEquipment;
-  };
-  
-  const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>) => {
-    setEquipments(prev => prev.map(e => e.id === equipmentId ? { ...e, ...equipmentData } : e));
-  };
-  
-  const deleteEquipment = async (equipmentId: string) => {
-    setEquipments(prev => prev.filter(e => e.id !== equipmentId));
-  };
-  
-  const createProtocol = async (protocolData: Omit<Protocol, 'id'>, id?: string): Promise<Protocol> => {
-    const newProtocol = { id: id || uuidv4(), ...protocolData };
-    setProtocols(prev => [...prev, newProtocol]);
-    return newProtocol;
-  };
-
-  const updateProtocol = async (protocolId: string, protocolData: Partial<Protocol>): Promise<Protocol> => {
-      let updatedProtocol: Protocol | null = null;
-      setProtocols(prev => prev.map(p => {
-          if (p.id === protocolId) {
-              updatedProtocol = { ...p, ...protocolData };
-              return updatedProtocol;
-          }
-          return p;
-      }));
-      if (!updatedProtocol) throw new Error("Protocol not found");
-      return updatedProtocol;
-  };
-
-  const deleteProtocol = async (protocolId: string) => {
-      setProtocols(prev => prev.filter(p => p.id !== protocolId));
-  };
-
-  const createCedula = async (cedulaData: Omit<Cedula, 'id'>): Promise<Cedula> => {
-    const newCedula = { id: uuidv4(), ...cedulaData };
-    setCedulas(prev => [...prev, newCedula]);
-    return newCedula;
-  };
-  
-  const updateCedula = async (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => {
-    onStep?.('Iniciando actualización de cédula...');
-    setCedulas(prev => {
-        return prev.map(c => {
-            if (c.id === cedulaId) {
-                onStep?.(`Cédula con folio ${c.folio} encontrada. Aplicando cambios...`);
-                const updatedCedula = { ...c, ...cedulaData };
-                onStep?.('Cambios aplicados en memoria.');
-                return updatedCedula;
-            }
-            return c;
-        });
-    });
-    onStep?.('¡Actualización completada con éxito!');
-  };
-
-  const deleteCedula = async (cedulaId: string) => {
-    setCedulas(prev => prev.filter(c => c.id !== cedulaId));
-  };
-  
-  // Mock Media Library Functions
-  const subscribeToMediaLibrary = (callback: (files: MediaFile[]) => void) => {
-    callback(mediaLibrary);
-    // Return an empty unsubscribe function as this is a mock
-    return () => {};
-  };
-
-  const uploadFile = async (files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void) => {
-    logAudit(`Simulando carga para ${files.length} archivos...`);
-    let totalProgress = 0;
-    const step = 100 / files.length;
-    for (const file of files) {
-        // Simulate upload delay
-        await new Promise(res => setTimeout(res, 500));
-        const newMediaFile: MediaFile = {
-            id: uuidv4(),
-            name: file.name,
-            url: URL.createObjectURL(file), // Create a temporary local URL
-            type: file.type,
-            size: file.size,
-            createdAt: new Date().toISOString(),
-        };
-        setMediaLibrary(prev => [newMediaFile, ...prev]);
-        totalProgress += step;
-        onProgress(totalProgress);
-        logAudit(`Archivo ${file.name} "cargado".`);
-    }
-    onProgress(100);
-    logAudit('Carga simulada completada.');
-  };
-
-  const deleteMediaFile = async (fileToDelete: MediaFile) => {
-    setMediaLibrary(prev => prev.filter(file => file.id !== fileToDelete.id));
-    if (fileToDelete.url.startsWith('blob:')) {
-      URL.revokeObjectURL(fileToDelete.url);
-    }
-  };
-
-  const updateCompanySettings = async (settingsData: Partial<CompanySettings>) => {
-    setCompanySettings(prev => ({...prev!, ...settingsData}));
-  };
-
   const value: DataContextType = {
     users,
     clients,
@@ -308,31 +153,31 @@ export function DataProvider({ children }: { children: ReactNode }) {
     protocols,
     cedulas,
     companySettings,
-    loading,
+    loading: loading || !authInitialized,
     error,
     loginUser,
-    subscribeToMediaLibrary,
-    uploadFile,
-    deleteMediaFile,
-    updateCompanySettings,
-    createUser,
-    updateUser,
-    deleteUser,
-    createClient,
-    updateClient,
-    deleteClient,
-    createSystem,
-    updateSystem,
-    deleteSystem,
-    createEquipment,
-    updateEquipment,
-    deleteEquipment,
-    createProtocol,
-    updateProtocol,
-    deleteProtocol,
-    createCedula,
-    updateCedula,
-    deleteCedula,
+    subscribeToMediaLibrary: firebaseSubscribeToMediaLibrary,
+    uploadFile: firebaseUploadFile,
+    deleteMediaFile: firebaseDeleteMediaFile,
+    updateCompanySettings: firebaseUpdateCompanySettings,
+    createUser: firebaseCreateUser,
+    updateUser: firebaseUpdateUser,
+    deleteUser: firebaseDeleteUser,
+    createClient: firebaseCreateClient,
+    updateClient: firebaseUpdateClient,
+    deleteClient: firebaseDeleteClient,
+    createSystem: firebaseCreateSystem,
+    updateSystem: firebaseUpdateSystem,
+    deleteSystem: firebaseDeleteSystem,
+    createEquipment: firebaseCreateEquipment,
+    updateEquipment: firebaseUpdateEquipment,
+    deleteEquipment: firebaseDeleteEquipment,
+    createProtocol: firebaseCreateProtocol,
+    updateProtocol: firebaseUpdateProtocol,
+    deleteProtocol: firebaseDeleteProtocol,
+    createCedula: firebaseCreateCedula,
+    updateCedula: firebaseUpdateCedula,
+    deleteCedula: firebaseDeleteCedula,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
