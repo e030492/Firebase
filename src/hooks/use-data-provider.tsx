@@ -118,29 +118,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // This effect runs once on mount to set up the auth listener.
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-            // User is signed in. Fetch data.
-            const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
-            if (storedUser) {
-                fetchData();
-            } else {
-                // If user is logged in via Firebase but not in localStorage (edge case),
-                // we should probably log them out or fetch their user doc. For now, we'll just not load data.
-                setLoading(false);
-            }
-        } else {
-            // User is signed out. No data to load.
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, get the ID token to ensure auth state is ready
+        try {
+          await user.getIdToken(true); // Force refresh the token
+          console.log("Auth state confirmed, fetching data...");
+          fetchData();
+        } catch (error) {
+            console.error("Error refreshing token:", error);
             setLoading(false);
-            // Clear local data
-            setUsers([]);
-            setClients([]);
-            setSystems([]);
-            setEquipments([]);
-            setProtocols([]);
-            setCedulas([]);
         }
+      } else {
+        // User is signed out.
+        setLoading(false);
+        // Clear local data
+        setUsers([]);
+        setClients([]);
+        setSystems([]);
+        setEquipments([]);
+        setProtocols([]);
+        setCedulas([]);
+      }
     });
 
     // Cleanup subscription on unmount
@@ -152,7 +151,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const user = await apiLoginUser(email, pass);
       if (user) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-          // Don't call fetchData() here. The onAuthStateChanged listener will handle it.
+          // The onAuthStateChanged listener will handle fetching the data
       }
       return user;
   };
