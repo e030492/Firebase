@@ -207,6 +207,7 @@ export default function EditCedulaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    setAuditLog([]);
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
@@ -234,7 +235,9 @@ export default function EditCedulaPage() {
     };
       
     try {
-        await updateCedula(cedulaId, updatedData);
+        await updateCedula(cedulaId, updatedData, (log) => {
+            setAuditLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${log}`]);
+        });
         alert('Cédula actualizada con éxito.');
         router.push('/dashboard/cedulas');
     } catch (error) {
@@ -627,6 +630,21 @@ export default function EditCedulaPage() {
                 {semaforoInfo.text}
             </div>
         )}
+        
+        {isSaving && (
+            <Alert>
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Auditoría de Guardado</AlertTitle>
+                <AlertDescription>
+                    <pre className="mt-2 w-full rounded-md bg-slate-950 p-4">
+                        <code className="text-white text-xs">
+                            {auditLog.join('\n')}
+                        </code>
+                    </pre>
+                </AlertDescription>
+            </Alert>
+        )}
+
 
         {canUpdateCedulas && (
             <div className="flex justify-start">
