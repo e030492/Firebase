@@ -216,11 +216,19 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
 export const createProtocol = async (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
-    return createDocument<Protocol>(collections.protocols, data, id);
+    const sanitizedData = {
+        ...data,
+        steps: data.steps.map(step => ({ ...step })),
+    };
+    return createDocument<Protocol>(collections.protocols, sanitizedData, id);
 };
 
 export const updateProtocol = async (id: string, data: Partial<Protocol>): Promise<Protocol> => {
-    return updateDocument<Protocol>(collections.protocols, id, data);
+    const sanitizedData = { ...data };
+    if (data.steps) {
+        sanitizedData.steps = data.steps.map(step => ({ ...step }));
+    }
+    return updateDocument<Protocol>(collections.protocols, id, sanitizedData);
 };
 
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);

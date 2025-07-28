@@ -169,7 +169,7 @@ function BaseProtocolManager() {
   }, [clientFilter, systemFilter, warehouseFilter]);
 
   useEffect(() => {
-    if (commandListRef.current && searchQuery) {
+    if (commandListRef.current) {
         commandListRef.current.scrollTop = 0;
     }
   }, [searchQuery]);
@@ -376,7 +376,7 @@ function BaseProtocolManager() {
   const handleUnlinkEquipment = async () => {
     if (!equipmentToUnlink) return;
     try {
-        await updateEquipment(equipmentToUnlink.id, { protocolId: `unlinked-${equipmentToUnlink.id}-${Date.now()}` });
+        await updateEquipment(equipmentToUnlink.id, { protocolId: null });
         toast({ title: "Equipo Desvinculado", description: `El equipo ${equipmentToUnlink.name} ya no usa el protocolo base.` });
     } catch (e) {
         console.error("Error unlinking equipment:", e);
@@ -396,7 +396,15 @@ function BaseProtocolManager() {
     setIsSavingEdit(true);
     try {
         const protocolId = equipmentToEdit.protocol.id;
-        await updateProtocol(protocolId, { steps: editedProtocolSteps });
+        const sanitizedSteps = editedProtocolSteps.map(step => ({
+          step: step.step || '',
+          priority: step.priority || 'baja',
+          percentage: Number(step.percentage) || 0,
+          completion: Number(step.completion) || 0,
+          notes: step.notes || '',
+          imageUrl: step.imageUrl || '',
+        }));
+        await updateProtocol(protocolId, { steps: sanitizedSteps });
         toast({ title: "Protocolo Actualizado", description: "Los cambios se han guardado en el protocolo base." });
         setEquipmentToEdit(null);
     } catch(e) {
@@ -411,7 +419,7 @@ function BaseProtocolManager() {
     setIsBulkUnlinking(true);
     try {
         const unlinkPromises = unlinkSelection.map(id => {
-            return updateEquipment(id, { protocolId: `unlinked-${id}-${Date.now()}` });
+            return updateEquipment(id, { protocolId: null });
         });
         await Promise.all(unlinkPromises);
         toast({ title: "Equipos Desvinculados", description: `${unlinkSelection.length} equipos han sido desvinculados.` });
