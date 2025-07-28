@@ -37,7 +37,7 @@ const storage = getStorage();
 export const auth = getAuth();
 
 // --- Firestore Collection Getters ---
-const getCollectionData = async <T>(collectionName: string): Promise<T[]> => {
+const getCollectionData = async <T extends { id: string }>(collectionName: string): Promise<T[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, collectionName));
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
@@ -70,6 +70,7 @@ export async function loginUser(email: string, pass: string): Promise<User | nul
     const userDoc = querySnapshot.docs[0];
     const userData = { id: userDoc.id, ...userDoc.data() } as User;
     
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userToStore } = userData;
     
     return userToStore;
@@ -120,7 +121,9 @@ const deleteDocument = (collectionName: string, id: string): Promise<void> => {
 export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
     if (!userData.password) throw new Error("Password is required to create a user.");
     const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userDataToSave } = userData;
+    // @ts-ignore
     const finalUserData = { ...userDataToSave, firebaseUid: userCredential.user.uid };
     return createDocument<User>('users', finalUserData);
 };
