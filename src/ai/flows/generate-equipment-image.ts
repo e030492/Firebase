@@ -46,7 +46,8 @@ const generateEquipmentImageFlow = ai.defineFlow(
     });
 
     if (!media?.url) {
-      throw new Error('Image generation failed to return a valid image.');
+      console.error('Image generation failed to return a valid image.');
+      return { imageUrl: 'https://placehold.co/1024x768.png' };
     }
 
     return {imageUrl: media.url};
