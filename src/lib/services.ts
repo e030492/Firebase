@@ -1,4 +1,5 @@
 
+
 import { 
     collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit, onSnapshot
 } from "firebase/firestore";
@@ -131,15 +132,14 @@ export const updateUser = (userId: string, userData: Partial<User>) => updateDoc
 export const deleteUser = (userId: string) => deleteDocument('users', userId);
 
 export async function seedMockUsers() {
-    const usersCollection = collection(db, 'users');
     for (const mockUser of mockUsers) {
         try {
-            // Check if user document exists in Firestore
-            const userDocRef = doc(db, "users", where("email", "==", mockUser.email));
-            const userDoc = await getDoc(userDocRef);
+            // Check if user document exists in Firestore using a query
+            const q = query(collection(db, "users"), where("email", "==", mockUser.email), limit(1));
+            const querySnapshot = await getDocs(q);
             
             // If user does not exist, create them in Auth and Firestore
-            if (!userDoc.exists()) {
+            if (querySnapshot.empty) {
                 console.log(`User ${mockUser.email} not found. Creating...`);
                 await createUser(mockUser);
             }
