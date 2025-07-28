@@ -309,7 +309,6 @@ function BaseProtocolManager() {
             await createProtocol({ type, brand, model, steps: sanitizedSteps }, protocolId);
         }
 
-        // --- Corrected Association Logic ---
         const updatePromises = confirmedEquipments.map(eq => 
             updateEquipment(eq.id, { type, brand, model })
         );
@@ -544,11 +543,22 @@ function BaseProtocolManager() {
                                     variant="outline"
                                     role="combobox"
                                     aria-expanded={comboboxOpen}
-                                    className="w-full justify-between"
+                                    className="w-full justify-between h-auto"
                                     >
-                                    {selectedEquipmentId
-                                        ? equipmentsWithoutProtocol.find((eq) => eq.id === selectedEquipmentId)?.name
-                                        : "Seleccionar equipo..."}
+                                    {selectedEquipmentId ? 
+                                        (() => {
+                                            const eq = equipmentsWithoutProtocol.find((e) => e.id === selectedEquipmentId);
+                                            return eq ? (
+                                                <div className="flex items-center gap-3 text-left">
+                                                    <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
+                                                    <div>
+                                                        <p className="font-semibold">{eq.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand}</p>
+                                                    </div>
+                                                </div>
+                                            ) : "Seleccionar equipo...";
+                                        })()
+                                    : "Seleccionar equipo..."}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
@@ -566,6 +576,7 @@ function BaseProtocolManager() {
                                                         handleEquipmentSelect(eq.id);
                                                         setComboboxOpen(false);
                                                     }}
+                                                    className="h-auto"
                                                 >
                                                     <Check
                                                         className={cn(
@@ -573,11 +584,15 @@ function BaseProtocolManager() {
                                                             selectedEquipmentId === eq.id ? "opacity-100" : "opacity-0"
                                                         )}
                                                     />
-                                                    <div className="flex flex-col">
-                                                        <span>{eq.name}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            ID: {eq.id.substring(0, 5)}... | N/S: {eq.serial || 'N/A'}
-                                                        </span>
+                                                    <div className="flex items-center gap-3">
+                                                        <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-semibold">{eq.name}</span>
+                                                            <span className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                ID: {eq.id.substring(0, 5)}... | N/S: {eq.serial || 'N/A'}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </CommandItem>
                                                 ))}
