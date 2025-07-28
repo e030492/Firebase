@@ -1,4 +1,5 @@
 
+
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
@@ -100,17 +101,12 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
         const dataPromises = snapshot.docs.map(async (doc) => {
             const docData = { id: doc.id, ...doc.data() } as T & { protocolSteps?: any[] };
             
+            // Re-hydrate image URLs for cedulas from separate fields
             if (collectionName === collections.cedulas && docData.protocolSteps) {
-                const stepImagesCollectionRef = collection(db, collections.cedulas, doc.id, collections.stepImages);
-                const stepImagesSnapshot = await getDocs(stepImagesCollectionRef);
-                const stepImagesMap = new Map(stepImagesSnapshot.docs.map(imgDoc => [imgDoc.id, imgDoc.data().imageUrl]));
-                
-                if (docData.protocolSteps) {
-                    docData.protocolSteps = docData.protocolSteps.map((step, index) => ({
-                        ...step,
-                        imageUrl: stepImagesMap.get(String(index)) || '',
-                    }));
-                }
+                docData.protocolSteps = docData.protocolSteps.map((step, index) => {
+                    const imageUrl = (docData as any)[`stepImage_${index}`] || '';
+                    return { ...step, imageUrl };
+                });
             }
             return docData as T;
         });
@@ -146,10 +142,6 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 
 // --- Image Upload Service ---
 export async function uploadImageAndGetURL(base64DataUrl: string): Promise<string> {
-    if (!base64DataUrl || !base64DataUrl.startsWith('data:image')) {
-        return base64DataUrl; // It's already a URL or empty/invalid
-    }
-    
     // Per user instruction, do not use Firebase Storage. Return base64 directly.
     return base64DataUrl;
 }
@@ -251,67 +243,41 @@ export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(c
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
 
-export const createCedula = async (data: Omit<Cedula, 'id'>) => {
-    const dataToSave: any = { ...data };
-    
-    const batch = writeBatch(db);
-    const cedulaRef = doc(collection(db, collections.cedulas));
-    
-    // Separate images from steps
-    const imagesToSave: { [key: string]: string } = {};
+const prepareCedulaDataForFirestore = (cedulaData: Partial<Cedula>): any => {
+    const dataToSave: { [key: string]: any } = { ...cedulaData };
+
     if (dataToSave.protocolSteps) {
-        dataToSave.protocolSteps = dataToSave.protocolSteps.map((step: ProtocolStep, index: number) => {
+        // Extract images to top-level fields and clean the array
+        const cleanedSteps = dataToSave.protocolSteps.map((step: ProtocolStep, index: number) => {
             if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                imagesToSave[String(index)] = step.imageUrl;
+                // Move the image to a top-level field
+                dataToSave[`stepImage_${index}`] = step.imageUrl;
+            } else if (step.imageUrl) {
+                // If it's not a base64 string, assume it's a URL and keep it (or handle as needed)
+                dataToSave[`stepImage_${index}`] = step.imageUrl;
             }
-            // Return step without imageUrl to save in main doc
+
+            // Return a version of the step without the imageUrl property for the array
             const { imageUrl, ...restOfStep } = step;
             return restOfStep;
         });
+        dataToSave.protocolSteps = cleanedSteps;
     }
+    return dataToSave;
+};
 
-    batch.set(cedulaRef, dataToSave);
 
-    // Save each image in its own document in a subcollection
-    for (const [index, imageUrl] of Object.entries(imagesToSave)) {
-        const imageDocRef = doc(db, collections.cedulas, cedulaRef.id, collections.stepImages, index);
-        batch.set(imageDocRef, { imageUrl });
-    }
-
-    await batch.commit();
-
+export const createCedula = async (data: Omit<Cedula, 'id'>) => {
+    const dataToSave = prepareCedulaDataForFirestore(data);
+    const cedulaRef = doc(collection(db, collections.cedulas));
+    await setDoc(cedulaRef, dataToSave);
     return { id: cedulaRef.id, ...data } as Cedula;
 };
 
 export const updateCedula = async (id: string, data: Partial<Cedula>) => {
-    const batch = writeBatch(db);
+    const dataToSave = prepareCedulaDataForFirestore(data);
     const cedulaRef = doc(db, collections.cedulas, id);
-    const dataToSave: any = { ...data };
-
-    // Separate images from steps
-    const imagesToSave: { [key: string]: string } = {};
-    if (dataToSave.protocolSteps) {
-        dataToSave.protocolSteps = dataToSave.protocolSteps.map((step: ProtocolStep, index: number) => {
-            if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                 imagesToSave[String(index)] = step.imageUrl;
-            }
-            // Return step without imageUrl to save in main doc
-            const { imageUrl, ...restOfStep } = step;
-            return restOfStep;
-        });
-    }
-    
-    batch.update(cedulaRef, dataToSave);
-
-    // Save each new/updated image in its own document in a subcollection
-    for (const [index, imageUrl] of Object.entries(imagesToSave)) {
-        const imageDocRef = doc(db, collections.cedulas, id, collections.stepImages, index);
-        batch.set(imageDocRef, { imageUrl }); // Use set to create or overwrite
-    }
-
-    await batch.commit();
+    await updateDoc(cedulaRef, dataToSave);
 };
 
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
-
-    
