@@ -308,11 +308,20 @@ function BaseProtocolManager() {
     const protocolId = `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
 
     try {
+        const sanitizedSteps = steps.map(step => ({
+            step: step.step || '',
+            priority: step.priority || 'baja',
+            percentage: Number(step.percentage) || 0,
+            completion: Number(step.completion) || 0,
+            notes: step.notes || '',
+            imageUrl: step.imageUrl || '',
+        }));
+
         const protocolData = {
-          type,
-          brand,
-          model,
-          steps: steps
+            type,
+            brand,
+            model,
+            steps: sanitizedSteps
         };
 
         const existingProtocol = protocols.find(p => p.id === protocolId);

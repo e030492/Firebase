@@ -201,15 +201,9 @@ export const deleteClient = (id: string): Promise<boolean> => deleteDocument(col
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
 export const createEquipment = async (data: Omit<Equipment, 'id'>) => {
-    const imageUrl = await uploadImageAndGetURL(data.imageUrl || '');
-    const processedData = { ...data, imageUrl };
-    return createDocument<Equipment>(collections.equipments, processedData);
+    return createDocument<Equipment>(collections.equipments, data);
 };
 export const updateEquipment = async (id: string, data: Partial<Equipment>) => {
-    if (data.imageUrl) {
-        const imageUrl = await uploadImageAndGetURL(data.imageUrl);
-        data.imageUrl = imageUrl;
-    }
     return updateDocument<Equipment>(collections.equipments, id, data);
 };
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
@@ -226,28 +220,11 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
 export const createProtocol = async (data: Omit<Protocol, 'id'>, id?: string): Promise<Protocol> => {
-    // Replicates the working pattern from createEquipment
-    const uploadPromises = data.steps.map(async (step) => {
-        const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
-        return { ...step, imageUrl };
-    });
-
-    const finalSteps = await Promise.all(uploadPromises);
-    const protocolData = { ...data, steps: finalSteps };
-    
-    return createDocument<Protocol>(collections.protocols, protocolData, id);
+    return createDocument<Protocol>(collections.protocols, data, id);
 };
 
 
 export const updateProtocol = async (id: string, data: Partial<Protocol>): Promise<Protocol> => {
-     if (data.steps) {
-        const uploadPromises = data.steps.map(async (step) => {
-            const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
-            return { ...step, imageUrl };
-        });
-        const finalSteps = await Promise.all(uploadPromises);
-        data.steps = finalSteps;
-    }
     return updateDocument<Protocol>(collections.protocols, id, data);
 };
 
@@ -258,26 +235,10 @@ export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(c
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
 
 export const createCedula = async (data: Omit<Cedula, 'id'>) => {
-    if (data.protocolSteps) {
-        const uploadPromises = data.protocolSteps.map(async (step) => {
-            const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
-            return { ...step, imageUrl };
-        });
-        const finalSteps = await Promise.all(uploadPromises);
-        data.protocolSteps = finalSteps;
-    }
     return createDocument<Cedula>(collections.cedulas, data);
 };
 
 export const updateCedula = async (id: string, data: Partial<Cedula>) => {
-    if (data.protocolSteps) {
-        const uploadPromises = data.protocolSteps.map(async (step) => {
-            const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
-            return { ...step, imageUrl };
-        });
-        const finalSteps = await Promise.all(uploadPromises);
-        data.protocolSteps = finalSteps;
-    }
     return updateDocument<Cedula>(collections.cedulas, id, data);
 };
 
