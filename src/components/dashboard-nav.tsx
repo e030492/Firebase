@@ -1,4 +1,3 @@
-(El `.` agrega todos los archivos. Puedes reemplazarlo por nombres de archivos específicos si no quieres agregar todo).
 
 "use client";
 
