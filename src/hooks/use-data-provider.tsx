@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from '@/lib/firebase';
 import { 
     loginUser as apiLoginUser,
@@ -96,34 +96,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
+  const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
+    setLoadingStatus('loading_data');
+    try {
+        // This ensures that Firestore calls are made with a valid and fresh token.
+        await firebaseUser.getIdToken(true); 
+
+        const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
+            getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
+        ]);
+        setUsers(usersData);
+        setClients(clientsData);
+        setSystems(systemsData);
+        setEquipments(equipmentsData);
+        setProtocols(protocolsData);
+        setCedulas(cedulasData);
+        setCompanySettings(settingsData);
+        setError(null);
+        setLoadingStatus('ready');
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during data fetching";
+        setError(errorMessage);
+        setLoadingStatus('error');
+        console.error("Data fetching error:", err);
+    }
+  }, []);
+
   useEffect(() => {
     setLoadingStatus('authenticating');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setLoadingStatus('loading_data');
-        try {
-          // Force refresh the token to ensure permissions are up to date
-          await user.getIdToken(true); 
-
-          const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
-            getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
-          ]);
-          setUsers(usersData);
-          setClients(clientsData);
-          setSystems(systemsData);
-          setEquipments(equipmentsData);
-          setProtocols(protocolsData);
-          setCedulas(cedulasData);
-          setCompanySettings(settingsData);
-          setError(null);
-          setLoadingStatus('ready');
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during data fetching";
-            setError(errorMessage);
-            setLoadingStatus('error');
-            console.error("Data fetching error:", err);
-        }
+        // User is signed in, now fetch the data.
+        await fetchAllData(user);
       } else {
+        // User is signed out.
         setLoadingStatus('idle');
         setUsers([]);
         setClients([]);
@@ -132,10 +138,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setProtocols([]);
         setCedulas([]);
         setCompanySettings(null);
+        localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
       }
     });
+    // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []); // Empty dependency array ensures this runs only once.
+  }, [fetchAllData]);
 
 
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
@@ -297,3 +305,5 @@ export function useData() {
   }
   return context;
 }
+
+    
