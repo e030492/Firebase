@@ -12,6 +12,7 @@ import {
   LineChart,
   Shield,
   Users,
+  FlaskConical,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -28,11 +29,12 @@ const allNavItems = [
   { href: '/dashboard/protocols/base', label: 'Protocolos', icon: ClipboardList, ai: true, module: 'protocols' as const },
   { href: '/dashboard/cedulas', label: 'Cédulas', icon: FileText, module: 'cedulas' as const },
   { href: '/dashboard/reports', label: 'Reportes', icon: LineChart, module: 'reports' as const },
+  { href: '/dashboard/pruebas', label: 'Pruebas', icon: FlaskConical, module: 'pruebas' as const },
 ];
 
 export function DashboardNav() {
   const pathname = usePathname();
-  const { can } = usePermissions();
+  const { can, user } = usePermissions();
 
   const isActive = (href: string) => {
     // Exact match for dashboard
@@ -47,7 +49,9 @@ export function DashboardNav() {
   // A simple check: if a module is not 'dashboard' or 'reports', the user must have at least 'update' permission to see it.
   // This is a basic approach. A more granular approach would be to check for 'read' permission if it existed.
   const hasAccess = (module: typeof allNavItems[0]['module']) => {
+    if (user?.role === 'Administrador') return true;
     if (module === 'dashboard' || module === 'reports') return true;
+    if (module === 'pruebas') return false; // Only for admins
     return can('update', module);
   }
 

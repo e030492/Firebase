@@ -1,7 +1,7 @@
 
 
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
 import { db, storage } from './firebase';
 import { 
@@ -26,7 +26,14 @@ export type Protocol = {
 };
 export type Cedula = typeof mockCedulas[0] & { id: string };
 export type CompanySettings = { id: string; logoUrl: string | null };
-
+export type MediaFile = {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+  createdAt: string;
+};
 
 const collections = {
     users: 'users',
@@ -36,8 +43,8 @@ const collections = {
     protocols: 'protocols',
     cedulas: 'cedulas',
     settings: 'settings',
+    mediaLibrary: 'mediaLibrary',
     _connectionTest: '_connectionTest',
-    stepImages: 'stepImages',
 };
 
 const mockDataMap: { [key: string]: any[] } = {
@@ -103,10 +110,11 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
             
             // Re-hydrate image URLs for cedulas from separate fields
             if (collectionName === collections.cedulas && docData.protocolSteps) {
-                docData.protocolSteps = docData.protocolSteps.map((step, index) => {
-                    const imageUrl = (docData as any)[`stepImage_${index}`] || '';
-                    return { ...step, imageUrl };
+                const stepImagePromises = docData.protocolSteps.map((step, index) => {
+                     const imageUrl = (docData as any)[`stepImage_${index}`] || '';
+                     return { ...step, imageUrl };
                 });
+                docData.protocolSteps = await Promise.all(stepImagePromises);
             }
             return docData as T;
         });
@@ -254,13 +262,13 @@ export const updateCedula = async (id: string, data: Partial<Cedula>, onStep?: (
 
     if (dataToSave.protocolSteps) {
         onStep?.(`Procesando ${dataToSave.protocolSteps.length} pasos del protocolo...`);
-        const processedSteps = [...dataToSave.protocolSteps]; // Create a mutable copy
+        const processedSteps = [...dataToSave.protocolSteps]; 
 
         processedSteps.forEach((step: ProtocolStep, index: number) => {
             if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                onStep?.(`Paso ${index + 1}: Imagen detectada. Moviendo a campo principal.`);
-                dataToSave[`stepImage_${index}`] = step.imageUrl; // Move to top-level field
-                step.imageUrl = ''; // Clear from array
+                onStep?.(`Paso ${index + 1}: Imagen detectada. Guardando en campo principal.`);
+                dataToSave[`stepImage_${index}`] = step.imageUrl;
+                step.imageUrl = ''; 
             } else {
                  onStep?.(`Paso ${index + 1}: Sin imagen nueva.`);
             }
@@ -280,3 +288,51 @@ export const updateCedula = async (id: string, data: Partial<Cedula>, onStep?: (
 
 
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
+
+
+// --- MEDIA LIBRARY (FOR TESTS) ---
+export const subscribeToMediaLibrary = (setFiles: (files: MediaFile[]) => void) => {
+    const q = query(collection(db, collections.mediaLibrary));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MediaFile));
+        setFiles(files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    });
+    return unsubscribe;
+};
+
+export async function uploadFile(file: File): Promise<MediaFile> {
+  const fileId = uuidv4();
+  const storageRef = ref(storage, `${collections.mediaLibrary}/${fileId}-${file.name}`);
+  
+  const snapshot = await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(snapshot.ref);
+
+  const fileData: Omit<MediaFile, 'id'> = {
+    name: file.name,
+    url: downloadURL,
+    type: file.type,
+    size: file.size,
+    createdAt: new Date().toISOString(),
+  };
+
+  const docRef = doc(db, collections.mediaLibrary, fileId);
+  await setDoc(docRef, fileData);
+
+  return { id: fileId, ...fileData };
+}
+
+export async function deleteMediaFile(file: MediaFile): Promise<void> {
+    const storageRef = ref(storage, file.url);
+    try {
+        await deleteObject(storageRef);
+    } catch (error: any) {
+        // If the file doesn't exist in storage, we can ignore the error and proceed to delete from Firestore.
+        if (error.code !== 'storage/object-not-found') {
+            console.error("Error deleting file from storage:", error);
+            throw error;
+        }
+    }
+    
+    const docRef = doc(db, collections.mediaLibrary, file.id);
+    await deleteDoc(docRef);
+}
