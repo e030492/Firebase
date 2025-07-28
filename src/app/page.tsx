@@ -23,8 +23,8 @@ import { seedMockUsers } from '@/lib/services';
 export default function LoginPage() {
   const router = useRouter();
   const { loginUser, loading: dataLoading, companySettings, isAuthReady } = useData(); 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('erick@escuadramx.com');
+  const [password, setPassword] = useState('admin123');
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeding, setIsSeeding] = useState(true);
   const [error, setError] = useState('');
@@ -156,5 +156,3 @@ export default function LoginPage() {
     </>
   );
 }
-
-    

@@ -386,5 +386,3 @@ export const mockCedulas = [
     semaforo: '' as const,
   },
 ];
-
-    
