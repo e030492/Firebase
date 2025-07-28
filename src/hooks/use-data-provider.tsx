@@ -12,6 +12,7 @@ import {
     subscribeToProtocols,
     subscribeToCedulas,
     subscribeToCompanySettings,
+    subscribeToMediaLibrary,
     updateCompanySettings as updateCompanySettingsService,
     createUser as createUserService,
     updateUser as updateUserService,
@@ -33,9 +34,10 @@ import {
     deleteCedula as deleteCedulaService,
     connectionTest,
     loginUser as loginUserService,
-    uploadImageAndGetURL as uploadImageService,
+    uploadFile as uploadFileService,
+    deleteMediaFile as deleteMediaFileService,
 } from '@/lib/services';
-import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings } from '@/lib/services';
+import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 
 type DataContextType = {
@@ -50,8 +52,10 @@ type DataContextType = {
   error: string | null;
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
-  // Image Upload
-  uploadImageAndGetURL: (base64DataUrl: string) => Promise<string>;
+  // Media Library
+  subscribeToMediaLibrary: (setFiles: (files: MediaFile[]) => void) => () => void;
+  uploadFile: (file: File) => Promise<MediaFile>;
+  deleteMediaFile: (file: MediaFile) => Promise<void>;
   // Settings
   updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;
   // User mutations
@@ -76,7 +80,7 @@ type DataContextType = {
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
   createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<Cedula>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<void>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 
@@ -144,7 +148,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     loginUser,
-    uploadImageAndGetURL: uploadImageService,
+    subscribeToMediaLibrary,
+    uploadFile: uploadFileService,
+    deleteMediaFile: deleteMediaFileService,
     updateCompanySettings: updateCompanySettingsService,
     createUser: createUserService,
     updateUser: updateUserService,
@@ -162,7 +168,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateProtocol: updateProtocolService,
     deleteProtocol: async (id) => { await deleteProtocolService(id); },
     createCedula: createCedulaService,
-    updateCedula: async (id, data) => { await updateCedulaService(id, data) },
+    updateCedula: async (id, data, onStep) => { await updateCedulaService(id, data, onStep) },
     deleteCedula: async (id) => { await deleteCedulaService(id); },
   };
 

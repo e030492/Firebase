@@ -148,12 +148,6 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
     return true;
 }
 
-// --- Image Upload Service ---
-export const uploadImageAndGetURL = async (base64DataUrl: string): Promise<string> => {
-    return Promise.resolve(base64DataUrl);
-};
-
-
 // --- Specific Service Functions ---
 
 // LOGIN
