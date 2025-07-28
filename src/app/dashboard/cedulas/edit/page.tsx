@@ -123,9 +123,9 @@ export default function EditCedulaPage() {
             if (cedula.protocolSteps && cedula.protocolSteps.length > 0) {
                 setProtocolSteps(cedula.protocolSteps);
             } else {
-                const equipmentProtocol = protocols.find(p => p.equipmentId === foundEquipment.id);
+                const equipmentProtocol = protocols.find(p => p.id === foundEquipment.protocolId);
                 const baseProtocolSteps = equipmentProtocol?.steps || [];
-                setProtocolSteps(baseProtocolSteps.map(s => ({...s, imageUrl: '', notes: ''})));
+                setProtocolSteps(baseProtocolSteps.map(s => ({...s, imageUrl: '', notes: '', completion: 0})));
             }
         } else {
             setProtocolSteps([]);
@@ -164,6 +164,14 @@ export default function EditCedulaPage() {
 
   const handleEquipmentChange = (newEquipmentId: string) => {
     setEquipmentId(newEquipmentId);
+    const selectedEquipment = allEquipments.find(e => e.id === newEquipmentId);
+    if(selectedEquipment) {
+      const equipmentProtocol = protocols.find(p => p.id === selectedEquipment.protocolId);
+      const baseProtocolSteps = equipmentProtocol?.steps || [];
+      setProtocolSteps(baseProtocolSteps.map(s => ({...s, imageUrl: '', notes: '', completion: 0})));
+    } else {
+      setProtocolSteps([]);
+    }
   };
   
   const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {

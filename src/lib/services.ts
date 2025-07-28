@@ -15,7 +15,7 @@ export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; al
 export type Equipment = Omit<typeof mockEquipments[0], 'id'> & { id: string; imageUrl?: string | null; protocolId?: string | null };
 export type System = typeof mockSystems[0] & { id: string };
 export type User = typeof mockUsers[0] & { id: string; clientId?: string, photoUrl?: string | null, signatureUrl?: string | null };
-export type ProtocolStep = typeof mockProtocols[0]['steps'][0] & { imageUrl?: string | null };
+export type ProtocolStep = typeof mockProtocols[0]['steps'][0] & { imageUrl?: string | null; notes?: string };
 export type Protocol = { 
     id: string; 
     steps: ProtocolStep[];
@@ -200,8 +200,18 @@ export const deleteClient = (id: string): Promise<boolean> => deleteDocument(col
 
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
-export const createEquipment = (data: Omit<Equipment, 'id'>) => createDocument<Equipment>(collections.equipments, data);
-export const updateEquipment = (id: string, data: Partial<Equipment>) => updateDocument<Equipment>(collections.equipments, id, data);
+export const createEquipment = async (data: Omit<Equipment, 'id'>) => {
+    const imageUrl = await uploadImageAndGetURL(data.imageUrl || '');
+    const processedData = { ...data, imageUrl };
+    return createDocument<Equipment>(collections.equipments, processedData);
+};
+export const updateEquipment = async (id: string, data: Partial<Equipment>) => {
+    if (data.imageUrl) {
+        const imageUrl = await uploadImageAndGetURL(data.imageUrl);
+        data.imageUrl = imageUrl;
+    }
+    return updateDocument<Equipment>(collections.equipments, id, data);
+};
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
 
 // SYSTEMS
@@ -215,22 +225,42 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 // PROTOCOLS
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
-export const createProtocol = async (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
-    const processedSteps = await Promise.all(data.steps.map(async (step) => {
-        const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
-        return { ...step, imageUrl };
+export const createProtocol = async (data: Omit<Protocol, 'id'>, id?: string): Promise<Protocol> => {
+    const sanitizedSteps = data.steps.map(step => ({
+        step: step.step,
+        priority: step.priority,
+        percentage: step.percentage,
+        completion: step.completion || 0,
+        notes: step.notes || '',
+        imageUrl: step.imageUrl || '',
     }));
-    const processedData = { ...data, steps: processedSteps };
-    return createDocument<Protocol>(collections.protocols, processedData, id);
+
+    const uploadPromises = sanitizedSteps.map(async (step) => {
+        if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
+            step.imageUrl = await uploadImageAndGetURL(step.imageUrl);
+        }
+        return step;
+    });
+
+    const finalSteps = await Promise.all(uploadPromises);
+
+    const protocolData: Omit<Protocol, 'id'> = {
+        ...data,
+        steps: finalSteps,
+    };
+    
+    return createDocument<Protocol>(collections.protocols, protocolData, id);
 };
+
 
 export const updateProtocol = async (id: string, data: Partial<Protocol>): Promise<Protocol> => {
      if (data.steps) {
-        const processedSteps = await Promise.all(data.steps.map(async (step) => {
+        const uploadPromises = data.steps.map(async (step) => {
             const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
             return { ...step, imageUrl };
-        }));
-        data.steps = processedSteps;
+        });
+        const finalSteps = await Promise.all(uploadPromises);
+        data.steps = finalSteps;
     }
     return updateDocument<Protocol>(collections.protocols, id, data);
 };
@@ -240,6 +270,41 @@ export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(c
 
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
-export const createCedula = (data: Omit<Cedula, 'id'>) => createDocument<Cedula>(collections.cedulas, data);
-export const updateCedula = (id: string, data: Partial<Cedula>) => updateDocument<Cedula>(collections.cedulas, id, data);
+
+export const createCedula = async (data: Omit<Cedula, 'id'>) => {
+    if (data.protocolSteps) {
+        const uploadPromises = data.protocolSteps.map(async (step) => {
+            const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
+            return { ...step, imageUrl };
+        });
+        const finalSteps = await Promise.all(uploadPromises);
+        data.protocolSteps = finalSteps;
+    }
+    return createDocument<Cedula>(collections.cedulas, data);
+};
+
+export const updateCedula = async (id: string, data: Partial<Cedula>, onProgress?: (progress: number) => void) => {
+    if (data.protocolSteps) {
+        const stepsToUpload = data.protocolSteps.filter(step => step.imageUrl && step.imageUrl.startsWith('data:image'));
+        let uploadedCount = 0;
+        
+        const uploadPromises = data.protocolSteps.map(async (step) => {
+            if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
+                const newUrl = await uploadImageAndGetURL(step.imageUrl);
+                uploadedCount++;
+                if (onProgress) {
+                    const progress = (uploadedCount / stepsToUpload.length) * 100;
+                    onProgress(progress);
+                }
+                return { ...step, imageUrl: newUrl };
+            }
+            return step;
+        });
+
+        const finalSteps = await Promise.all(uploadPromises);
+        data.protocolSteps = finalSteps;
+    }
+    return updateDocument<Cedula>(collections.cedulas, id, data);
+};
+
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

@@ -68,7 +68,7 @@ type DataContextType = {
   deleteSystem: (systemId: string) => Promise<void>;
   // Equipment mutations
   createEquipment: (equipmentData: Omit<Equipment, 'id'>) => Promise<Equipment>;
-  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<Equipment>;
+  updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<void>;
   deleteEquipment: (equipmentId: string) => Promise<void>;
   // Protocol mutations
   createProtocol: (protocolData: Omit<Protocol, 'id'>, id?: string) => Promise<Protocol>;
@@ -76,7 +76,7 @@ type DataContextType = {
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
   createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<Cedula>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onProgress?: (progress: number) => void) => Promise<Cedula>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onProgress?: (progress: number) => void) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 
@@ -156,13 +156,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateSystem: updateSystemService,
     deleteSystem: async (id) => { await deleteSystemService(id); },
     createEquipment: createEquipmentService,
-    updateEquipment: updateEquipmentService,
+    updateEquipment: async (id, data) => { await updateEquipmentService(id, data) },
     deleteEquipment: async (id) => { await deleteEquipmentService(id); },
     createProtocol: createProtocolService,
     updateProtocol: updateProtocolService,
     deleteProtocol: async (id) => { await deleteProtocolService(id); },
     createCedula: createCedulaService,
-    updateCedula: updateCedulaService,
+    updateCedula: async (id, data, onProgress) => { await updateCedulaService(id, data, onProgress) },
     deleteCedula: async (id) => { await deleteCedulaService(id); },
   };
 
