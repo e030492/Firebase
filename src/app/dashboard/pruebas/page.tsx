@@ -61,11 +61,11 @@ export default function PruebasPage() {
         } catch (error) {
             console.error("Error during bulk upload:", error);
             alert(`Error al subir los archivos.`);
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(null);
+            setFiles([]);
         }
-        
-        setIsUploading(false);
-        setUploadProgress(null);
-        setFiles([]);
     };
     
     const handleDelete = async () => {

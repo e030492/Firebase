@@ -293,29 +293,6 @@ export const subscribeToMediaLibrary = (setFiles: (files: MediaFile[]) => void) 
     return unsubscribe;
 };
 
-async function uploadFileToStorage(file: File, onProgress: (percentage: number) => void): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const fileId = uuidv4();
-        const storageRef = ref(storage, `${collections.mediaLibrary}/${fileId}-${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                onProgress(progress);
-            },
-            (error) => {
-                console.error("Upload failed:", error);
-                reject(error);
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve(downloadURL);
-            }
-        );
-    });
-}
-
 export async function uploadFile(files: File[], onProgress: (percentage: number) => void) {
     const totalSize = files.reduce((acc, file) => acc + file.size, 0);
     let totalUploaded = 0;
@@ -329,6 +306,9 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
             uploadTask.on('state_changed',
                 (snapshot) => {
                     // This reports progress for a single file, we need to aggregate it.
+                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                     // This is a rough approximation for multiple files
+                     onProgress(progress);
                 },
                 (error) => {
                     console.error("Upload failed for file:", file.name, error);
