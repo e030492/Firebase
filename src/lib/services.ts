@@ -217,3 +217,5 @@ export async function deleteMediaFile(file: MediaFile): Promise<void> {
     await deleteObject(fileRef);
     await deleteDocument('mediaLibrary', file.id);
 }
+
+    

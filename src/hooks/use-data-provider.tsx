@@ -35,6 +35,8 @@ import {
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 
+export type LoadingStatus = 'idle' | 'authenticating' | 'loading_data' | 'ready' | 'error';
+
 type DataContextType = {
   users: User[];
   clients: Client[];
@@ -44,6 +46,7 @@ type DataContextType = {
   cedulas: Cedula[];
   companySettings: CompanySettings | null;
   loading: boolean;
+  loadingStatus: LoadingStatus;
   error: string | null;
   // Auth
   loginUser: (email: string, pass: string) => Promise<User | null>;
@@ -90,13 +93,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   
-  const [loading, setLoading] = useState(true);
+  const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      // Set loading to true only when we start fetching
-      setLoading(true);
+      setLoadingStatus('loading_data');
       const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
         getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
       ]);
@@ -108,31 +110,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setCedulas(cedulasData);
       setCompanySettings(settingsData);
       setError(null);
+      setLoadingStatus('ready');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
       setError(errorMessage);
+      setLoadingStatus('error');
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    setLoadingStatus('authenticating');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in, get the ID token to ensure auth state is ready
         try {
           await user.getIdToken(true); // Force refresh the token
-          console.log("Auth state confirmed, fetching data...");
           fetchData();
         } catch (error) {
             console.error("Error refreshing token:", error);
-            setLoading(false);
+            setError("Error de autenticación");
+            setLoadingStatus('error');
         }
       } else {
-        // User is signed out.
-        setLoading(false);
-        // Clear local data
+        setLoadingStatus('idle');
         setUsers([]);
         setClients([]);
         setSystems([]);
@@ -141,8 +141,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setCedulas([]);
       }
     });
-
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [fetchData]);
 
@@ -151,7 +149,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const user = await apiLoginUser(email, pass);
       if (user) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-          // The onAuthStateChanged listener will handle fetching the data
       }
       return user;
   };
@@ -269,7 +266,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     protocols,
     cedulas,
     companySettings,
-    loading,
+    loading: loadingStatus !== 'ready',
+    loadingStatus,
     error,
     loginUser,
     subscribeToMediaLibrary: apiSubscribeToMediaLibrary,
@@ -306,3 +304,5 @@ export function useData() {
   }
   return context;
 }
+
+    

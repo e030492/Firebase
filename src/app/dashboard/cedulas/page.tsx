@@ -38,20 +38,60 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, Camera } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, Camera, Loader2, AlertCircle, WifiOff } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Cedula, Client, Equipment, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useData } from '@/hooks/use-data-provider';
+import { useData, LoadingStatus } from '@/hooks/use-data-provider';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type SortableKey = keyof Omit<Cedula, 'id' | 'description' | 'protocolSteps'> | 'semaforo' | 'system';
 type AugmentedCedula = Cedula & { system: string; serial: string; systemColor?: string; };
 
+function DiagnosticPanel({ status, error }: { status: LoadingStatus, error: string | null }) {
+    if (status === 'ready') return null;
+
+    let title = "Conectando...";
+    let description = "El sistema está estableciendo la conexión con la base de datos.";
+    let icon = <Loader2 className="h-4 w-4 animate-spin" />;
+
+    switch (status) {
+        case 'authenticating':
+            title = 'Autenticando...';
+            description = 'Verificando su identidad para un acceso seguro.';
+            break;
+        case 'loading_data':
+            title = 'Cargando Datos...';
+            description = 'La autenticación fue exitosa. Obteniendo sus registros desde la nube.';
+            break;
+        case 'error':
+            title = 'Error de Conexión';
+            description = `No se pudo cargar la información. ${error || 'Por favor, revise su conexión a internet y refresque la página.'}`;
+            icon = <AlertCircle className="h-4 w-4" />;
+            break;
+        case 'idle':
+            title = 'Inactivo';
+            description = 'Esperando acción para iniciar la conexión.';
+            icon = <WifiOff className="h-4 w-4" />;
+            break;
+    }
+
+    return (
+        <Alert className="mb-4 bg-blue-50 border-blue-200 text-blue-800 [&>svg]:text-blue-800">
+            {icon}
+            <AlertTitle>{title}</AlertTitle>
+            <AlertDescription>
+                {description}
+            </AlertDescription>
+        </Alert>
+    );
+}
+
 export default function CedulasPage() {
-  const { cedulas, clients, equipments: allEquipments, systems, loading, deleteCedula } = useData();
+  const { cedulas, clients, equipments: allEquipments, systems, loading, deleteCedula, loadingStatus, error } = useData();
   const { can } = usePermissions();
 
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -193,30 +233,10 @@ export default function CedulasPage() {
   const canUpdateCedulas = can('update', 'cedulas');
   const canDeleteCedulas = can('delete', 'cedulas');
 
-  if (loading) {
-      return (
-          <div className="grid auto-rows-max items-start gap-4 md:gap-8">
-              <div className="flex items-center justify-between">
-                  <div className="grid gap-2">
-                      <Skeleton className="h-9 w-80" />
-                      <Skeleton className="h-5 w-96" />
-                  </div>
-                  <Skeleton className="h-10 w-36" />
-              </div>
-              <Card>
-                  <CardContent className="pt-6">
-                       <Skeleton className="h-24 w-full mb-6" />
-                       <Skeleton className="h-40 w-full" />
-                  </CardContent>
-              </Card>
-          </div>
-      );
-  }
-
-
   return (
     <>
       <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+        <DiagnosticPanel status={loadingStatus} error={error} />
         <div className="flex items-center justify-between">
           <div className="grid gap-2">
             <h1 className="font-headline text-3xl font-bold">Cédulas de Mantenimiento</h1>
@@ -298,6 +318,13 @@ export default function CedulasPage() {
                </div>
             </div>
             <Separator className="mb-6"/>
+            {loading && cedulas.length === 0 ? (
+                <div className="space-y-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                </div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -506,6 +533,7 @@ export default function CedulasPage() {
                 ))}
               </TableBody>
             </Table>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -528,3 +556,5 @@ export default function CedulasPage() {
     </>
   );
 }
+
+    
