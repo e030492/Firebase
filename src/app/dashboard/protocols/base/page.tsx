@@ -308,26 +308,19 @@ function BaseProtocolManager() {
     const protocolId = `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
 
     try {
-        const sanitizedProtocolData = {
+        const protocolData = {
           type,
           brand,
           model,
-          steps: steps.map(step => ({
-            step: step.step || '',
-            priority: step.priority || 'baja',
-            percentage: Number(step.percentage) || 0,
-            completion: Number(step.completion) || 0,
-            notes: step.notes || '',
-            imageUrl: step.imageUrl || '',
-          })),
+          steps: steps
         };
 
         const existingProtocol = protocols.find(p => p.id === protocolId);
         
         if (existingProtocol) {
-            await updateProtocol(protocolId, sanitizedProtocolData);
+            await updateProtocol(protocolId, protocolData);
         } else {
-            await createProtocol(sanitizedProtocolData, protocolId);
+            await createProtocol(protocolData, protocolId);
         }
 
         const updatePromises = confirmedEquipments.map(eq => 
@@ -379,8 +372,6 @@ function BaseProtocolManager() {
   const handleUnlinkEquipment = async () => {
     if (!equipmentToUnlink) return;
     try {
-        // We assign a temporary, non-existent protocolId to unlink the equipment
-        // without corrupting its type, brand, or model.
         await updateEquipment(equipmentToUnlink.id, { protocolId: `unlinked-${equipmentToUnlink.id}` });
         toast({ title: "Equipo Desvinculado", description: `El equipo ${equipmentToUnlink.name} ya no usa el protocolo base.` });
     } catch (e) {
@@ -401,15 +392,7 @@ function BaseProtocolManager() {
     setIsSavingEdit(true);
     try {
         const protocolId = equipmentToEdit.protocol.id;
-        const sanitizedSteps = editedProtocolSteps.map(step => ({
-          step: step.step || '',
-          priority: step.priority || 'baja',
-          percentage: Number(step.percentage) || 0,
-          completion: Number(step.completion) || 0,
-          notes: step.notes || '',
-          imageUrl: step.imageUrl || '',
-        }));
-        await updateProtocol(protocolId, { steps: sanitizedSteps });
+        await updateProtocol(protocolId, { steps: editedProtocolSteps });
         toast({ title: "Protocolo Actualizado", description: "Los cambios se han guardado en el protocolo base." });
         setEquipmentToEdit(null);
     } catch(e) {
@@ -424,7 +407,6 @@ function BaseProtocolManager() {
     setIsBulkUnlinking(true);
     try {
         const unlinkPromises = unlinkSelection.map(id => {
-            // We assign a temporary, non-existent protocolId to unlink the equipment
             return updateEquipment(id, { protocolId: `unlinked-${id}` });
         });
         await Promise.all(unlinkPromises);
@@ -619,6 +601,7 @@ function BaseProtocolManager() {
                                     >
                                         <CommandInput 
                                             placeholder="Buscar por nombre, marca, modelo..."
+                                            onValueChange={setSearchQuery}
                                         />
                                         <CommandList ref={commandListRef}>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>

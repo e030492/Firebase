@@ -129,8 +129,8 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 
 // --- Image Upload Service ---
 export async function uploadImageAndGetURL(base64DataUrl: string): Promise<string> {
-    if (!base64DataUrl.startsWith('data:image')) {
-        return base64DataUrl; // It's already a URL
+    if (!base64DataUrl || !base64DataUrl.startsWith('data:image')) {
+        return base64DataUrl; // It's already a URL or empty/invalid
     }
     const storageRef = ref(storage, `images/${uuidv4()}`);
     const uploadResult = await uploadString(storageRef, base64DataUrl, 'data_url');
@@ -216,10 +216,22 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
 export const createProtocol = async (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
-    return createDocument<Protocol>(collections.protocols, data, id);
+    const processedSteps = await Promise.all(data.steps.map(async (step) => {
+        const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
+        return { ...step, imageUrl };
+    }));
+    const processedData = { ...data, steps: processedSteps };
+    return createDocument<Protocol>(collections.protocols, processedData, id);
 };
 
 export const updateProtocol = async (id: string, data: Partial<Protocol>): Promise<Protocol> => {
+     if (data.steps) {
+        const processedSteps = await Promise.all(data.steps.map(async (step) => {
+            const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
+            return { ...step, imageUrl };
+        }));
+        data.steps = processedSteps;
+    }
     return updateDocument<Protocol>(collections.protocols, id, data);
 };
 
