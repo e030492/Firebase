@@ -99,7 +99,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
     setLoadingStatus('loading_data');
     try {
-        // This ensures that Firestore calls are made with a valid and fresh token.
         await firebaseUser.getIdToken(true); 
 
         const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
@@ -124,9 +123,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setLoadingStatus('authenticating');
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        await fetchAllData(user);
+        fetchAllData(user);
       } else {
         setUsers([]);
         setClients([]);
@@ -134,9 +133,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setEquipments([]);
         setProtocols([]);
         setCedulas([]);
-        setCompanySettings(null); // Clear settings on logout
+        setCompanySettings(null); 
         localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-        setLoadingStatus('ready'); // Set to ready to enable login form
+        setLoadingStatus('ready');
       }
     });
     return () => unsubscribe();
