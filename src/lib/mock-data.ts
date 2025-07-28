@@ -223,6 +223,7 @@ export const mockEquipments = [
     ipAddress: '192.168.1.100',
     configUser: 'admin',
     configPassword: 'password123',
+    protocolId: 'domo-ptz-hikvision-ds-2de4225iw-de',
   },
   {
     id: '2',
@@ -243,6 +244,7 @@ export const mockEquipments = [
     ipAddress: '',
     configUser: '',
     configPassword: '',
+    protocolId: 'lector-rfid-zkteco-kr500',
   },
   {
     id: '3',
@@ -288,7 +290,7 @@ export const mockEquipments = [
 
 export const mockProtocols = [
   {
-    id: 'proto-1',
+    id: 'domo-ptz-hikvision-ds-2de4225iw-de',
     type: 'Domo PTZ',
     brand: 'Hikvision',
     model: 'DS-2DE4225IW-DE',
@@ -301,7 +303,7 @@ export const mockProtocols = [
     ]
   },
   {
-    id: 'proto-2',
+    id: 'lector-rfid-zkteco-kr500',
     type: 'Lector RFID',
     brand: 'ZKTeco',
     model: 'KR500',

@@ -12,7 +12,7 @@ import {
 export type Plano = { url: string; name: string; size: number };
 export type Almacen = { nombre: string; direccion: string; };
 export type Client = Omit<typeof mockClients[0], 'almacenes'> & { id: string; almacenes: Almacen[]};
-export type Equipment = typeof mockEquipments[0] & { id: string, imageUrl?: string | null };
+export type Equipment = Omit<typeof mockEquipments[0], 'id'> & { id: string; imageUrl?: string | null; protocolId?: string | null };
 export type System = typeof mockSystems[0] & { id: string };
 export type User = typeof mockUsers[0] & { id: string; clientId?: string, photoUrl?: string | null, signatureUrl?: string | null };
 export type ProtocolStep = typeof mockProtocols[0]['steps'][0] & { imageUrl?: string | null };

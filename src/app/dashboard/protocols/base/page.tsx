@@ -126,23 +126,16 @@ function BaseProtocolManager() {
   }, [clientFilter, clients]);
 
   const { equipmentsWithoutProtocol, equipmentsWithProtocol } = useMemo(() => {
-    const protocolKeys = new Set(protocols.map(p => `${p.type}-${p.brand}-${p.model}`));
-    
+    const protocolMap = new Map(protocols.map(p => [p.id, p]));
     const withoutProtocol: Equipment[] = [];
     const withProtocol: EquipmentWithProtocol[] = [];
 
     allEquipments.forEach(eq => {
-        const key = `${eq.type}-${eq.brand}-${eq.model}`;
-        if (protocolKeys.has(key)) {
-            const foundProtocol = protocols.find(p => `${p.type}-${p.brand}-${p.model}` === key);
-            if (foundProtocol) {
-                withProtocol.push({ ...eq, protocol: foundProtocol });
-            } else {
-                withoutProtocol.push(eq);
-            }
-        } else {
-            withoutProtocol.push(eq);
-        }
+      if (eq.protocolId && protocolMap.has(eq.protocolId)) {
+        withProtocol.push({ ...eq, protocol: protocolMap.get(eq.protocolId) });
+      } else {
+        withoutProtocol.push(eq);
+      }
     });
 
     const filterFn = (eq: Equipment) => {
@@ -327,7 +320,7 @@ function BaseProtocolManager() {
         }
 
         const updatePromises = confirmedEquipments.map(eq => 
-            updateEquipment(eq.id, { type, brand, model })
+            updateEquipment(eq.id, { protocolId: protocolId })
         );
         await Promise.all(updatePromises);
 
@@ -375,11 +368,7 @@ function BaseProtocolManager() {
   const handleUnlinkEquipment = async () => {
     if (!equipmentToUnlink) return;
     try {
-        await updateEquipment(equipmentToUnlink.id, { 
-          type: `UNLINKED_${equipmentToUnlink.type}_${Date.now()}`,
-          brand: `UNLINKED_${equipmentToUnlink.brand}_${Date.now()}`,
-          model: `UNLINKED_${equipmentToUnlink.model}_${Date.now()}`
-        });
+        await updateEquipment(equipmentToUnlink.id, { protocolId: null });
         toast({ title: "Equipo Desvinculado", description: `El equipo ${equipmentToUnlink.name} ya no usa el protocolo base.` });
     } catch (e) {
         console.error("Error unlinking equipment:", e);
@@ -414,13 +403,7 @@ function BaseProtocolManager() {
     setIsBulkUnlinking(true);
     try {
         const unlinkPromises = unlinkSelection.map(id => {
-            const eq = allEquipments.find(e => e.id === id);
-            if (!eq) return Promise.resolve();
-            return updateEquipment(id, {
-                type: `UNLINKED_${eq.type}_${Date.now()}`,
-                brand: `UNLINKED_${eq.brand}_${Date.now()}`,
-                model: `UNLINKED_${eq.model}_${Date.now()}`
-            });
+            return updateEquipment(id, { protocolId: null });
         });
         await Promise.all(unlinkPromises);
         toast({ title: "Equipos Desvinculados", description: `${unlinkSelection.length} equipos han sido desvinculados.` });
@@ -614,6 +597,8 @@ function BaseProtocolManager() {
                                     >
                                         <CommandInput 
                                             placeholder="Buscar por nombre, marca, modelo..."
+                                            value={searchQuery}
+                                            onValueChange={setSearchQuery}
                                         />
                                         <CommandList ref={commandListRef}>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
