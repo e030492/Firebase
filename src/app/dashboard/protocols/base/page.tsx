@@ -520,7 +520,7 @@ function BaseProtocolManager() {
       case 'baja': return 'secondary';
       default: return 'secondary';
     }
-  };
+  }
 
 
   return (
@@ -1090,3 +1090,7 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
+
+    
+
+    
