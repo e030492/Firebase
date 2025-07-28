@@ -287,6 +287,7 @@ function BaseProtocolManager() {
     
     const representativeEquipment = confirmedEquipments[0];
     const { type, brand, model } = representativeEquipment;
+    
     const protocolId = `${type}-${brand}-${model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
 
     try {
@@ -564,14 +565,14 @@ function BaseProtocolManager() {
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                     <Command>
-                                        <CommandInput placeholder="Buscar equipo por nombre..." />
+                                        <CommandInput placeholder="Buscar por nombre, marca, modelo..." />
                                         <CommandList>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
                                             <CommandGroup>
                                                 {equipmentsWithoutProtocol.map((eq) => (
                                                 <CommandItem
                                                     key={eq.id}
-                                                    value={eq.name}
+                                                    value={`${eq.name} ${eq.brand} ${eq.model} ${eq.type} ${eq.serial}`}
                                                     onSelect={() => {
                                                         handleEquipmentSelect(eq.id);
                                                         setComboboxOpen(false);
