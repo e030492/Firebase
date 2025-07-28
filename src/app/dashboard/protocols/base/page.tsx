@@ -103,6 +103,7 @@ function BaseProtocolManager() {
   const [generatingEditImageIndex, setGeneratingEditImageIndex] = useState<number | null>(null);
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const commandListRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
 
   // Filters
@@ -163,7 +164,7 @@ function BaseProtocolManager() {
     if (commandListRef.current) {
         commandListRef.current.scrollTop = 0;
     }
-  }, [equipmentsWithoutProtocol]);
+  }, [searchQuery, equipmentsWithoutProtocol]);
 
 
   const handleEquipmentSelect = (equipmentId: string) => {
@@ -556,7 +557,7 @@ function BaseProtocolManager() {
                                     >
                                     {selectedEquipmentId ? 
                                         (() => {
-                                            const eq = equipmentsWithoutProtocol.find((e) => e.id === selectedEquipmentId);
+                                            const eq = allEquipments.find((e) => e.id === selectedEquipmentId);
                                             return eq ? (
                                                 <div className="flex items-center gap-3 text-left">
                                                     <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
@@ -581,7 +582,10 @@ function BaseProtocolManager() {
                                             return 0;
                                         }}
                                     >
-                                        <CommandInput placeholder="Buscar por nombre, marca, modelo..." />
+                                        <CommandInput 
+                                            placeholder="Buscar por nombre, marca, modelo..." 
+                                            onValueChange={setSearchQuery}
+                                        />
                                         <CommandList ref={commandListRef}>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
                                             <CommandGroup>
