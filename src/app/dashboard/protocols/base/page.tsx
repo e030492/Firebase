@@ -35,7 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle, CheckCircle, List, MoreHorizontal, Link2Off } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle, CheckCircle, List, MoreHorizontal, Link2Off, ChevronsUpDown, Check } from 'lucide-react';
 import { Protocol, Equipment, ProtocolStep, Client, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -50,6 +50,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -78,7 +80,8 @@ function BaseProtocolManager() {
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   // Page State
-  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
+  const selectedEquipment = useMemo(() => allEquipments.find(eq => eq.id === selectedEquipmentId) || null, [selectedEquipmentId, allEquipments]);
   const [similarEquipments, setSimilarEquipments] = useState<Equipment[]>([]);
   const [confirmedEquipments, setConfirmedEquipments] = useState<Equipment[]>([]);
   const [steps, setSteps] = useState<ProtocolStep[]>([]);
@@ -98,6 +101,7 @@ function BaseProtocolManager() {
   const [editedProtocolSteps, setEditedProtocolSteps] = useState<ProtocolStep[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [generatingEditImageIndex, setGeneratingEditImageIndex] = useState<number | null>(null);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
 
   // Filters
   const [clientFilter, setClientFilter] = useState('');
@@ -154,8 +158,8 @@ function BaseProtocolManager() {
   }, [allEquipments, protocols, clientFilter, systemFilter, warehouseFilter, clients, systems]);
 
 
-  const handleEquipmentSelect = (equipment: Equipment) => {
-    setSelectedEquipment(equipment);
+  const handleEquipmentSelect = (equipmentId: string) => {
+    setSelectedEquipmentId(equipmentId);
     // Reset subsequent steps
     setSimilarEquipments([]);
     setConfirmedEquipments([]);
@@ -305,9 +309,16 @@ function BaseProtocolManager() {
             await createProtocol({ type, brand, model, steps: sanitizedSteps }, protocolId);
         }
 
-        toast({ title: "Protocolo Guardado", description: "El protocolo base ha sido guardado y asociado a los equipos."});
+        // --- Corrected Association Logic ---
+        const updatePromises = confirmedEquipments.map(eq => 
+            updateEquipment(eq.id, { type, brand, model })
+        );
+        await Promise.all(updatePromises);
 
-        setSelectedEquipment(null);
+
+        toast({ title: "Protocolo Guardado", description: `El protocolo base ha sido guardado y asociado a ${confirmedEquipments.length} equipos.`});
+
+        setSelectedEquipmentId(null);
         setSimilarEquipments([]);
         setConfirmedEquipments([]);
         setSteps([]);
@@ -348,7 +359,11 @@ function BaseProtocolManager() {
   const handleUnlinkEquipment = async () => {
     if (!equipmentToUnlink) return;
     try {
-        await updateEquipment(equipmentToUnlink.id, { type: `UNLINKED_${equipmentToUnlink.type}` });
+        await updateEquipment(equipmentToUnlink.id, { 
+          type: `UNLINKED_${equipmentToUnlink.type}_${Date.now()}`,
+          brand: `UNLINKED_${equipmentToUnlink.brand}_${Date.now()}`,
+          model: `UNLINKED_${equipmentToUnlink.model}_${Date.now()}`
+        });
         toast({ title: "Equipo Desvinculado", description: `El equipo ${equipmentToUnlink.name} ya no usa el protocolo base.` });
     } catch (e) {
         console.error("Error unlinking equipment:", e);
@@ -520,32 +535,58 @@ function BaseProtocolManager() {
                             </SelectContent>
                         </Select>
                         <Separator />
-                        <ScrollArea className="h-72">
-                            <div className="space-y-2 pr-4">
-                            {loading ? (
-                                <Skeleton className="h-40 w-full" />
-                            ) : equipmentsWithoutProtocol.length > 0 ? (
-                                equipmentsWithoutProtocol.map(eq => (
-                                    <button 
-                                        key={eq.id} 
-                                        onClick={() => handleEquipmentSelect(eq)}
-                                        className={cn(
-                                            "w-full text-left p-2 border rounded-md flex items-center gap-3 transition-colors",
-                                            selectedEquipment?.id === eq.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "hover:bg-muted/50"
-                                        )}
+                        {loading ? (
+                             <Skeleton className="h-10 w-full" />
+                        ): (
+                            <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={comboboxOpen}
+                                    className="w-full justify-between"
                                     >
-                                        <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
-                                        <div className="flex-1">
-                                            <p className="font-semibold">{eq.name}</p>
-                                            <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
-                                        </div>
-                                    </button>
-                                ))
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center p-4">No se encontraron equipos sin protocolo con los filtros aplicados.</p>
-                            )}
-                            </div>
-                        </ScrollArea>
+                                    {selectedEquipmentId
+                                        ? equipmentsWithoutProtocol.find((eq) => eq.id === selectedEquipmentId)?.name
+                                        : "Seleccionar equipo..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Buscar equipo por nombre..." />
+                                        <CommandList>
+                                            <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
+                                            <CommandGroup>
+                                                {equipmentsWithoutProtocol.map((eq) => (
+                                                <CommandItem
+                                                    key={eq.id}
+                                                    value={eq.name}
+                                                    onSelect={() => {
+                                                        handleEquipmentSelect(eq.id);
+                                                        setComboboxOpen(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            selectedEquipmentId === eq.id ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    <div className="flex flex-col">
+                                                        <span>{eq.name}</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            ID: {eq.id.substring(0, 5)}... | N/S: {eq.serial || 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -556,7 +597,7 @@ function BaseProtocolManager() {
                         <CardHeader>
                             <HardHat className="h-16 w-16 text-muted-foreground mx-auto mb-4"/>
                             <CardTitle>Seleccione un Equipo</CardTitle>
-                            <CardDescription>Elija un equipo de la lista de la izquierda para empezar a crear un protocolo base.</CardDescription>
+                            <CardDescription>Elija un equipo del combobox de la izquierda para empezar a crear un protocolo base.</CardDescription>
                         </CardHeader>
                     </Card>
                 ) : (
@@ -603,9 +644,10 @@ function BaseProtocolManager() {
                                             />
                                             <Label htmlFor={`eq-${eq.id}`} className="flex items-center gap-3 cursor-pointer flex-1">
                                                 <Image src={isValidImageUrl(eq.imageUrl) ? eq.imageUrl! : 'https://placehold.co/40x40.png'} alt={eq.name} width={40} height={40} data-ai-hint="equipment photo" className="rounded-md object-cover"/>
-                                                <div>
+                                                <div className="flex-1">
                                                     <p className="font-semibold">{eq.name}</p>
                                                     <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
+                                                    <p className="text-xs text-muted-foreground">ID: {eq.id.substring(0, 5)}... | N/S: {eq.serial || 'N/A'}</p>
                                                 </div>
                                             </Label>
                                         </div>
