@@ -2,7 +2,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { onAuthStateChanged } from "firebase/auth";
 import { 
+    auth,
     loginUser as apiLoginUser,
     getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createUser as apiCreateUser,
@@ -27,10 +29,8 @@ import {
     getCompanySettings,
     subscribeToMediaLibrary as apiSubscribeToMediaLibrary,
     uploadFile as apiUploadFile,
-    deleteMediaFile as apiDeleteMediaFile,
-    auth // Import auth instance
+    deleteMediaFile as apiDeleteMediaFile
 } from '@/lib/services';
-import { onAuthStateChanged } from "firebase/auth";
 
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
@@ -95,6 +95,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchData = useCallback(async () => {
     try {
+      // Set loading to true only when we start fetching
       setLoading(true);
       const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
         getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
@@ -117,15 +118,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
+    // This effect runs once on mount to set up the auth listener.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
         if (user) {
-            // User is signed in, see docs for a list of available properties
-            // https://firebase.google.com/docs/reference/js/firebase.User
-            fetchData();
+            // User is signed in. Fetch data.
+            const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
+            if (storedUser) {
+                fetchData();
+            } else {
+                // If user is logged in via Firebase but not in localStorage (edge case),
+                // we should probably log them out or fetch their user doc. For now, we'll just not load data.
+                setLoading(false);
+            }
         } else {
-            // User is signed out
-            setLoading(false); // Not fetching data if not logged in
+            // User is signed out. No data to load.
+            setLoading(false);
+            // Clear local data
+            setUsers([]);
+            setClients([]);
+            setSystems([]);
+            setEquipments([]);
+            setProtocols([]);
+            setCedulas([]);
         }
     });
 
@@ -138,6 +152,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const user = await apiLoginUser(email, pass);
       if (user) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
+          // Don't call fetchData() here. The onAuthStateChanged listener will handle it.
       }
       return user;
   };
@@ -246,7 +261,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const newSettings = await apiUpdateCompanySettings(settingsData);
       setCompanySettings(newSettings);
   };
-
   
   const value: DataContextType = {
     users,
