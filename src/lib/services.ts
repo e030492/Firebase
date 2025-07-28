@@ -80,6 +80,7 @@ export async function getCompanySettings(): Promise<CompanySettings> {
     if (docSnap.exists()) {
         return { id: docSnap.id, ...docSnap.data() } as CompanySettings;
     } else {
+        // Provide a default fallback if the document doesn't exist
         return { id: 'company', logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' };
     }
 }
@@ -216,4 +217,3 @@ export async function deleteMediaFile(file: MediaFile): Promise<void> {
     await deleteDocument('mediaLibrary', file.id);
 }
 
-    
