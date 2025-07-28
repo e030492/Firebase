@@ -226,28 +226,14 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
 export const createProtocol = async (data: Omit<Protocol, 'id'>, id?: string): Promise<Protocol> => {
-    const sanitizedSteps = data.steps.map(step => ({
-        step: step.step,
-        priority: step.priority,
-        percentage: step.percentage,
-        completion: step.completion || 0,
-        notes: step.notes || '',
-        imageUrl: step.imageUrl || '',
-    }));
-
-    const uploadPromises = sanitizedSteps.map(async (step) => {
-        if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-            step.imageUrl = await uploadImageAndGetURL(step.imageUrl);
-        }
-        return step;
+    // Replicates the working pattern from createEquipment
+    const uploadPromises = data.steps.map(async (step) => {
+        const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
+        return { ...step, imageUrl };
     });
 
     const finalSteps = await Promise.all(uploadPromises);
-
-    const protocolData: Omit<Protocol, 'id'> = {
-        ...data,
-        steps: finalSteps,
-    };
+    const protocolData = { ...data, steps: finalSteps };
     
     return createDocument<Protocol>(collections.protocols, protocolData, id);
 };
@@ -283,24 +269,12 @@ export const createCedula = async (data: Omit<Cedula, 'id'>) => {
     return createDocument<Cedula>(collections.cedulas, data);
 };
 
-export const updateCedula = async (id: string, data: Partial<Cedula>, onProgress?: (progress: number) => void) => {
+export const updateCedula = async (id: string, data: Partial<Cedula>) => {
     if (data.protocolSteps) {
-        const stepsToUpload = data.protocolSteps.filter(step => step.imageUrl && step.imageUrl.startsWith('data:image'));
-        let uploadedCount = 0;
-        
         const uploadPromises = data.protocolSteps.map(async (step) => {
-            if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                const newUrl = await uploadImageAndGetURL(step.imageUrl);
-                uploadedCount++;
-                if (onProgress) {
-                    const progress = (uploadedCount / stepsToUpload.length) * 100;
-                    onProgress(progress);
-                }
-                return { ...step, imageUrl: newUrl };
-            }
-            return step;
+            const imageUrl = await uploadImageAndGetURL(step.imageUrl || '');
+            return { ...step, imageUrl };
         });
-
         const finalSteps = await Promise.all(uploadPromises);
         data.protocolSteps = finalSteps;
     }

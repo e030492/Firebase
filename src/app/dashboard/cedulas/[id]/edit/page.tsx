@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
@@ -127,7 +128,7 @@ export default function EditCedulaPage() {
             priority: s.priority || 'baja',
           }));
         }
-        const equipmentProtocol = protocols.find(p => p.type === foundEquipment.type && p.brand === foundEquipment.brand && p.model === foundEquipment.model);
+        const equipmentProtocol = protocols.find(p => p.id === foundEquipment.protocolId);
         return (equipmentProtocol?.steps || []).map(s => ({
           ...s,
           completion: 0,

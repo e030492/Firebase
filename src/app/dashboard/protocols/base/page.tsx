@@ -284,7 +284,7 @@ function BaseProtocolManager() {
             model: referenceEquipment.model,
             type: referenceEquipment.type,
         });
-        setSteps(result.map(step => ({...step, imageUrl: '', notes: ''})));
+        setSteps(result);
     } catch (error) {
         console.error("Error generating protocol steps:", error);
         toast({ title: "Error de IA", description: "No se pudieron generar los pasos del protocolo.", variant: "destructive" });

@@ -76,7 +76,7 @@ type DataContextType = {
   deleteProtocol: (protocolId: string) => Promise<void>;
   // Cedula mutations
   createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<Cedula>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onProgress?: (progress: number) => void) => Promise<void>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 
@@ -162,7 +162,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateProtocol: updateProtocolService,
     deleteProtocol: async (id) => { await deleteProtocolService(id); },
     createCedula: createCedulaService,
-    updateCedula: async (id, data, onProgress) => { await updateCedulaService(id, data, onProgress) },
+    updateCedula: async (id, data) => { await updateCedulaService(id, data) },
     deleteCedula: async (id) => { await deleteCedulaService(id); },
   };
 

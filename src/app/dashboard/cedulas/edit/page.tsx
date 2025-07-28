@@ -38,7 +38,6 @@ import { Separator } from '@/components/ui/separator';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Cedula, Client, Equipment, User, System, Protocol, ProtocolStep } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
-import { Progress } from '@/components/ui/progress';
 
 
 export default function EditCedulaPage() {
@@ -73,68 +72,80 @@ export default function EditCedulaPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const dataLoadedRef = useRef(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!loading && cedulaId) {
-      const cedulaData = cedulas.find(c => c.id === cedulaId);
-      if (cedulaData) {
-        setCedula(cedulaData);
-      } else {
-        setNotFound(true);
-      }
-    }
-  }, [cedulaId, cedulas, loading]);
+    if (loading) return;
   
-  useEffect(() => {
-    if (cedula && !dataLoadedRef.current) {
-        setFolio(cedula.folio);
-        setDescription(cedula.description);
-        setStatus(cedula.status);
-        setSemaforo(cedula.semaforo || '');
-
-        if (cedula.creationDate) {
-            const dateObj = new Date(cedula.creationDate);
-            setCreationDate(dateObj);
-            setCreationTime(format(dateObj, 'HH:mm'));
-        }
-
-        const foundClient = clients.find(c => c.name === cedula.client);
-        if (foundClient) setClientId(foundClient.id);
-        
-        const currentTechnicians = users.filter(u => u.role === 'Técnico');
-        const currentSupervisors = users.filter(u => u.role === 'Supervisor');
-        setTechnicians(currentTechnicians);
-        setSupervisors(currentSupervisors);
-
-        const foundTechnician = currentTechnicians.find(u => u.name === cedula.technician);
-        if (foundTechnician) setTechnicianId(foundTechnician.id);
-
-        const foundSupervisor = currentSupervisors.find(u => u.name === cedula.supervisor);
-        if (foundSupervisor) setSupervisorId(foundSupervisor.id);
-
-        const foundEquipment = allEquipments.find(e => e.name === cedula.equipment && e.client === cedula.client);
-        if (foundEquipment) {
-            setEquipmentId(foundEquipment.id);
-            const foundSystem = systems.find(s => s.name === foundEquipment.system);
-            if (foundSystem) setSystemId(foundSystem.id);
-
-            if (cedula.protocolSteps && cedula.protocolSteps.length > 0) {
-                setProtocolSteps(cedula.protocolSteps);
-            } else {
-                const equipmentProtocol = protocols.find(p => p.id === foundEquipment.protocolId);
-                const baseProtocolSteps = equipmentProtocol?.steps || [];
-                setProtocolSteps(baseProtocolSteps.map(s => ({...s, imageUrl: '', notes: '', completion: 0})));
-            }
-        } else {
-            setProtocolSteps([]);
-        }
-        
-        dataLoadedRef.current = true;
-        setPageLoading(false);
+    const cedulaData = cedulas.find(c => c.id === cedulaId);
+    if (!cedulaData) {
+      setNotFound(true);
+      setPageLoading(false);
+      return;
     }
-  }, [cedula, clients, allEquipments, users, systems, protocols]);
+  
+    setCedula(cedulaData);
+    setFolio(cedulaData.folio);
+    setDescription(cedulaData.description);
+    setStatus(cedulaData.status);
+    setSemaforo(cedulaData.semaforo || '');
+  
+    if (cedulaData.creationDate) {
+      const dateObj = new Date(cedulaData.creationDate);
+      setCreationDate(dateObj);
+      setCreationTime(format(dateObj, 'HH:mm'));
+    }
+  
+    const currentTechnicians = users.filter(u => u.role === 'Técnico');
+    const currentSupervisors = users.filter(u => u.role === 'Supervisor');
+    setTechnicians(currentTechnicians);
+    setSupervisors(currentSupervisors);
+  
+    const foundClient = clients.find(c => c.name === cedulaData.client);
+    if (foundClient) setClientId(foundClient.id);
+  
+    const foundTechnician = currentTechnicians.find(u => u.name === cedulaData.technician);
+    if (foundTechnician) setTechnicianId(foundTechnician.id);
+  
+    const foundSupervisor = currentSupervisors.find(s => s.name === cedulaData.supervisor);
+    if (foundSupervisor) setSupervisorId(foundSupervisor.id);
+  
+    const foundEquipment = allEquipments.find(e => e.name === cedulaData.equipment && e.client === cedulaData.client);
+    if (foundEquipment) {
+      setEquipmentId(foundEquipment.id);
+      
+      const foundSystem = systems.find(s => s.name === foundEquipment.system);
+      if (foundSystem) setSystemId(foundSystem.id);
+      
+      const getSafeProtocolSteps = (): ProtocolStep[] => {
+        if (cedulaData.protocolSteps && cedulaData.protocolSteps.length > 0) {
+          return cedulaData.protocolSteps.map(s => ({
+            ...s,
+            completion: s.completion || 0,
+            notes: s.notes || '',
+            imageUrl: s.imageUrl || '',
+            percentage: s.percentage || 0,
+            priority: s.priority || 'baja',
+          }));
+        }
+        const equipmentProtocol = protocols.find(p => p.type === foundEquipment.type && p.brand === foundEquipment.brand && p.model === foundEquipment.model);
+        return (equipmentProtocol?.steps || []).map(s => ({
+          ...s,
+          completion: 0,
+          notes: '',
+          imageUrl: '',
+          percentage: s.percentage || 0,
+          priority: s.priority || 'baja',
+        }));
+      };
+      setProtocolSteps(getSafeProtocolSteps());
+    } else {
+      setProtocolSteps([]);
+    }
+  
+    setPageLoading(false);
+  
+  }, [cedulaId, cedulas, clients, allEquipments, users, systems, protocols, loading]);
+  
 
   useEffect(() => {
     if (clientId && systemId) {
@@ -164,23 +175,13 @@ export default function EditCedulaPage() {
 
   const handleEquipmentChange = (newEquipmentId: string) => {
     setEquipmentId(newEquipmentId);
-    const selectedEquipment = allEquipments.find(e => e.id === newEquipmentId);
-    if(selectedEquipment) {
-      const equipmentProtocol = protocols.find(p => p.id === selectedEquipment.protocolId);
-      const baseProtocolSteps = equipmentProtocol?.steps || [];
-      setProtocolSteps(baseProtocolSteps.map(s => ({...s, imageUrl: '', notes: '', completion: 0})));
-    } else {
-      setProtocolSteps([]);
-    }
   };
   
   const handleStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
-    setProtocolSteps(prev => {
-        const newSteps = [...prev];
-        const updatedStep = { ...newSteps[index], [field]: value };
-        newSteps[index] = updatedStep;
-        return newSteps;
-    });
+    const newSteps = [...protocolSteps];
+    const stepToUpdate = { ...newSteps[index], [field]: value };
+    newSteps[index] = stepToUpdate;
+    setProtocolSteps(newSteps);
   };
 
   const handleImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,7 +202,6 @@ export default function EditCedulaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    setUploadProgress(0);
 
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
@@ -215,6 +215,16 @@ export default function EditCedulaPage() {
         finalDateTime.setMinutes(parseInt(minutes, 10));
     }
     
+    // Final sanitization before submitting to Firebase
+    const sanitizedProtocolSteps = protocolSteps.map(step => ({
+        step: step.step || '',
+        priority: step.priority || 'baja',
+        completion: Number(step.completion) || 0,
+        imageUrl: step.imageUrl || '',
+        notes: step.notes || '',
+        percentage: step.percentage || 0,
+    }));
+
     const updatedData: Partial<Cedula> = {
         folio,
         client: clientName,
@@ -225,18 +235,11 @@ export default function EditCedulaPage() {
         status: status as Cedula['status'],
         description,
         semaforo: semaforo as Cedula['semaforo'],
-        protocolSteps: protocolSteps.map(step => ({
-          step: step.step,
-          priority: step.priority,
-          completion: Number(step.completion) || 0,
-          imageUrl: step.imageUrl,
-          notes: step.notes || '',
-          percentage: step.percentage || 0,
-        })),
+        protocolSteps: sanitizedProtocolSteps,
     };
       
     try {
-        await updateCedula(cedulaId, updatedData, setUploadProgress);
+        await updateCedula(cedulaId, updatedData);
         alert('Cédula actualizada con éxito.');
         router.push('/dashboard/cedulas');
     } catch (error) {
@@ -244,7 +247,6 @@ export default function EditCedulaPage() {
         alert('Error: No se pudo actualizar la cédula.');
     } finally {
         setIsSaving(false);
-        setUploadProgress(null);
     }
   }
 
@@ -607,7 +609,6 @@ export default function EditCedulaPage() {
                                         </Button>
                                     )}
                                 </div>
-                                {uploadProgress !== null && step.imageUrl?.startsWith('data:') && <Progress value={uploadProgress} className="w-full mt-2" />}
                                 <Input
                                     id={`image-upload-${index}`}
                                     type="file"
