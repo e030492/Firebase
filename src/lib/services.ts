@@ -40,7 +40,7 @@ const getCollectionData = async <T extends { id: string }>(collectionName: strin
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     } catch (error) {
         console.error(`Error getting ${collectionName}:`, error);
-        throw new Error(`Failed to fetch ${collectionName}`);
+        throw error; // Re-throw the original error to be caught by the caller
     }
 };
 
@@ -216,4 +216,3 @@ export async function deleteMediaFile(file: MediaFile): Promise<void> {
     await deleteObject(fileRef);
     await deleteDocument('mediaLibrary', file.id);
 }
-

@@ -92,6 +92,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
     setLoadingStatus('loading_data');
     try {
+        // Force token refresh to ensure permissions are up to date for Firestore rules.
         await firebaseUser.getIdToken(true); 
 
         const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
@@ -129,7 +130,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setCedulas([]);
         setCompanySettings(null); 
         localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-        setLoadingStatus('ready');
+        setLoadingStatus('ready'); // Set to ready to enable login screen
       }
     });
     return () => unsubscribe();
@@ -144,6 +145,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const user = await apiLoginUser(email, pass);
       if (user) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
+          // After successful login, onAuthStateChanged will trigger fetchAllData
       }
       return user;
   };
