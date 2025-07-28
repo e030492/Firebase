@@ -104,6 +104,8 @@ function BaseProtocolManager() {
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const commandListRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [unlinkSelection, setUnlinkSelection] = useState<string[]>([]);
+  const [isBulkUnlinking, setIsBulkUnlinking] = useState(false);
 
 
   // Filters
@@ -159,12 +161,17 @@ function BaseProtocolManager() {
         equipmentsWithProtocol: withProtocol.filter(filterFn)
     };
   }, [allEquipments, protocols, clientFilter, systemFilter, warehouseFilter, clients, systems]);
+  
+  // Clear unlink selection when filters change
+  useEffect(() => {
+    setUnlinkSelection([]);
+  }, [clientFilter, systemFilter, warehouseFilter]);
 
   useEffect(() => {
     if (commandListRef.current) {
         commandListRef.current.scrollTop = 0;
     }
-  }, [searchQuery, equipmentsWithoutProtocol]);
+  }, [searchQuery]);
 
 
   const handleEquipmentSelect = (equipmentId: string) => {
@@ -402,6 +409,29 @@ function BaseProtocolManager() {
         setIsSavingEdit(false);
     }
   };
+  
+  const handleBulkUnlink = async () => {
+    setIsBulkUnlinking(true);
+    try {
+        const unlinkPromises = unlinkSelection.map(id => {
+            const eq = allEquipments.find(e => e.id === id);
+            if (!eq) return Promise.resolve();
+            return updateEquipment(id, {
+                type: `UNLINKED_${eq.type}_${Date.now()}`,
+                brand: `UNLINKED_${eq.brand}_${Date.now()}`,
+                model: `UNLINKED_${eq.model}_${Date.now()}`
+            });
+        });
+        await Promise.all(unlinkPromises);
+        toast({ title: "Equipos Desvinculados", description: `${unlinkSelection.length} equipos han sido desvinculados.` });
+        setUnlinkSelection([]);
+    } catch (e) {
+        console.error("Error during bulk unlink:", e);
+        toast({ title: "Error", description: "No se pudieron desvincular los equipos.", variant: "destructive" });
+    } finally {
+        setIsBulkUnlinking(false);
+    }
+  };
 
   const handleEditedStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
     const newSteps = [...editedProtocolSteps];
@@ -583,8 +613,7 @@ function BaseProtocolManager() {
                                         }}
                                     >
                                         <CommandInput 
-                                            placeholder="Buscar por nombre, marca, modelo..." 
-                                            onValueChange={setSearchQuery}
+                                            placeholder="Buscar por nombre, marca, modelo..."
                                         />
                                         <CommandList ref={commandListRef}>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
@@ -794,13 +823,33 @@ function BaseProtocolManager() {
 
         <Card>
             <CardHeader>
-                <CardTitle>Equipos con Protocolo Asignado</CardTitle>
-                <CardDescription>Visualice y gestione los equipos que ya tienen un protocolo base.</CardDescription>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Equipos con Protocolo Asignado</CardTitle>
+                        <CardDescription>Visualice y gestione los equipos que ya tienen un protocolo base.</CardDescription>
+                    </div>
+                     <Button 
+                        variant="destructive"
+                        onClick={() => setIsBulkUnlinking(true)}
+                        disabled={unlinkSelection.length === 0}
+                    >
+                        <Link2Off className="mr-2 h-4 w-4" />
+                        Desvincular ({unlinkSelection.length})
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-12">
+                                <Checkbox
+                                    checked={unlinkSelection.length === equipmentsWithProtocol.length && equipmentsWithProtocol.length > 0}
+                                    onCheckedChange={(checked) => {
+                                        setUnlinkSelection(checked ? equipmentsWithProtocol.map(e => e.id) : []);
+                                    }}
+                                />
+                            </TableHead>
                             <TableHead>Equipo</TableHead>
                             <TableHead>Cliente</TableHead>
                             <TableHead>Protocolo Base</TableHead>
@@ -811,6 +860,16 @@ function BaseProtocolManager() {
                         {equipmentsWithProtocol.length > 0 ? equipmentsWithProtocol.map(equipment => (
                            <Fragment key={equipment.id}>
                             <TableRow>
+                                <TableCell>
+                                     <Checkbox
+                                        checked={unlinkSelection.includes(equipment.id)}
+                                        onCheckedChange={(checked) => {
+                                            setUnlinkSelection(prev => 
+                                                checked ? [...prev, equipment.id] : prev.filter(id => id !== equipment.id)
+                                            );
+                                        }}
+                                    />
+                                </TableCell>
                                 <TableCell className="font-medium">{equipment.name}<span className="block text-xs text-muted-foreground">{equipment.serial}</span></TableCell>
                                 <TableCell>{equipment.client}</TableCell>
                                 <TableCell className="text-muted-foreground">{equipment.protocol ? `${equipment.protocol.type} / ${equipment.protocol.brand}` : 'N/A'}</TableCell>
@@ -835,7 +894,7 @@ function BaseProtocolManager() {
                             </TableRow>
                            </Fragment>
                         )) : (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center">No hay equipos con protocolo que coincidan con los filtros.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No hay equipos con protocolo que coincidan con los filtros.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -879,6 +938,21 @@ function BaseProtocolManager() {
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteStep} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isBulkUnlinking} onOpenChange={setIsBulkUnlinking}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Desvincular Equipos Seleccionados?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción quitará el protocolo base de los {unlinkSelection.length} equipos seleccionados. El protocolo no se eliminará.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkUnlink} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Sí, desvincular</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
