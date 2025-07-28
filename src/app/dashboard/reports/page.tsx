@@ -28,6 +28,7 @@ type EnrichedCedula = Cedula & {
   warehouse?: string;
   systemColor?: string;
   serial: string;
+  evidenceImageUrl?: string;
 };
 type SortableCedulaKey = 'folio' | 'client' | 'warehouse' | 'system' | 'equipment' | 'creationDate';
 type SortableEquipmentKey = 'name' | 'client' | 'system' | 'location' | 'nextMaintenanceDate';
@@ -139,6 +140,17 @@ function ReportView({ data, onBack, logoUrl }: { data: EnrichedCedula[], onBack:
                                 </div>
                             </section>
 
+                            <section className="mt-6 break-inside-avoid">
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Evidencia Fotográfica Principal</h3>
+                                {cedula.evidenceImageUrl ? (
+                                    <div className="flex justify-center">
+                                        <Image src={cedula.evidenceImageUrl} alt={`Evidencia para ${cedula.folio}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover border max-w-full h-auto"/>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-center text-gray-500">No se adjuntó evidencia fotográfica principal.</p>
+                                )}
+                            </section>
+
                             {cedula.protocolSteps && cedula.protocolSteps.length > 0 && (
                                 <section className="mt-6 break-inside-avoid">
                                     <h3 className="text-xl font-bold text-gray-800 mb-2">Protocolo de Mantenimiento</h3>
@@ -146,7 +158,7 @@ function ReportView({ data, onBack, logoUrl }: { data: EnrichedCedula[], onBack:
                                         {cedula.protocolSteps.map((step, index) => (
                                             <div key={index} className="p-4 break-inside-avoid border-b last:border-b-0">
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                                                    <div className="md:col-span-2">
+                                                    <div className="md:col-span-3">
                                                         <table className="w-full text-sm">
                                                             <tbody>
                                                                 <tr>
@@ -169,12 +181,6 @@ function ReportView({ data, onBack, logoUrl }: { data: EnrichedCedula[], onBack:
                                                             </tbody>
                                                         </table>
                                                     </div>
-                                                    {step.imageUrl && (
-                                                         <div className="md:col-span-1">
-                                                            <p className="font-semibold text-sm mb-2">Evidencia</p>
-                                                            <Image src={step.imageUrl} alt={`Evidencia para ${step.step}`} width={200} height={150} data-ai-hint="protocol evidence" className="rounded-md object-cover border w-full max-w-[33%] h-auto"/>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -736,3 +742,5 @@ export default function ReportsPage() {
         </div>
     );
 }
+
+    

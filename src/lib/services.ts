@@ -1,5 +1,4 @@
 
-
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, onSnapshot, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
@@ -237,11 +236,61 @@ export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(c
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
 
 export const createCedula = async (data: Omit<Cedula, 'id'>) => {
-    return createDocument<Cedula>(collections.cedulas, data);
+    // This is a workaround for Firestore's limitation on large strings in arrays.
+    // We find the first image and move it to a top-level field.
+    const dataToSave: any = { ...data };
+    let evidenceImageUrl = '';
+    if (dataToSave.protocolSteps && dataToSave.protocolSteps.length > 0) {
+        for (const step of dataToSave.protocolSteps) {
+            if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
+                evidenceImageUrl = step.imageUrl;
+                break; // Found the first image, stop looking.
+            }
+        }
+        // Now clear all imageUrls from the array to avoid the error.
+        dataToSave.protocolSteps = dataToSave.protocolSteps.map((step: ProtocolStep) => ({
+            ...step,
+            imageUrl: '',
+        }));
+    }
+    dataToSave.evidenceImageUrl = evidenceImageUrl; // Add the new top-level field.
+
+    return createDocument<Cedula>(collections.cedulas, dataToSave);
 };
 
 export const updateCedula = async (id: string, data: Partial<Cedula>) => {
-    return updateDocument<Cedula>(collections.cedulas, id, data);
+    const dataToSave: any = { ...data };
+    
+    // This is a workaround for Firestore's limitation on large strings in arrays.
+    // We find the first image and move it to a top-level field.
+    let evidenceImageUrl: string | undefined = undefined;
+
+    if (dataToSave.protocolSteps && dataToSave.protocolSteps.length > 0) {
+        // Find the first new base64 image to be used as the main evidence
+        for (const step of dataToSave.protocolSteps) {
+            if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
+                evidenceImageUrl = step.imageUrl;
+                break; 
+            }
+        }
+        
+        // Clean the array: remove base64 strings
+        dataToSave.protocolSteps = dataToSave.protocolSteps.map((step: ProtocolStep) => ({
+            ...step,
+            // Keep existing URLs, but clear new base64 images from the array
+            imageUrl: (step.imageUrl && step.imageUrl.startsWith('http')) ? step.imageUrl : '',
+        }));
+    }
+    
+    // Only add the evidenceImageUrl field if a new image was found.
+    // Otherwise, we don't want to overwrite a potentially existing one with an empty string.
+    if (evidenceImageUrl !== undefined) {
+      dataToSave.evidenceImageUrl = evidenceImageUrl;
+    }
+
+    return updateDocument<Cedula>(collections.cedulas, id, dataToSave);
 };
 
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
+
+    
