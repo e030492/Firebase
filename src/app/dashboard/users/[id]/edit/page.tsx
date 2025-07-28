@@ -212,26 +212,13 @@ export default function EditUserPage() {
             photoUrl: photoUrl || null,
         };
 
-        // Modificación: Incluir clientId solo si el rol es 'cliente' y selectedClientId está definido
-        if (role === 'cliente' && selectedClientId !== undefined) {
-            updatedData.clientId = selectedClientId;
-        } else if (role !== 'cliente' && selectedClientId === undefined) {
-           // Si el rol no es cliente y selectedClientId es undefined (como debe ser),
-           // no incluyas clientId en updatedData para no enviarlo con undefined.
-           // Esta condición es redundante con el cambio de arriba, pero explícita.
-           // Simplemente no hacemos nada aquí si el rol no es cliente.
-        } else if (role !== 'cliente' && selectedClientId !== undefined) {
-             // Este caso podría ocurrir si selectedClientId tenía un valor previo y el rol cambió a no-cliente.
-             // Queremos eliminar el clientId si el rol ya no es cliente.
-             // Firestore no permite establecer un campo a undefined para eliminarlo directamente.
-             // Para eliminar un campo, necesitas un marcador especialFieldValue.delete().
-             // Si updateDoc debe manejar la eliminación de campos, necesitarías adjustar updateDocument en services.ts
-             // Alternativa: No incluir clientId en updatedData si el rol no es cliente, y si updateDocument puede manejar eso,
-             // o si necesitas una lógica específica para "eliminar" el campo en Firestore si el rol cambia.
-             // Por ahora, simplemente no lo incluimos si no es cliente, y confiamos en que 
-             // updateDocument maneje los campos no incluidos como "no modificados".
+        if (role === 'cliente') {
+            updatedData.clientId = selectedClientId || '';
+        } else {
+            // Ensure clientId is not part of the update if the role is not 'cliente'
+            // This prevents sending `undefined` to Firestore.
+            delete (updatedData as Partial<User & { clientId: any }>).clientId;
         }
-        // Si el rol no es cliente, el campo clientId simplemente no se incluye en updatedData.
 
         if (password) {
             updatedData.password = password;
