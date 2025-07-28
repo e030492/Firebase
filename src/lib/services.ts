@@ -141,10 +141,15 @@ async function deleteDocument(collectionName: string, id: string): Promise<boole
 }
 
 // --- Image Upload Service ---
-export async function uploadImageAndGetURL(base64DataUrl: string): Promise<string> {
-    // Per user instruction, do not use Firebase Storage. Return base64 directly.
-    return base64DataUrl;
-}
+export const uploadImageAndGetURL = async (base64DataUrl: string): Promise<string> => {
+    if (!base64DataUrl || !base64DataUrl.startsWith('data:image')) {
+        return base64DataUrl; // Not a new base64 image, return as is.
+    }
+    const storageRef = ref(storage, `images/${uuidv4()}`);
+    await uploadString(storageRef, base64DataUrl, 'data_url');
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+};
 
 
 // --- Specific Service Functions ---
@@ -210,9 +215,15 @@ export const deleteClient = (id: string): Promise<boolean> => deleteDocument(col
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
 export const createEquipment = async (data: Omit<Equipment, 'id'>) => {
+    if (data.imageUrl) {
+        data.imageUrl = await uploadImageAndGetURL(data.imageUrl);
+    }
     return createDocument<Equipment>(collections.equipments, data);
 };
 export const updateEquipment = async (id: string, data: Partial<Equipment>) => {
+    if (data.imageUrl) {
+        data.imageUrl = await uploadImageAndGetURL(data.imageUrl);
+    }
     return updateDocument<Equipment>(collections.equipments, id, data);
 };
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
@@ -229,11 +240,29 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
 export const createProtocol = async (data: Omit<Protocol, 'id'>, id?: string): Promise<Protocol> => {
+    if (data.steps) {
+        const stepPromises = data.steps.map(async (step) => {
+            if (step.imageUrl) {
+                step.imageUrl = await uploadImageAndGetURL(step.imageUrl);
+            }
+            return step;
+        });
+        data.steps = await Promise.all(stepPromises);
+    }
     return createDocument<Protocol>(collections.protocols, data, id);
 };
 
 
 export const updateProtocol = async (id: string, data: Partial<Protocol>): Promise<Protocol> => {
+     if (data.steps) {
+        const stepPromises = data.steps.map(async (step) => {
+            if (step.imageUrl) {
+                step.imageUrl = await uploadImageAndGetURL(step.imageUrl);
+            }
+            return step;
+        });
+        data.steps = await Promise.all(stepPromises);
+    }
     return updateDocument<Protocol>(collections.protocols, id, data);
 };
 
@@ -243,41 +272,33 @@ export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(c
 // CEDULAS
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
 
-const prepareCedulaDataForFirestore = (cedulaData: Partial<Cedula>): any => {
-    const dataToSave: { [key: string]: any } = { ...cedulaData };
-
-    if (dataToSave.protocolSteps) {
-        // Extract images to top-level fields and clean the array
-        const cleanedSteps = dataToSave.protocolSteps.map((step: ProtocolStep, index: number) => {
-            if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                // Move the image to a top-level field
-                dataToSave[`stepImage_${index}`] = step.imageUrl;
-            } else if (step.imageUrl) {
-                // If it's not a base64 string, assume it's a URL and keep it (or handle as needed)
-                dataToSave[`stepImage_${index}`] = step.imageUrl;
-            }
-
-            // Return a version of the step without the imageUrl property for the array
-            const { imageUrl, ...restOfStep } = step;
-            return restOfStep;
-        });
-        dataToSave.protocolSteps = cleanedSteps;
-    }
-    return dataToSave;
-};
-
-
 export const createCedula = async (data: Omit<Cedula, 'id'>) => {
-    const dataToSave = prepareCedulaDataForFirestore(data);
+    if (data.protocolSteps) {
+        const stepPromises = data.protocolSteps.map(async (step) => {
+            if (step.imageUrl) {
+                step.imageUrl = await uploadImageAndGetURL(step.imageUrl);
+            }
+            return step;
+        });
+        data.protocolSteps = await Promise.all(stepPromises);
+    }
     const cedulaRef = doc(collection(db, collections.cedulas));
-    await setDoc(cedulaRef, dataToSave);
+    await setDoc(cedulaRef, data);
     return { id: cedulaRef.id, ...data } as Cedula;
 };
 
 export const updateCedula = async (id: string, data: Partial<Cedula>) => {
-    const dataToSave = prepareCedulaDataForFirestore(data);
+    if (data.protocolSteps) {
+        const stepPromises = data.protocolSteps.map(async (step) => {
+            if (step.imageUrl) {
+                step.imageUrl = await uploadImageAndGetURL(step.imageUrl);
+            }
+            return step;
+        });
+        data.protocolSteps = await Promise.all(stepPromises);
+    }
     const cedulaRef = doc(db, collections.cedulas, id);
-    await updateDoc(cedulaRef, dataToSave);
+    await updateDoc(cedulaRef, data);
 };
 
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

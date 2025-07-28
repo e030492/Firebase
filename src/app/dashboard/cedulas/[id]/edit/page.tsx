@@ -207,14 +207,7 @@ export default function EditCedulaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    setAuditLog([]); // Clear previous logs
-
-    const log = (message: string) => {
-        setAuditLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
-    };
-
-    log('Iniciando proceso de guardado...');
-
+    
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
     const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
@@ -239,22 +232,16 @@ export default function EditCedulaPage() {
         semaforo: semaforo as Cedula['semaforo'],
         protocolSteps: protocolSteps,
     };
-    
-    log(`Datos preparados para enviar a Firestore. Contiene ${protocolSteps.length} pasos.`);
       
     try {
-        log('Llamando a la función updateCedula...');
         await updateCedula(cedulaId, updatedData);
-        log('¡Éxito! La función updateCedula se completó sin errores.');
         alert('Cédula actualizada con éxito.');
         router.push('/dashboard/cedulas');
     } catch (error) {
         console.error("Failed to update cedula:", error);
-        log(`¡ERROR! Falló la actualización: ${error instanceof Error ? error.message : String(error)}`);
         alert('Error: No se pudo actualizar la cédula.');
     } finally {
         setIsSaving(false);
-        log('Proceso de guardado finalizado.');
     }
   }
 
@@ -647,26 +634,6 @@ export default function EditCedulaPage() {
                   {isSaving ? "Guardando..." : "Guardar Cambios"}
                 </Button>
             </div>
-        )}
-        
-        {isSaving && (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Auditoría de Guardado</CardTitle>
-                    <CardDescription>Visualizando el proceso de guardado en tiempo real.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Alert>
-                        <Terminal className="h-4 w-4" />
-                        <AlertTitle>Registro de Ejecución</AlertTitle>
-                        <AlertDescription>
-                            <pre className="mt-2 w-full whitespace-pre-wrap rounded-md bg-slate-950 p-4 font-mono text-xs text-slate-50">
-                                {auditLog.join('\n')}
-                            </pre>
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
         )}
 
         </div>
