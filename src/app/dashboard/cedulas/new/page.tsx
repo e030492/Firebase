@@ -217,14 +217,7 @@ export default function NewCedulaPage() {
       status: status as Cedula['status'],
       description,
       semaforo: semaforo as Cedula['semaforo'],
-      protocolSteps: protocolSteps.map(step => ({
-        step: step.step || '',
-        priority: step.priority || 'baja',
-        completion: Number(step.completion) || 0,
-        imageUrl: step.imageUrl || '',
-        notes: step.notes || '',
-        percentage: step.percentage || 0,
-      })),
+      protocolSteps: protocolSteps,
     };
 
     try {
@@ -672,3 +665,5 @@ export default function NewCedulaPage() {
     </>
   );
 }
+
+    

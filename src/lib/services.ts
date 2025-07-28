@@ -36,6 +36,7 @@ const collections = {
     cedulas: 'cedulas',
     settings: 'settings',
     _connectionTest: '_connectionTest',
+    stepImages: 'stepImages',
 };
 
 const mockDataMap: { [key: string]: any[] } = {
@@ -95,8 +96,25 @@ export const seedDatabase = async () => {
 // --- Generic Firestore Service Functions ---
 function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) => void) {
     const collectionRef = collection(db, collectionName);
-    const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    const unsubscribe = onSnapshot(collectionRef, async (snapshot) => {
+        const dataPromises = snapshot.docs.map(async (doc) => {
+            const docData = { id: doc.id, ...doc.data() } as T & { protocolSteps?: any[] };
+            
+            if (collectionName === collections.cedulas && docData.protocolSteps) {
+                const stepImagesCollectionRef = collection(db, collections.cedulas, doc.id, collections.stepImages);
+                const stepImagesSnapshot = await getDocs(stepImagesCollectionRef);
+                const stepImagesMap = new Map(stepImagesSnapshot.docs.map(imgDoc => [imgDoc.id, imgDoc.data().imageUrl]));
+                
+                if (docData.protocolSteps) {
+                    docData.protocolSteps = docData.protocolSteps.map((step, index) => ({
+                        ...step,
+                        imageUrl: stepImagesMap.get(String(index)) || '',
+                    }));
+                }
+            }
+            return docData as T;
+        });
+        const data = await Promise.all(dataPromises);
         setData(data);
     }, (error) => {
         console.error(`Error listening to ${collectionName}:`, error);
@@ -131,10 +149,8 @@ export async function uploadImageAndGetURL(base64DataUrl: string): Promise<strin
     if (!base64DataUrl || !base64DataUrl.startsWith('data:image')) {
         return base64DataUrl; // It's already a URL or empty/invalid
     }
-    // This function should handle large base64 strings correctly by uploading to storage
-    // but per user request, we are temporarily disabling it.
-    // For now, we will just return the base64 string and let Firestore handle it.
-    // This will fail if the string is > 1MB.
+    
+    // Per user instruction, do not use Firebase Storage. Return base64 directly.
     return base64DataUrl;
 }
 
@@ -236,59 +252,64 @@ export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(c
 export const subscribeToCedulas = (setCedulas: (cedulas: Cedula[]) => void) => subscribeToCollection<Cedula>(collections.cedulas, setCedulas);
 
 export const createCedula = async (data: Omit<Cedula, 'id'>) => {
-    // This is a workaround for Firestore's limitation on large strings in arrays.
-    // We find the first image and move it to a top-level field.
     const dataToSave: any = { ...data };
-    let evidenceImageUrl = '';
-    if (dataToSave.protocolSteps && dataToSave.protocolSteps.length > 0) {
-        for (const step of dataToSave.protocolSteps) {
+    
+    const batch = writeBatch(db);
+    const cedulaRef = doc(collection(db, collections.cedulas));
+    
+    // Separate images from steps
+    const imagesToSave: { [key: string]: string } = {};
+    if (dataToSave.protocolSteps) {
+        dataToSave.protocolSteps = dataToSave.protocolSteps.map((step: ProtocolStep, index: number) => {
             if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                evidenceImageUrl = step.imageUrl;
-                break; // Found the first image, stop looking.
+                imagesToSave[String(index)] = step.imageUrl;
             }
-        }
-        // Now clear all imageUrls from the array to avoid the error.
-        dataToSave.protocolSteps = dataToSave.protocolSteps.map((step: ProtocolStep) => ({
-            ...step,
-            imageUrl: '',
-        }));
+            // Return step without imageUrl to save in main doc
+            const { imageUrl, ...restOfStep } = step;
+            return restOfStep;
+        });
     }
-    dataToSave.evidenceImageUrl = evidenceImageUrl; // Add the new top-level field.
 
-    return createDocument<Cedula>(collections.cedulas, dataToSave);
+    batch.set(cedulaRef, dataToSave);
+
+    // Save each image in its own document in a subcollection
+    for (const [index, imageUrl] of Object.entries(imagesToSave)) {
+        const imageDocRef = doc(db, collections.cedulas, cedulaRef.id, collections.stepImages, index);
+        batch.set(imageDocRef, { imageUrl });
+    }
+
+    await batch.commit();
+
+    return { id: cedulaRef.id, ...data } as Cedula;
 };
 
 export const updateCedula = async (id: string, data: Partial<Cedula>) => {
+    const batch = writeBatch(db);
+    const cedulaRef = doc(db, collections.cedulas, id);
     const dataToSave: any = { ...data };
-    
-    // This is a workaround for Firestore's limitation on large strings in arrays.
-    // We find the first image and move it to a top-level field.
-    let evidenceImageUrl: string | undefined = undefined;
 
-    if (dataToSave.protocolSteps && dataToSave.protocolSteps.length > 0) {
-        // Find the first new base64 image to be used as the main evidence
-        for (const step of dataToSave.protocolSteps) {
+    // Separate images from steps
+    const imagesToSave: { [key: string]: string } = {};
+    if (dataToSave.protocolSteps) {
+        dataToSave.protocolSteps = dataToSave.protocolSteps.map((step: ProtocolStep, index: number) => {
             if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                evidenceImageUrl = step.imageUrl;
-                break; 
+                 imagesToSave[String(index)] = step.imageUrl;
             }
-        }
-        
-        // Clean the array: remove base64 strings
-        dataToSave.protocolSteps = dataToSave.protocolSteps.map((step: ProtocolStep) => ({
-            ...step,
-            // Keep existing URLs, but clear new base64 images from the array
-            imageUrl: (step.imageUrl && step.imageUrl.startsWith('http')) ? step.imageUrl : '',
-        }));
+            // Return step without imageUrl to save in main doc
+            const { imageUrl, ...restOfStep } = step;
+            return restOfStep;
+        });
     }
     
-    // Only add the evidenceImageUrl field if a new image was found.
-    // Otherwise, we don't want to overwrite a potentially existing one with an empty string.
-    if (evidenceImageUrl !== undefined) {
-      dataToSave.evidenceImageUrl = evidenceImageUrl;
+    batch.update(cedulaRef, dataToSave);
+
+    // Save each new/updated image in its own document in a subcollection
+    for (const [index, imageUrl] of Object.entries(imagesToSave)) {
+        const imageDocRef = doc(db, collections.cedulas, id, collections.stepImages, index);
+        batch.set(imageDocRef, { imageUrl }); // Use set to create or overwrite
     }
 
-    return updateDocument<Cedula>(collections.cedulas, id, dataToSave);
+    await batch.commit();
 };
 
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);

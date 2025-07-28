@@ -215,16 +215,6 @@ export default function EditCedulaPage() {
         finalDateTime.setHours(parseInt(hours, 10));
         finalDateTime.setMinutes(parseInt(minutes, 10));
     }
-    
-    // Final sanitization before submitting to Firebase
-    const sanitizedProtocolSteps = protocolSteps.map(step => ({
-        step: step.step || '',
-        priority: step.priority || 'baja',
-        completion: Number(step.completion) || 0,
-        imageUrl: step.imageUrl || '',
-        notes: step.notes || '',
-        percentage: step.percentage || 0,
-    }));
 
     const updatedData: Partial<Cedula> = {
         folio,
@@ -236,7 +226,7 @@ export default function EditCedulaPage() {
         status: status as Cedula['status'],
         description,
         semaforo: semaforo as Cedula['semaforo'],
-        protocolSteps: sanitizedProtocolSteps,
+        protocolSteps: protocolSteps,
     };
       
     try {
