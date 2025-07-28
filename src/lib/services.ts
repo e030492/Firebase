@@ -216,37 +216,11 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
 export const createProtocol = async (data: Omit<Protocol, 'id'>, id: string): Promise<Protocol> => {
-    // Sanitize steps to ensure they are plain objects
-    const sanitizedSteps = data.steps.map(step => ({
-        step: step.step || '',
-        priority: step.priority || 'baja',
-        percentage: Number(step.percentage) || 0,
-        completion: Number(step.completion) || 0,
-        notes: step.notes || '',
-        imageUrl: step.imageUrl || '',
-    }));
-
-    const sanitizedData = {
-        ...data,
-        steps: sanitizedSteps,
-    };
-    return createDocument<Protocol>(collections.protocols, sanitizedData, id);
+    return createDocument<Protocol>(collections.protocols, data, id);
 };
 
 export const updateProtocol = async (id: string, data: Partial<Protocol>): Promise<Protocol> => {
-    const sanitizedData: Partial<Protocol> = { ...data };
-    if (data.steps) {
-        // Sanitize steps to ensure they are plain objects
-        sanitizedData.steps = data.steps.map(step => ({
-            step: step.step || '',
-            priority: step.priority || 'baja',
-            percentage: Number(step.percentage) || 0,
-            completion: Number(step.completion) || 0,
-            notes: step.notes || '',
-            imageUrl: step.imageUrl || '',
-        }));
-    }
-    return updateDocument<Protocol>(collections.protocols, id, sanitizedData);
+    return updateDocument<Protocol>(collections.protocols, id, data);
 };
 
 export const deleteProtocol = (id: string): Promise<boolean> => deleteDocument(collections.protocols, id);
