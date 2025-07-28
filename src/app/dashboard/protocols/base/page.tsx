@@ -102,6 +102,8 @@ function BaseProtocolManager() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [generatingEditImageIndex, setGeneratingEditImageIndex] = useState<number | null>(null);
   const [comboboxOpen, setComboboxOpen] = useState(false);
+  const commandListRef = useRef<HTMLDivElement>(null);
+
 
   // Filters
   const [clientFilter, setClientFilter] = useState('');
@@ -156,6 +158,12 @@ function BaseProtocolManager() {
         equipmentsWithProtocol: withProtocol.filter(filterFn)
     };
   }, [allEquipments, protocols, clientFilter, systemFilter, warehouseFilter, clients, systems]);
+
+  useEffect(() => {
+    if (commandListRef.current) {
+        commandListRef.current.scrollTop = 0;
+    }
+  }, [equipmentsWithoutProtocol]);
 
 
   const handleEquipmentSelect = (equipmentId: string) => {
@@ -564,15 +572,23 @@ function BaseProtocolManager() {
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command>
+                                    <Command
+                                        filter={(value, search) => {
+                                            const equipment = allEquipments.find(e => e.id === value);
+                                            if (!equipment) return 0;
+                                            const terms = `${equipment.name} ${equipment.brand} ${equipment.model} ${equipment.type} ${equipment.serial} ${equipment.id}`.toLowerCase();
+                                            if (terms.includes(search.toLowerCase())) return 1;
+                                            return 0;
+                                        }}
+                                    >
                                         <CommandInput placeholder="Buscar por nombre, marca, modelo..." />
-                                        <CommandList>
+                                        <CommandList ref={commandListRef}>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
                                             <CommandGroup>
                                                 {equipmentsWithoutProtocol.map((eq) => (
                                                 <CommandItem
                                                     key={eq.id}
-                                                    value={`${eq.name} ${eq.brand} ${eq.model} ${eq.type} ${eq.serial}`}
+                                                    value={eq.id}
                                                     onSelect={() => {
                                                         handleEquipmentSelect(eq.id);
                                                         setComboboxOpen(false);
