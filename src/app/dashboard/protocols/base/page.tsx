@@ -35,7 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle, CheckCircle, List, MoreHorizontal } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle, CheckCircle, List, MoreHorizontal, Link2Off } from 'lucide-react';
 import { Protocol, Equipment, ProtocolStep, Client, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -57,7 +57,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 const isValidImageUrl = (url: string | null | undefined): boolean => {
     if (!url) return false;
@@ -72,12 +72,11 @@ type EquipmentWithProtocol = Equipment & { protocol: Protocol | undefined };
 
 // Main Page Component
 function BaseProtocolManager() {
-  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments: allEquipments, clients, systems } = useData();
+  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments: allEquipments, clients, systems, updateEquipment } = useData();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const existingProtocolFileInputRefs = useRef<{ [key: string]: (HTMLInputElement | null)[] }>({});
-
+  
   // Page State
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [similarEquipments, setSimilarEquipments] = useState<Equipment[]>([]);
@@ -94,8 +93,11 @@ function BaseProtocolManager() {
   const [stepToDeleteIndex, setStepToDeleteIndex] = useState<number | null>(null);
   const [isAddEquipmentDialogOpen, setIsAddEquipmentDialogOpen] = useState(false);
   const [manualSelectionIds, setManualSelectionIds] = useState<string[]>([]);
-  const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
-  const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(null);
+  const [equipmentToUnlink, setEquipmentToUnlink] = useState<EquipmentWithProtocol | null>(null);
+  const [equipmentToEdit, setEquipmentToEdit] = useState<EquipmentWithProtocol | null>(null);
+  const [editedProtocolSteps, setEditedProtocolSteps] = useState<ProtocolStep[]>([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [generatingEditImageIndex, setGeneratingEditImageIndex] = useState<number | null>(null);
 
   // Filters
   const [clientFilter, setClientFilter] = useState('');
@@ -123,8 +125,12 @@ function BaseProtocolManager() {
     allEquipments.forEach(eq => {
         const key = `${eq.type}-${eq.brand}-${eq.model}`;
         if (protocolKeys.has(key)) {
-            const foundProtocol = protocols.find(p => p.id === key.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, ''));
-            withProtocol.push({ ...eq, protocol: foundProtocol });
+            const foundProtocol = protocols.find(p => `${p.type}-${p.brand}-${p.model}` === key);
+            if (foundProtocol) {
+                withProtocol.push({ ...eq, protocol: foundProtocol });
+            } else {
+                withoutProtocol.push(eq);
+            }
         } else {
             withoutProtocol.push(eq);
         }
@@ -314,7 +320,6 @@ function BaseProtocolManager() {
     }
   };
 
-
   const openEditDialog = (step: ProtocolStep, index: number) => {
     setStepToEdit({ ...step, index });
     setEditedStepText(step.step);
@@ -340,18 +345,77 @@ function BaseProtocolManager() {
     setStepToDeleteIndex(null);
   };
 
-  const handleDeleteProtocol = async () => {
-    if (!protocolToDelete) return;
+  const handleUnlinkEquipment = async () => {
+    if (!equipmentToUnlink) return;
     try {
-        await deleteProtocol(protocolToDelete.id);
-        toast({ title: "Protocolo Eliminado", description: "El protocolo base ha sido eliminado." });
-    } catch(e) {
-        console.error("Error deleting protocol:", e);
-        toast({ title: "Error", description: "No se pudo eliminar el protocolo.", variant: "destructive" });
+        await updateEquipment(equipmentToUnlink.id, { type: `UNLINKED_${equipmentToUnlink.type}` });
+        toast({ title: "Equipo Desvinculado", description: `El equipo ${equipmentToUnlink.name} ya no usa el protocolo base.` });
+    } catch (e) {
+        console.error("Error unlinking equipment:", e);
+        toast({ title: "Error", description: "No se pudo desvincular el equipo.", variant: "destructive" });
     } finally {
-        setProtocolToDelete(null);
+        setEquipmentToUnlink(null);
     }
-  }
+  };
+
+  const handleEditProtocolForEquipment = (equipment: EquipmentWithProtocol) => {
+    setEquipmentToEdit(equipment);
+    setEditedProtocolSteps(equipment.protocol?.steps.map(s => ({...s})) || []);
+  };
+  
+  const handleSaveEditedProtocol = async () => {
+    if (!equipmentToEdit || !equipmentToEdit.protocol) return;
+    setIsSavingEdit(true);
+    try {
+        const protocolId = equipmentToEdit.protocol.id;
+        await updateProtocol(protocolId, { steps: editedProtocolSteps });
+        toast({ title: "Protocolo Actualizado", description: "Los cambios se han guardado en el protocolo base." });
+        setEquipmentToEdit(null);
+    } catch(e) {
+        console.error("Error updating protocol:", e);
+        toast({ title: "Error", description: "No se pudo actualizar el protocolo.", variant: "destructive" });
+    } finally {
+        setIsSavingEdit(false);
+    }
+  };
+
+  const handleEditedStepChange = (index: number, field: keyof ProtocolStep, value: string | number) => {
+    const newSteps = [...editedProtocolSteps];
+    const stepToUpdate = { ...newSteps[index], [field]: value };
+    newSteps[index] = stepToUpdate;
+    setEditedProtocolSteps(newSteps);
+  };
+  
+  const handleGenerateEditedStepImage = async (step: ProtocolStep, index: number) => {
+      if (!equipmentToEdit) return;
+      setGeneratingEditImageIndex(index);
+      try {
+          const result = await generateProtocolStepImage({
+              name: equipmentToEdit.name, brand: equipmentToEdit.brand, model: equipmentToEdit.model, step: step.step,
+          });
+          const newSteps = [...editedProtocolSteps];
+          if (result?.imageUrl) newSteps[index].imageUrl = result.imageUrl;
+          setEditedProtocolSteps(newSteps);
+      } catch (error) {
+          console.error("Error generating step image:", error);
+          toast({ title: "Error de IA", description: "No se pudo generar la imagen para el paso.", variant: "destructive"});
+      } finally {
+          setGeneratingEditImageIndex(null);
+      }
+  };
+
+  const handleEditedImageChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newSteps = [...editedProtocolSteps];
+        newSteps[index].imageUrl = reader.result as string;
+        setEditedProtocolSteps(newSteps);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   
   const handleStepImageChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
@@ -659,81 +723,41 @@ function BaseProtocolManager() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[50px]"><Checkbox disabled/></TableHead>
                             <TableHead>Equipo</TableHead>
                             <TableHead>Cliente</TableHead>
                             <TableHead>Protocolo Base</TableHead>
-                            <TableHead><span className="sr-only">Acciones</span></TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {equipmentsWithProtocol.length > 0 ? equipmentsWithProtocol.map(equipment => (
                            <Fragment key={equipment.id}>
                             <TableRow>
-                                <TableCell><Checkbox /></TableCell>
                                 <TableCell className="font-medium">{equipment.name}<span className="block text-xs text-muted-foreground">{equipment.serial}</span></TableCell>
                                 <TableCell>{equipment.client}</TableCell>
                                 <TableCell className="text-muted-foreground">{equipment.protocol ? `${equipment.protocol.type} / ${equipment.protocol.brand}` : 'N/A'}</TableCell>
-                                <TableCell>
+                                <TableCell className="text-right">
                                      <div className="flex items-center justify-end gap-2">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <DropdownMenuItem onSelect={() => alert("Función de edición en desarrollo.")}>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onSelect={() => handleEditProtocolForEquipment(equipment)}>
                                                     <Edit className="mr-2 h-4 w-4"/> Editar Protocolo
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => equipment.protocol && setProtocolToDelete(equipment.protocol)} className="text-destructive">
-                                                    <Trash2 className="mr-2 h-4 w-4"/> Desvincular y Eliminar Base
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onSelect={() => setEquipmentToUnlink(equipment)} className="text-destructive">
+                                                    <Link2Off className="mr-2 h-4 w-4"/> Desvincular Protocolo
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
-                                        <Button variant="ghost" size="icon" onClick={() => setExpandedEquipmentId(expandedEquipmentId === equipment.id ? null : equipment.id)}>
-                                            <ChevronDown className={cn("h-4 w-4 transition-transform", expandedEquipmentId === equipment.id && "rotate-180")} />
-                                        </Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
-                            {expandedEquipmentId === equipment.id && equipment.protocol && (
-                                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                    <TableCell colSpan={5} className="p-4">
-                                       <div className="space-y-6">
-                                            {equipment.protocol.steps.map((step, index) => (
-                                                <div key={index}>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg bg-background">
-                                                        <div className="space-y-4">
-                                                            <div className="flex items-start justify-between">
-                                                                <div className="space-y-1 pr-4">
-                                                                    <Label className="text-base font-semibold">Paso del Protocolo</Label>
-                                                                    <p className="text-muted-foreground">{step.step}</p>
-                                                                </div>
-                                                                <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
-                                                            </div>
-                                                        </div>
-                                                        <div className="grid gap-3">
-                                                            <Label>Evidencia Fotográfica Sugerida</Label>
-                                                            <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
-                                                                {isValidImageUrl(step.imageUrl) ? (
-                                                                    <Image src={step.imageUrl!} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
-                                                                ) : (
-                                                                    <div className="text-center text-muted-foreground">
-                                                                        <Camera className="h-10 w-10 mx-auto" />
-                                                                        <p className="text-sm mt-2">Sin imagen</p>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )}
                            </Fragment>
                         )) : (
-                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No hay equipos con protocolo que coincidan con los filtros.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center">No hay equipos con protocolo que coincidan con los filtros.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -781,18 +805,90 @@ function BaseProtocolManager() {
             </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog open={!!protocolToDelete} onOpenChange={() => setProtocolToDelete(null)}>
+        <AlertDialog open={!!equipmentToUnlink} onOpenChange={() => setEquipmentToUnlink(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>¿Está seguro de eliminar este protocolo?</AlertDialogTitle>
-                    <AlertDialogDescription>Esta acción no se puede deshacer. El protocolo se eliminará permanentemente. Los equipos asociados ya no tendrán un protocolo base.</AlertDialogDescription>
+                    <AlertDialogTitle>¿Desvincular Equipo?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción quitará el protocolo base de "{equipmentToUnlink?.name}". El protocolo no se eliminará y seguirá disponible para otros equipos.
+                        El equipo volverá a la lista de "Equipos Sin Protocolo".
+                    </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteProtocol} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+                    <AlertDialogAction onClick={handleUnlinkEquipment} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Sí, desvincular</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        
+        <Dialog open={!!equipmentToEdit} onOpenChange={() => setEquipmentToEdit(null)}>
+            <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>Editar Protocolo para: {equipmentToEdit?.protocol?.type}</DialogTitle>
+                    <DialogDescription>
+                       Los cambios realizados aquí afectarán a todos los equipos que utilicen este protocolo base.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[60vh] -mx-6 px-6">
+                    <div className="space-y-6 py-4">
+                        {editedProtocolSteps.map((step, index) => (
+                           <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg">
+                               <div className="space-y-4">
+                                   <div className="grid gap-2">
+                                       <Label htmlFor={`edit-step-text-${index}`}>Paso del Protocolo</Label>
+                                       <Textarea id={`edit-step-text-${index}`} value={step.step} onChange={e => handleEditedStepChange(index, 'step', e.target.value)} className="min-h-24"/>
+                                   </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor={`edit-step-priority-${index}`}>Prioridad</Label>
+                                        <Select value={step.priority} onValueChange={(v) => handleEditedStepChange(index, 'priority', v as any)}>
+                                            <SelectTrigger id={`edit-step-priority-${index}`}><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="baja">Baja</SelectItem>
+                                                <SelectItem value="media">Media</SelectItem>
+                                                <SelectItem value="alta">Alta</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                               </div>
+                               <div className="grid gap-3">
+                                   <Label>Evidencia Fotográfica Sugerida</Label>
+                                   <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                       {generatingEditImageIndex === index ? (
+                                           <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+                                       ) : isValidImageUrl(step.imageUrl) ? (
+                                           <Image src={step.imageUrl!} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                       ) : (
+                                           <Camera className="h-10 w-10 text-muted-foreground" />
+                                       )}
+                                   </div>
+                                   <div className="flex items-center gap-2">
+                                       <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`edit-image-upload-${index}`)?.click()}>
+                                           <Camera className="mr-2 h-4 w-4" /> Subir
+                                       </Button>
+                                       <Button type="button" size="sm" onClick={() => handleGenerateEditedStepImage(step, index)} disabled={generatingEditImageIndex !== null}>
+                                           <Wand2 className="mr-2 h-4 w-4" /> IA
+                                       </Button>
+                                       {isValidImageUrl(step.imageUrl) && (
+                                           <Button type="button" variant="destructive" size="icon" onClick={() => handleEditedStepChange(index, 'imageUrl', '')}>
+                                               <Trash2 className="h-4 w-4" />
+                                           </Button>
+                                       )}
+                                   </div>
+                                    <Input id={`edit-image-upload-${index}`} type="file" accept="image/*" onChange={(e) => handleEditedImageChange(e, index)} className="hidden" />
+                               </div>
+                           </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setEquipmentToEdit(null)}>Cancelar</Button>
+                    <Button onClick={handleSaveEditedProtocol} disabled={isSavingEdit}>
+                        {isSavingEdit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                        Guardar Cambios
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <Dialog open={isAddEquipmentDialogOpen} onOpenChange={setIsAddEquipmentDialogOpen}>
             <DialogContent className="max-w-3xl">
