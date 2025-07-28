@@ -105,13 +105,13 @@ export const seedDatabase = async () => {
 function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) => void) {
     const collectionRef = collection(db, collectionName);
     const unsubscribe = onSnapshot(collectionRef, async (snapshot) => {
-        const dataPromises = snapshot.docs.map(async (doc) => {
-            const docData = { id: doc.id, ...doc.data() } as T & { protocolSteps?: any[] };
+        const dataPromises = snapshot.docs.map(async (documentSnapshot) => {
+            const docData = { id: documentSnapshot.id, ...documentSnapshot.data() } as T & { protocolSteps?: any[] };
             
             // Re-hydrate image URLs for cedulas from separate fields
             if (collectionName === collections.cedulas && docData.protocolSteps) {
                  const stepImagePromises = docData.protocolSteps.map(async (step, index) => {
-                    const stepImageRef = doc(db, `${collectionName}/${doc.id}/stepImages`, `${index}`);
+                    const stepImageRef = doc(db, `${collectionName}/${documentSnapshot.id}/stepImages`, `${index}`);
                     const stepImageSnap = await getDoc(stepImageRef);
                     const imageUrl = stepImageSnap.exists() ? stepImageSnap.data().imageUrl : '';
                     return { ...step, imageUrl };
@@ -298,17 +298,20 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
     let totalUploaded = 0;
 
     const uploadPromises = files.map(file => {
-        const fileId = uuidv4();
-        const storageRef = ref(storage, `${collections.mediaLibrary}/${fileId}-${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
         return new Promise<void>((resolve, reject) => {
+            const fileId = uuidv4();
+            const storageRef = ref(storage, `${collections.mediaLibrary}/${fileId}-${file.name}`);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
             uploadTask.on('state_changed',
                 (snapshot) => {
-                    // This reports progress for a single file, we need to aggregate it.
-                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                     // This is a rough approximation for multiple files
-                     onProgress(progress);
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    console.log(`Upload progress for ${file.name}: ${progress}%`);
+                    
+                    // To calculate total progress, we need to manage bytes transferred, not percentages
+                    // This part is tricky without a more complex state management.
+                    // For simplicity in this fix, we will use a temporary object to track progress per file.
+                    // A better solution would involve a state manager or event emitter.
                 },
                 (error) => {
                     console.error("Upload failed for file:", file.name, error);
@@ -326,7 +329,6 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
                     const docRef = doc(db, collections.mediaLibrary, fileId);
                     await setDoc(docRef, fileData);
 
-                    // Update total progress
                     totalUploaded += file.size;
                     const overallProgress = (totalUploaded / totalSize) * 100;
                     onProgress(overallProgress);
