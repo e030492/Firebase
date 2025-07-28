@@ -201,15 +201,9 @@ export const deleteClient = (id: string): Promise<boolean> => deleteDocument(col
 // EQUIPMENTS
 export const subscribeToEquipments = (setEquipments: (equipments: Equipment[]) => void) => subscribeToCollection<Equipment>(collections.equipments, setEquipments);
 export const createEquipment = async (data: Omit<Equipment, 'id'>) => {
-    if (data.imageUrl && data.imageUrl.startsWith('data:image')) {
-        data.imageUrl = await uploadImageAndGetURL(data.imageUrl);
-    }
     return createDocument<Equipment>(collections.equipments, data);
 };
 export const updateEquipment = async (id: string, data: Partial<Equipment>) => {
-    if (data.imageUrl && data.imageUrl.startsWith('data:image')) {
-        data.imageUrl = await uploadImageAndGetURL(data.imageUrl);
-    }
     return updateDocument<Equipment>(collections.equipments, id, data);
 };
 export const deleteEquipment = (id: string): Promise<boolean> => deleteDocument(collections.equipments, id);
@@ -226,33 +220,11 @@ export const deleteSystem = (id: string): Promise<boolean> => deleteDocument(col
 export const subscribeToProtocols = (setProtocols: (protocols: Protocol[]) => void) => subscribeToCollection<Protocol>(collections.protocols, setProtocols);
 
 export const createProtocol = async (data: Omit<Protocol, 'id'>, id?: string): Promise<Protocol> => {
-    const stepsWithImageUrls = await Promise.all(
-        data.steps.map(async (step) => {
-            if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                const imageUrl = await uploadImageAndGetURL(step.imageUrl);
-                return { ...step, imageUrl };
-            }
-            return step;
-        })
-    );
-    const finalData = { ...data, steps: stepsWithImageUrls };
-    return createDocument<Protocol>(collections.protocols, finalData, id);
+    return createDocument<Protocol>(collections.protocols, data, id);
 };
 
 
 export const updateProtocol = async (id: string, data: Partial<Protocol>): Promise<Protocol> => {
-    if (data.steps) {
-        const stepsWithImageUrls = await Promise.all(
-            data.steps.map(async (step) => {
-                if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                    const imageUrl = await uploadImageAndGetURL(step.imageUrl);
-                    return { ...step, imageUrl };
-                }
-                return step;
-            })
-        );
-        data.steps = stepsWithImageUrls;
-    }
     return updateDocument<Protocol>(collections.protocols, id, data);
 };
 
@@ -283,5 +255,3 @@ export const updateCedula = async (id: string, data: Partial<Cedula>) => {
 };
 
 export const deleteCedula = (id: string): Promise<boolean> => deleteDocument(collections.cedulas, id);
-
-    
