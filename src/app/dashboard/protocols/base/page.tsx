@@ -161,7 +161,7 @@ function BaseProtocolManager() {
   }, [clientFilter, systemFilter, warehouseFilter]);
 
   useEffect(() => {
-    if (commandListRef.current) {
+    if (commandListRef.current && searchQuery) {
         commandListRef.current.scrollTop = 0;
     }
   }, [searchQuery]);
@@ -588,7 +588,7 @@ function BaseProtocolManager() {
                                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                     <Command
                                         filter={(value, search) => {
-                                            const equipment = allEquipments.find(e => e.id === value);
+                                            const equipment = equipmentsWithoutProtocol.find(e => e.id === value);
                                             if (!equipment) return 0;
                                             const terms = `${equipment.name} ${equipment.brand} ${equipment.model} ${equipment.type} ${equipment.serial} ${equipment.id}`.toLowerCase();
                                             if (terms.includes(search.toLowerCase())) return 1;
@@ -597,11 +597,13 @@ function BaseProtocolManager() {
                                     >
                                         <CommandInput 
                                             placeholder="Buscar por nombre, marca, modelo..."
+                                            value={searchQuery}
+                                            onValueChange={setSearchQuery}
                                         />
                                         <CommandList ref={commandListRef}>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
                                             <CommandGroup>
-                                                {equipmentsWithoutProtocol.map((eq) => (
+                                                {equipmentsWithoutProtocol.map((eq, index) => (
                                                 <CommandItem
                                                     key={eq.id}
                                                     value={eq.id}
@@ -623,7 +625,7 @@ function BaseProtocolManager() {
                                                             <span className="font-semibold">{eq.name}</span>
                                                             <span className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</span>
                                                             <span className="text-xs text-muted-foreground">
-                                                                ID: {eq.id} | N/S: {eq.serial || 'N/A'}
+                                                                No. de Registro: {index + 1} | N/S: {eq.serial || 'N/A'}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -683,7 +685,7 @@ function BaseProtocolManager() {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
-                                    {similarEquipments.map(eq => (
+                                    {similarEquipments.map((eq, index) => (
                                         <div key={eq.id} className="flex items-center gap-4 p-2 border rounded-md">
                                             <Checkbox 
                                                 id={`eq-${eq.id}`}
@@ -695,7 +697,7 @@ function BaseProtocolManager() {
                                                 <div className="flex-1">
                                                     <p className="font-semibold">{eq.name}</p>
                                                     <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
-                                                    <p className="text-xs text-muted-foreground">ID: {eq.id} | N/S: {eq.serial || 'N/A'}</p>
+                                                    <p className="text-xs text-muted-foreground">No. de Registro: {index + 1} | N/S: {eq.serial || 'N/A'}</p>
                                                 </div>
                                             </Label>
                                         </div>
