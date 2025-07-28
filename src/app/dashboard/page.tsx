@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -86,7 +87,7 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
-                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isFormDisabled} placeholder="admin"/>
+                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isFormDisabled} placeholder="admin123"/>
                 </div>
                 {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
               </CardContent>

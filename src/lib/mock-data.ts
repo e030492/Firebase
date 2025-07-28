@@ -7,7 +7,7 @@ export const mockUsers = [
     name: 'Admin User',
     email: 'admin@escuadra.com',
     role: 'Administrador',
-    password: 'admin',
+    password: 'admin123',
     signatureUrl: '',
     photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
@@ -24,7 +24,7 @@ export const mockUsers = [
     name: 'Root Administrator',
     email: 'root@escuadra.com',
     role: 'Administrador',
-    password: 'admin',
+    password: 'admin123',
     signatureUrl: '',
     photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
@@ -41,7 +41,7 @@ export const mockUsers = [
     name: 'Super Admin',
     email: 'super@escuadra.com',
     role: 'Administrador',
-    password: 'admin',
+    password: 'admin123',
     signatureUrl: '',
     photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
@@ -58,7 +58,7 @@ export const mockUsers = [
     name: 'Blanca (Técnico)',
     email: 'blanca@escuadra.com',
     role: 'Técnico',
-    password: 'admin',
+    password: 'admin123',
     signatureUrl: '',
     photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
@@ -75,7 +75,7 @@ export const mockUsers = [
     name: 'Carlos (Técnico)',
     email: 'carlos@escuadra.com',
     role: 'Técnico',
-    password: 'admin',
+    password: 'admin123',
     signatureUrl: '',
     photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
@@ -92,7 +92,7 @@ export const mockUsers = [
     name: 'Supervisor General',
     email: 'supervisor@escuadra.com',
     role: 'Supervisor',
-    password: 'admin',
+    password: 'admin123',
     signatureUrl: '',
     photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
