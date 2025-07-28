@@ -35,7 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle, CheckCircle, List } from 'lucide-react';
+import { Terminal, Loader2, Save, ArrowLeft, Camera, Trash2, Wand2, Edit, ListChecks, HardHat, ChevronDown, Search, PlusCircle, CheckCircle, List, MoreHorizontal } from 'lucide-react';
 import { Protocol, Equipment, ProtocolStep, Client, System } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
@@ -57,15 +57,20 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const isValidImageUrl = (url: string | null | undefined): boolean => {
     if (!url) return false;
     return url.startsWith('http') || url.startsWith('data:image');
 };
 
+type ProtocolGroup = Protocol & {
+  equipments: Equipment[];
+};
+
 // Main Page Component
 function BaseProtocolManager() {
-  const { protocols, loading, createProtocol, updateProtocol, equipments: allEquipments, clients, systems } = useData();
+  const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments: allEquipments, clients, systems } = useData();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -86,6 +91,9 @@ function BaseProtocolManager() {
   const [stepToDeleteIndex, setStepToDeleteIndex] = useState<number | null>(null);
   const [isAddEquipmentDialogOpen, setIsAddEquipmentDialogOpen] = useState(false);
   const [manualSelectionIds, setManualSelectionIds] = useState<string[]>([]);
+  const [protocolToDelete, setProtocolToDelete] = useState<ProtocolGroup | null>(null);
+  const [expandedProtocolId, setExpandedProtocolId] = useState<string | null>(null);
+
 
   // Filters
   const [clientFilter, setClientFilter] = useState('');
@@ -104,15 +112,16 @@ function BaseProtocolManager() {
     }
   }, [clientFilter, clients]);
 
-  const { equipmentsWithoutProtocol, equipmentsWithProtocol } = useMemo(() => {
+  const { equipmentsWithoutProtocol, groupedProtocols } = useMemo(() => {
     const protocolKeys = new Set(protocols.map(p => `${p.type}-${p.brand}-${p.model}`));
-    const withProtocol: (Equipment & { protocolId: string })[] = [];
+    
+    const withProtocolEquipments: Equipment[] = [];
     const withoutProtocol: Equipment[] = [];
 
     allEquipments.forEach(eq => {
         const key = `${eq.type}-${eq.brand}-${eq.model}`;
         if (protocolKeys.has(key)) {
-            withProtocol.push({ ...eq, protocolId: key.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '') });
+            withProtocolEquipments.push(eq);
         } else {
             withoutProtocol.push(eq);
         }
@@ -129,9 +138,22 @@ function BaseProtocolManager() {
         return clientMatch && systemMatch && warehouseMatch;
     };
     
+    const protocolGroups: { [key: string]: ProtocolGroup } = {};
+    protocols.forEach(p => {
+        const key = p.id;
+        protocolGroups[key] = { ...p, equipments: [] };
+    });
+    
+    withProtocolEquipments.forEach(eq => {
+        const key = `${eq.type}-${eq.brand}-${eq.model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+        if (protocolGroups[key]) {
+            protocolGroups[key].equipments.push(eq);
+        }
+    });
+
     return {
         equipmentsWithoutProtocol: withoutProtocol.filter(filterFn),
-        equipmentsWithProtocol: withProtocol.filter(filterFn)
+        groupedProtocols: Object.values(protocolGroups).filter(g => g.equipments.length > 0 && filterFn(g.equipments[0]))
     };
   }, [allEquipments, protocols, clientFilter, systemFilter, warehouseFilter, clients, systems]);
 
@@ -327,6 +349,19 @@ function BaseProtocolManager() {
     setSteps(newSteps);
     setStepToDeleteIndex(null);
   };
+
+  const handleDeleteProtocol = async () => {
+    if (!protocolToDelete) return;
+    try {
+        await deleteProtocol(protocolToDelete.id);
+        toast({ title: "Protocolo Eliminado", description: "El protocolo base ha sido eliminado." });
+    } catch(e) {
+        console.error("Error deleting protocol:", e);
+        toast({ title: "Error", description: "No se pudo eliminar el protocolo.", variant: "destructive" });
+    } finally {
+        setProtocolToDelete(null);
+    }
+  }
   
   const handleStepImageChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
@@ -385,7 +420,7 @@ function BaseProtocolManager() {
 
 
   return (
-    <div className="flex flex-col h-full p-4 md:p-6">
+    <div className="flex flex-col h-full p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between">
             <div className="grid gap-2">
                 <h1 className="font-headline text-3xl font-bold">Gestión de Protocolos Base</h1>
@@ -399,7 +434,7 @@ function BaseProtocolManager() {
             )}
         </div>
         
-        <div className="grid lg:grid-cols-3 gap-8 mt-6">
+        <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-4">
                 <Card>
                     <CardHeader>
@@ -458,36 +493,6 @@ function BaseProtocolManager() {
                             </div>
                         </ScrollArea>
                     </CardContent>
-                </Card>
-                <Card>
-                    <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="item-1">
-                            <AccordionTrigger className="p-6">
-                                <CardTitle className="text-lg">Equipos con Protocolo Asignado ({equipmentsWithProtocol.length})</CardTitle>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-6 pb-6">
-                                <ScrollArea className="h-72">
-                                     <div className="space-y-2 pr-4">
-                                     {loading ? (
-                                        <Skeleton className="h-40 w-full" />
-                                    ) : equipmentsWithProtocol.length > 0 ? (
-                                        equipmentsWithProtocol.map(eq => (
-                                            <div key={eq.id} className="p-2 border rounded-md flex items-center gap-3 bg-muted/30">
-                                                <CheckCircle className="h-5 w-5 text-green-500" />
-                                                <div className="flex-1">
-                                                    <p className="font-semibold">{eq.name}</p>
-                                                    <p className="text-xs text-muted-foreground">Protocolo: {eq.type} / {eq.brand} / {eq.model}</p>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground text-center p-4">No hay equipos con protocolos asignados que coincidan con los filtros.</p>
-                                    )}
-                                    </div>
-                                </ScrollArea>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
                 </Card>
             </div>
 
@@ -654,6 +659,92 @@ function BaseProtocolManager() {
                 )}
             </div>
         </div>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Protocolos Base Existentes</CardTitle>
+                <CardDescription>Gestione los protocolos base que ya ha creado.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px]"><Checkbox disabled/></TableHead>
+                            <TableHead>Tipo de Equipo</TableHead>
+                            <TableHead>Marca</TableHead>
+                            <TableHead>Modelo</TableHead>
+                            <TableHead>Equipos Vinculados</TableHead>
+                            <TableHead><span className="sr-only">Acciones</span></TableHead>
+                            <TableHead><span className="sr-only">Expandir</span></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {groupedProtocols.length > 0 ? groupedProtocols.map(group => (
+                           <Fragment key={group.id}>
+                            <TableRow>
+                                <TableCell><Checkbox /></TableCell>
+                                <TableCell>{group.type}</TableCell>
+                                <TableCell>{group.brand}</TableCell>
+                                <TableCell>{group.model}</TableCell>
+                                <TableCell><Badge variant="secondary">{group.equipments.length}</Badge></TableCell>
+                                <TableCell>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuItem onSelect={() => alert("Función de edición en desarrollo.")}>
+                                                <Edit className="mr-2 h-4 w-4"/> Editar
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => setProtocolToDelete(group)} className="text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4"/> Eliminar
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                                <TableCell>
+                                    <Button variant="ghost" size="icon" onClick={() => setExpandedProtocolId(expandedProtocolId === group.id ? null : group.id)}>
+                                        <ChevronDown className={cn("h-4 w-4 transition-transform", expandedProtocolId === group.id && "rotate-180")} />
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                            {expandedProtocolId === group.id && (
+                                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                    <TableCell colSpan={7} className="p-4">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <h4 className="font-semibold">Pasos del Protocolo</h4>
+                                                <div className="border rounded-md bg-background">
+                                                    {group.steps.map((step, i) => (
+                                                        <div key={i} className={cn("p-2 text-sm", i < group.steps.length - 1 && "border-b")}>
+                                                            <p>{i+1}. {step.step}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                             <div className="space-y-2">
+                                                <h4 className="font-semibold">Equipos Vinculados</h4>
+                                                <div className="border rounded-md bg-background">
+                                                    {group.equipments.map((eq, i) => (
+                                                         <div key={eq.id} className={cn("p-2 text-sm", i < group.equipments.length - 1 && "border-b")}>
+                                                            <p className="font-medium">{eq.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{eq.client} / {eq.location}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                           </Fragment>
+                        )) : (
+                            <TableRow><TableCell colSpan={7} className="h-24 text-center">No hay protocolos que coincidan con los filtros.</TableCell></TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
         
         <Dialog open={!!stepToEdit} onOpenChange={() => setStepToEdit(null)}>
             <DialogContent>
@@ -696,12 +787,25 @@ function BaseProtocolManager() {
             </AlertDialogContent>
         </AlertDialog>
 
+        <AlertDialog open={!!protocolToDelete} onOpenChange={() => setProtocolToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Está seguro de eliminar este protocolo?</AlertDialogTitle>
+                    <AlertDialogDescription>Esta acción no se puede deshacer. El protocolo se eliminará permanentemente. Los equipos asociados ya no tendrán un protocolo base.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteProtocol} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         <Dialog open={isAddEquipmentDialogOpen} onOpenChange={setIsAddEquipmentDialogOpen}>
             <DialogContent className="max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>Añadir Equipos Manualmente al Grupo</DialogTitle>
                     <DialogDescription>
-                        Seleccione los equipos del inventario para añadirlos al grupo que compartirá el protocolo.
+                        Seleccione los equipos del inventario que no fueron sugeridos por la IA para añadirlos al grupo.
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-96 mt-4">
@@ -747,3 +851,6 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
+
+
+    
