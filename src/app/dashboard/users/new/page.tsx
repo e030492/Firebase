@@ -103,7 +103,7 @@ const modules: { key: ModuleKey; label: string }[] = [
 
 export default function NewUserPage() {
   const router = useRouter();
-  const { createUser, clients } = useData();
+  const { createUser, clients, users } = useData();
   const signatureInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
@@ -116,7 +116,18 @@ export default function NewUserPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    if (newEmail && users.some(user => user.email === newEmail)) {
+      setEmailError('Este correo electrónico ya está en uso.');
+    } else {
+      setEmailError('');
+    }
+  };
+  
   const handlePermissionChange = (module: ModuleKey, action: ActionKey, value: boolean) => {
     setPermissions(prev => ({
       ...prev,
@@ -158,6 +169,12 @@ export default function NewUserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (emailError) {
+      alert(emailError);
+      return;
+    }
+
     if (!name || !email || !role || !password) {
       alert('Por favor, complete todos los campos.');
       return;
@@ -195,6 +212,7 @@ export default function NewUserPage() {
     } catch (error: any) {
         console.error("Failed to create user:", error);
         if (error.code === 'auth/email-already-in-use') {
+            setEmailError('Este correo electrónico ya está en uso.');
             alert('Error: El correo electrónico que ha ingresado ya está en uso. Por favor, utilice otro.');
         } else {
             alert("Error al crear el usuario. Revise la consola para más detalles.");
@@ -256,7 +274,8 @@ export default function NewUserPage() {
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="ejemplo@correo.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading} />
+                <Input id="email" type="email" placeholder="ejemplo@correo.com" value={email} onChange={handleEmailChange} required disabled={loading} />
+                {emailError && <p className="text-sm text-destructive">{emailError}</p>}
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
@@ -383,5 +402,3 @@ export default function NewUserPage() {
     </form>
   );
 }
-
-    
