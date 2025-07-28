@@ -293,32 +293,47 @@ export const subscribeToMediaLibrary = (setFiles: (files: MediaFile[]) => void) 
     return unsubscribe;
 };
 
-export async function uploadFile(files: File[], onProgress: (percentage: number) => void) {
+export async function uploadFile(
+    files: File[], 
+    onProgress: (percentage: number) => void,
+    logAudit: (message: string) => void
+) {
+    logAudit(`Calculando tamaño total de ${files.length} archivos.`);
     const totalSize = files.reduce((acc, file) => acc + file.size, 0);
-    let totalUploaded = 0;
+    let totalBytesTransferred = 0;
+    logAudit(`Tamaño total: ${totalSize} bytes.`);
+
+    const progressTracker: { [key: string]: number } = {};
 
     const uploadPromises = files.map(file => {
         return new Promise<void>((resolve, reject) => {
             const fileId = uuidv4();
             const storageRef = ref(storage, `${collections.mediaLibrary}/${fileId}-${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
+            logAudit(`Iniciando carga de: ${file.name}`);
 
             uploadTask.on('state_changed',
                 (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    console.log(`Upload progress for ${file.name}: ${progress}%`);
+                    const previousBytes = progressTracker[file.name] || 0;
+                    const newBytes = snapshot.bytesTransferred;
+                    const diff = newBytes - previousBytes;
                     
-                    // To calculate total progress, we need to manage bytes transferred, not percentages
-                    // This part is tricky without a more complex state management.
-                    // For simplicity in this fix, we will use a temporary object to track progress per file.
-                    // A better solution would involve a state manager or event emitter.
+                    totalBytesTransferred += diff;
+                    progressTracker[file.name] = newBytes;
+
+                    const overallProgress = (totalBytesTransferred / totalSize) * 100;
+                    onProgress(overallProgress);
                 },
                 (error) => {
+                    logAudit(`ERROR al subir ${file.name}: ${error.message}`);
                     console.error("Upload failed for file:", file.name, error);
                     reject(error);
                 },
                 async () => {
+                    logAudit(`Carga de ${file.name} completada. Obteniendo URL...`);
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    logAudit(`URL obtenida para ${file.name}. Guardando en Firestore...`);
+                    
                     const fileData: Omit<MediaFile, 'id'> = {
                         name: file.name,
                         url: downloadURL,
@@ -328,17 +343,16 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
                     };
                     const docRef = doc(db, collections.mediaLibrary, fileId);
                     await setDoc(docRef, fileData);
-
-                    totalUploaded += file.size;
-                    const overallProgress = (totalUploaded / totalSize) * 100;
-                    onProgress(overallProgress);
+                    logAudit(`Registro en Firestore completo para ${file.name}.`);
                     resolve();
                 }
             );
         });
     });
-
+    
+    logAudit('Esperando a que todas las cargas finalicen...');
     await Promise.all(uploadPromises);
+    logAudit('Todas las promesas de carga resueltas.');
 }
 
 

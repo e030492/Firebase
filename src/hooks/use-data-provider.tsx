@@ -54,7 +54,7 @@ type DataContextType = {
   loginUser: (email: string, pass: string) => Promise<User | null>;
   // Media Library
   subscribeToMediaLibrary: (setFiles: (files: MediaFile[]) => void) => () => void;
-  uploadFile: (files: File[], onProgress: (percentage: number) => void) => Promise<void>;
+  uploadFile: (files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void) => Promise<void>;
   deleteMediaFile: (file: MediaFile) => Promise<void>;
   // Settings
   updateCompanySettings: (settingsData: Partial<CompanySettings>) => Promise<void>;

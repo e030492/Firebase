@@ -14,7 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useData } from '@/hooks/use-data-provider';
 import { MediaFile } from '@/lib/services';
-import { Upload, FileVideo, FileImage, Trash2, Expand, Loader2 } from 'lucide-react';
+import { Upload, FileVideo, FileImage, Trash2, Expand, Loader2, Terminal } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 function formatBytes(bytes: number, decimals = 2) {
     if (bytes === 0) return '0 Bytes';
@@ -34,34 +35,58 @@ export default function PruebasPage() {
     const [loadingLibrary, setLoadingLibrary] = useState(true);
     const [selectedMedia, setSelectedMedia] = useState<MediaFile | null>(null);
     const [mediaToDelete, setMediaToDelete] = useState<MediaFile | null>(null);
+    const [auditLog, setAuditLog] = useState<string[]>([]);
+
+    const logAudit = useCallback((message: string) => {
+        setAuditLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+    }, []);
 
     useEffect(() => {
+        logAudit('Iniciando suscripción a la librería multimedia...');
         const unsubscribe = subscribeToMediaLibrary((data) => {
             setMediaLibrary(data);
             setLoadingLibrary(false);
+            logAudit('Librería multimedia actualizada.');
         });
-        return () => unsubscribe();
-    }, [subscribeToMediaLibrary]);
+        return () => {
+            logAudit('Finalizando suscripción a la librería multimedia.');
+            unsubscribe();
+        };
+    }, [subscribeToMediaLibrary, logAudit]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            setFiles(Array.from(e.target.files));
+            const selectedFiles = Array.from(e.target.files);
+            setFiles(selectedFiles);
+            logAudit(`Se seleccionaron ${selectedFiles.length} archivos.`);
         }
     };
 
     const handleUpload = async () => {
-        if (files.length === 0) return;
+        if (files.length === 0) {
+            logAudit('Intento de subida sin archivos seleccionados.');
+            return;
+        };
+
+        setAuditLog([]); // Reset log for new upload
+        logAudit(`Iniciando proceso de carga para ${files.length} archivos.`);
         setIsUploading(true);
         setUploadProgress(0);
 
         try {
+            logAudit('Llamando a la función uploadFile del servicio...');
             await uploadFile(files, (progress) => {
                 setUploadProgress(progress);
-            });
+                logAudit(`Progreso de carga actualizado: ${progress.toFixed(2)}%`);
+            }, logAudit);
+            logAudit('¡Carga de todos los archivos completada!');
         } catch (error) {
-            console.error("Error during bulk upload:", error);
+            console.error("Error durante la carga masiva:", error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logAudit(`ERROR: ${errorMessage}`);
             alert(`Error al subir los archivos.`);
         } finally {
+            logAudit('Proceso de carga finalizado. Limpiando estados.');
             setIsUploading(false);
             setUploadProgress(null);
             setFiles([]);
@@ -125,6 +150,20 @@ export default function PruebasPage() {
                     </Button>
                 </CardFooter>
             </Card>
+
+            {isUploading && (
+                <Alert>
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Auditoría de Carga</AlertTitle>
+                    <AlertDescription>
+                        <ScrollArea className="h-40 w-full mt-2">
+                            <pre className="text-xs">
+                                {auditLog.join('\n')}
+                            </pre>
+                        </ScrollArea>
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <Card>
                 <CardHeader>
