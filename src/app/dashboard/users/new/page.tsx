@@ -185,16 +185,20 @@ export default function NewUserPage() {
             photoUrl: photoUrl || null,
         };
 
-        if (role === 'cliente') {
+        if (role === 'cliente' && selectedClientId) {
             newUser.clientId = selectedClientId;
         }
 
         await createUser(newUser);
         alert('Usuario creado con éxito.');
         router.push('/dashboard/users');
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to create user:", error);
-        alert("Error al crear el usuario.");
+        if (error.code === 'auth/email-already-in-use') {
+            alert('Error: El correo electrónico que ha ingresado ya está en uso. Por favor, utilice otro.');
+        } else {
+            alert("Error al crear el usuario. Revise la consola para más detalles.");
+        }
     } finally {
         setLoading(false);
     }
