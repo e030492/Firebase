@@ -183,8 +183,11 @@ export default function NewUserPage() {
             permissions,
             signatureUrl: signatureUrl || null,
             photoUrl: photoUrl || null,
-            clientId: role === 'cliente' ? selectedClientId : undefined,
         };
+
+        if (role === 'cliente') {
+            newUser.clientId = selectedClientId;
+        }
 
         await createUser(newUser);
         alert('Usuario creado con éxito.');
@@ -376,3 +379,5 @@ export default function NewUserPage() {
     </form>
   );
 }
+
+    
