@@ -68,12 +68,15 @@ type ProtocolGroup = Protocol & {
   equipments: Equipment[];
 };
 
+type EquipmentWithProtocol = Equipment & { protocol: Protocol | undefined };
+
 // Main Page Component
 function BaseProtocolManager() {
   const { protocols, loading, createProtocol, updateProtocol, deleteProtocol, equipments: allEquipments, clients, systems } = useData();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const existingProtocolFileInputRefs = useRef<{ [key: string]: (HTMLInputElement | null)[] }>({});
 
   // Page State
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
@@ -91,9 +94,8 @@ function BaseProtocolManager() {
   const [stepToDeleteIndex, setStepToDeleteIndex] = useState<number | null>(null);
   const [isAddEquipmentDialogOpen, setIsAddEquipmentDialogOpen] = useState(false);
   const [manualSelectionIds, setManualSelectionIds] = useState<string[]>([]);
-  const [protocolToDelete, setProtocolToDelete] = useState<ProtocolGroup | null>(null);
-  const [expandedProtocolId, setExpandedProtocolId] = useState<string | null>(null);
-
+  const [protocolToDelete, setProtocolToDelete] = useState<Protocol | null>(null);
+  const [expandedEquipmentId, setExpandedEquipmentId] = useState<string | null>(null);
 
   // Filters
   const [clientFilter, setClientFilter] = useState('');
@@ -112,16 +114,17 @@ function BaseProtocolManager() {
     }
   }, [clientFilter, clients]);
 
-  const { equipmentsWithoutProtocol, groupedProtocols } = useMemo(() => {
+  const { equipmentsWithoutProtocol, equipmentsWithProtocol } = useMemo(() => {
     const protocolKeys = new Set(protocols.map(p => `${p.type}-${p.brand}-${p.model}`));
     
-    const withProtocolEquipments: Equipment[] = [];
     const withoutProtocol: Equipment[] = [];
+    const withProtocol: EquipmentWithProtocol[] = [];
 
     allEquipments.forEach(eq => {
         const key = `${eq.type}-${eq.brand}-${eq.model}`;
         if (protocolKeys.has(key)) {
-            withProtocolEquipments.push(eq);
+            const foundProtocol = protocols.find(p => p.id === key.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, ''));
+            withProtocol.push({ ...eq, protocol: foundProtocol });
         } else {
             withoutProtocol.push(eq);
         }
@@ -138,22 +141,9 @@ function BaseProtocolManager() {
         return clientMatch && systemMatch && warehouseMatch;
     };
     
-    const protocolGroups: { [key: string]: ProtocolGroup } = {};
-    protocols.forEach(p => {
-        const key = p.id;
-        protocolGroups[key] = { ...p, equipments: [] };
-    });
-    
-    withProtocolEquipments.forEach(eq => {
-        const key = `${eq.type}-${eq.brand}-${eq.model}`.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-        if (protocolGroups[key]) {
-            protocolGroups[key].equipments.push(eq);
-        }
-    });
-
     return {
         equipmentsWithoutProtocol: withoutProtocol.filter(filterFn),
-        groupedProtocols: Object.values(protocolGroups).filter(g => g.equipments.length > 0 && filterFn(g.equipments[0]))
+        equipmentsWithProtocol: withProtocol.filter(filterFn)
     };
   }, [allEquipments, protocols, clientFilter, systemFilter, warehouseFilter, clients, systems]);
 
@@ -662,84 +652,88 @@ function BaseProtocolManager() {
 
         <Card>
             <CardHeader>
-                <CardTitle>Protocolos Base Existentes</CardTitle>
-                <CardDescription>Gestione los protocolos base que ya ha creado.</CardDescription>
+                <CardTitle>Equipos con Protocolo Asignado</CardTitle>
+                <CardDescription>Visualice y gestione los equipos que ya tienen un protocolo base.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-[50px]"><Checkbox disabled/></TableHead>
-                            <TableHead>Tipo de Equipo</TableHead>
-                            <TableHead>Marca</TableHead>
-                            <TableHead>Modelo</TableHead>
-                            <TableHead>Equipos Vinculados</TableHead>
+                            <TableHead>Equipo</TableHead>
+                            <TableHead>Cliente</TableHead>
+                            <TableHead>Protocolo Base</TableHead>
                             <TableHead><span className="sr-only">Acciones</span></TableHead>
-                            <TableHead><span className="sr-only">Expandir</span></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {groupedProtocols.length > 0 ? groupedProtocols.map(group => (
-                           <Fragment key={group.id}>
+                        {equipmentsWithProtocol.length > 0 ? equipmentsWithProtocol.map(equipment => (
+                           <Fragment key={equipment.id}>
                             <TableRow>
                                 <TableCell><Checkbox /></TableCell>
-                                <TableCell>{group.type}</TableCell>
-                                <TableCell>{group.brand}</TableCell>
-                                <TableCell>{group.model}</TableCell>
-                                <TableCell><Badge variant="secondary">{group.equipments.length}</Badge></TableCell>
+                                <TableCell className="font-medium">{equipment.name}<span className="block text-xs text-muted-foreground">{equipment.serial}</span></TableCell>
+                                <TableCell>{equipment.client}</TableCell>
+                                <TableCell className="text-muted-foreground">{equipment.protocol ? `${equipment.protocol.type} / ${equipment.protocol.brand}` : 'N/A'}</TableCell>
                                 <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onSelect={() => alert("Función de edición en desarrollo.")}>
-                                                <Edit className="mr-2 h-4 w-4"/> Editar
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => setProtocolToDelete(group)} className="text-destructive">
-                                                <Trash2 className="mr-2 h-4 w-4"/> Eliminar
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                                <TableCell>
-                                    <Button variant="ghost" size="icon" onClick={() => setExpandedProtocolId(expandedProtocolId === group.id ? null : group.id)}>
-                                        <ChevronDown className={cn("h-4 w-4 transition-transform", expandedProtocolId === group.id && "rotate-180")} />
-                                    </Button>
+                                     <div className="flex items-center justify-end gap-2">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onSelect={() => alert("Función de edición en desarrollo.")}>
+                                                    <Edit className="mr-2 h-4 w-4"/> Editar Protocolo
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => equipment.protocol && setProtocolToDelete(equipment.protocol)} className="text-destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4"/> Desvincular y Eliminar Base
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        <Button variant="ghost" size="icon" onClick={() => setExpandedEquipmentId(expandedEquipmentId === equipment.id ? null : equipment.id)}>
+                                            <ChevronDown className={cn("h-4 w-4 transition-transform", expandedEquipmentId === equipment.id && "rotate-180")} />
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
-                            {expandedProtocolId === group.id && (
+                            {expandedEquipmentId === equipment.id && equipment.protocol && (
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                    <TableCell colSpan={7} className="p-4">
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            <div className="space-y-2">
-                                                <h4 className="font-semibold">Pasos del Protocolo</h4>
-                                                <div className="border rounded-md bg-background">
-                                                    {group.steps.map((step, i) => (
-                                                        <div key={i} className={cn("p-2 text-sm", i < group.steps.length - 1 && "border-b")}>
-                                                            <p>{i+1}. {step.step}</p>
+                                    <TableCell colSpan={5} className="p-4">
+                                       <div className="space-y-6">
+                                            {equipment.protocol.steps.map((step, index) => (
+                                                <div key={index}>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-4 border rounded-lg bg-background">
+                                                        <div className="space-y-4">
+                                                            <div className="flex items-start justify-between">
+                                                                <div className="space-y-1 pr-4">
+                                                                    <Label className="text-base font-semibold">Paso del Protocolo</Label>
+                                                                    <p className="text-muted-foreground">{step.step}</p>
+                                                                </div>
+                                                                <Badge variant={getPriorityBadgeVariant(step.priority)} className="capitalize h-fit">{step.priority}</Badge>
+                                                            </div>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                             <div className="space-y-2">
-                                                <h4 className="font-semibold">Equipos Vinculados</h4>
-                                                <div className="border rounded-md bg-background">
-                                                    {group.equipments.map((eq, i) => (
-                                                         <div key={eq.id} className={cn("p-2 text-sm", i < group.equipments.length - 1 && "border-b")}>
-                                                            <p className="font-medium">{eq.name}</p>
-                                                            <p className="text-xs text-muted-foreground">{eq.client} / {eq.location}</p>
+                                                        <div className="grid gap-3">
+                                                            <Label>Evidencia Fotográfica Sugerida</Label>
+                                                            <div className="w-full aspect-video bg-muted rounded-md flex items-center justify-center border">
+                                                                {isValidImageUrl(step.imageUrl) ? (
+                                                                    <Image src={step.imageUrl!} alt={`Evidencia para ${step.step}`} width={400} height={300} data-ai-hint="protocol evidence" className="rounded-md object-cover aspect-video" />
+                                                                ) : (
+                                                                    <div className="text-center text-muted-foreground">
+                                                                        <Camera className="h-10 w-10 mx-auto" />
+                                                                        <p className="text-sm mt-2">Sin imagen</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    ))}
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            ))}
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             )}
                            </Fragment>
                         )) : (
-                            <TableRow><TableCell colSpan={7} className="h-24 text-center">No hay protocolos que coincidan con los filtros.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No hay equipos con protocolo que coincidan con los filtros.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -851,6 +845,3 @@ export default function BaseProtocolPageWrapper() {
         </Suspense>
     )
 }
-
-
-    
