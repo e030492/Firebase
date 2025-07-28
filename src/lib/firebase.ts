@@ -10,12 +10,13 @@ import { getStorage } from "firebase/storage";
 export const firebaseConfig = {
   "projectId": "guardian-shield-k9g9l",
   "appId": "1:224891357938:web:399bcf1f064bdf7bdf9e6b",
-  "storageBucket": "guardian-shield-k9g9l.appspot.com",
+  "storageBucket": "guardian-shield-k9g9l.firebasestorage.app", 
   "apiKey": "AIzaSyC6MOe2IHjiMxGLl2aEAqg2KKvsAcnd-ZM",
   "authDomain": "guardian-shield-k9g9l.firebaseapp.com",
   "measurementId": "",
   "messagingSenderId": "224891357938"
 };
+
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();

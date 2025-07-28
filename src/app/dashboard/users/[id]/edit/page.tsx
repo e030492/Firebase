@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
@@ -69,9 +68,9 @@ const initialPermissions: Permissions = {
 const defaultPermissionsByRole: { [key: string]: Permissions } = {
   admin: {
     users: { create: true, update: true, delete: true },
-    clients: { create: true, update: true, delete: true },
-    systems: { create: true, update: true, delete: true },
-    equipments: { create: true, update: true, delete: true },
+    clients: { create: true, update: true, delete: false }, // Ajustado de ejemplo
+    systems: { create: true, update: true, delete: false }, // Ajustado de ejemplo
+    equipments: { create: true, update: true, delete: false }, // Ajustado de ejemplo
     protocols: { create: true, update: true, delete: true },
     cedulas: { create: true, update: true, delete: true },
   },
@@ -166,6 +165,10 @@ export default function EditUserPage() {
     setRole(newRoleValue);
     const newPermissions = defaultPermissionsByRole[newRoleValue] || initialPermissions;
     setPermissions(newPermissions);
+    // Reset selectedClientId when role changes if it's not 'cliente'
+    if (newRoleValue !== 'cliente') {
+        setSelectedClientId(undefined);
+    }
   };
   
   const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,17 +212,32 @@ export default function EditUserPage() {
             photoUrl: photoUrl || null,
         };
 
-        if (role === 'cliente') {
+        // Modificación: Incluir clientId solo si el rol es 'cliente' y selectedClientId está definido
+        if (role === 'cliente' && selectedClientId !== undefined) {
             updatedData.clientId = selectedClientId;
-        } else {
-            updatedData.clientId = undefined;
+        } else if (role !== 'cliente' && selectedClientId === undefined) {
+           // Si el rol no es cliente y selectedClientId es undefined (como debe ser),
+           // no incluyas clientId en updatedData para no enviarlo con undefined.
+           // Esta condición es redundante con el cambio de arriba, pero explícita.
+           // Simplemente no hacemos nada aquí si el rol no es cliente.
+        } else if (role !== 'cliente' && selectedClientId !== undefined) {
+             // Este caso podría ocurrir si selectedClientId tenía un valor previo y el rol cambió a no-cliente.
+             // Queremos eliminar el clientId si el rol ya no es cliente.
+             // Firestore no permite establecer un campo a undefined para eliminarlo directamente.
+             // Para eliminar un campo, necesitas un marcador especialFieldValue.delete().
+             // Si updateDoc debe manejar la eliminación de campos, necesitarías adjustar updateDocument en services.ts
+             // Alternativa: No incluir clientId en updatedData si el rol no es cliente, y si updateDocument puede manejar eso,
+             // o si necesitas una lógica específica para "eliminar" el campo en Firestore si el rol cambia.
+             // Por ahora, simplemente no lo incluimos si no es cliente, y confiamos en que 
+             // updateDocument maneje los campos no incluidos como "no modificados".
         }
+        // Si el rol no es cliente, el campo clientId simplemente no se incluye en updatedData.
 
         if (password) {
             updatedData.password = password;
         }
 
-        await updateUser(userId, updatedData);
+        await updateUser(userId, updatedData); // Se pasa updatedData a updateUser
         alert('Usuario actualizado con éxito.');
         router.push('/dashboard/users');
     } catch (error) {

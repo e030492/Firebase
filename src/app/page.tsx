@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -21,7 +20,8 @@ import { useData } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser, loading: dataLoading, companySettings } = useData();
+  // Obtener isAuthReady del hook useData
+  const { loginUser, loading: dataLoading, companySettings, isAuthReady } = useData(); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +31,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
+    // Asegurarse de que la autenticación esté lista antes de intentar iniciar sesión
+    if (!isAuthReady) {
+      console.warn("Attempted login before Firebase Auth was ready.");
+      setIsLoading(false);
+      setError("La autenticación de Firebase no está lista. Intente de nuevo.");
+      return;
+    }
 
     try {
       const user = await loginUser(email, password);
@@ -49,7 +57,8 @@ export default function LoginPage() {
     }
   };
 
-  const isFormDisabled = isLoading || dataLoading;
+  // Deshabilitar el formulario si está cargando o la autenticación no está lista
+  const isFormDisabled = isLoading || dataLoading || !isAuthReady;
 
   return (
     <>
@@ -57,7 +66,17 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="flex flex-col items-center text-center">
             <div className="mb-4 flex items-center justify-center h-72 w-72">
-              <Image src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} alt="Escuadra Technology Logo" width={200} height={200} data-ai-hint="logo" className="object-contain w-full h-full" />
+              {/* Usa la imagen de la compañía si está disponible, de lo contrario un placeholder */}
+              {/* Añadida la propiedad priority */}
+              <Image 
+                src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} 
+                alt="Escuadra Technology Logo" 
+                width={200} 
+                height={200} 
+                data-ai-hint="logo" 
+                className="object-contain w-full h-full" 
+                priority 
+              />
             </div>
             <p className="text-muted-foreground">Control de Mantenimiento de Seguridad</p>
           </div>
@@ -81,6 +100,7 @@ export default function LoginPage() {
                 {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
               </CardContent>
               <CardFooter className="flex-col gap-4">
+                {/* Deshabilitar el botón si el formulario está deshabilitado */}
                 <Button type="submit" className="w-full" disabled={isFormDisabled}>
                   {dataLoading ? (
                     <>
@@ -92,6 +112,11 @@ export default function LoginPage() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>Accediendo...</span>
                     </>
+                  ) : !isAuthReady ? ( // Mostrar estado si la autenticación no está lista
+                     <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Inicializando autenticación...</span>
+                     </>
                   ) : 'Acceder'}
                 </Button>
                  <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
