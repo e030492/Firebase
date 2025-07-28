@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, HardHat, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ArrowUp, ArrowDown, ArrowUpDown, HardHat, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -45,6 +45,7 @@ import { Equipment, Client } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { addMonths, addYears } from 'date-fns';
 
 type SortableKey = keyof Equipment;
@@ -58,6 +59,7 @@ export default function EquipmentsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedSystemId, setSelectedSystemId] = useState<string>('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [clientWarehouses, setClientWarehouses] = useState<string[]>([]);
 
   useEffect(() => {
@@ -74,6 +76,21 @@ export default function EquipmentsPage() {
 
   const sortedEquipments = useMemo(() => {
     let filtered = [...equipments];
+    
+    if (searchQuery) {
+        filtered = filtered.filter(eq => {
+            const searchLower = searchQuery.toLowerCase();
+            const terms = [
+                eq.name,
+                eq.alias,
+                eq.brand,
+                eq.model,
+                eq.type,
+                eq.serial,
+            ].filter(Boolean).map(t => t.toLowerCase());
+            return terms.some(term => term.includes(searchLower));
+        });
+    }
 
     if (selectedClientId) {
       const clientName = clients.find(c => c.id === selectedClientId)?.name;
@@ -108,7 +125,7 @@ export default function EquipmentsPage() {
       });
     }
     return filtered;
-  }, [equipments, sortConfig, selectedClientId, selectedSystemId, selectedWarehouse, clients, systems]);
+  }, [equipments, sortConfig, selectedClientId, selectedSystemId, selectedWarehouse, searchQuery, clients, systems]);
 
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -220,7 +237,20 @@ export default function EquipmentsPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <div className="grid gap-2 lg:col-span-4">
+                    <Label htmlFor="search-equipments">Búsqueda Rápida</Label>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                        <Input
+                            id="search-equipments"
+                            placeholder="Buscar por nombre, marca, modelo, tipo, serie..."
+                            className="pl-10"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
                 <div className="grid gap-2">
                     <Label htmlFor="client-filter">Filtrar por Cliente</Label>
                     <Select onValueChange={(value) => setSelectedClientId(value === 'all' ? '' : value)} value={selectedClientId || 'all'}>
@@ -432,7 +462,7 @@ export default function EquipmentsPage() {
     </>
   );
 }
-
     
 
     
+
