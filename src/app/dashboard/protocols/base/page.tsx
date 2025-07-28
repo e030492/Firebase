@@ -368,7 +368,7 @@ function BaseProtocolManager() {
   const handleUnlinkEquipment = async () => {
     if (!equipmentToUnlink) return;
     try {
-        await updateEquipment(equipmentToUnlink.id, { protocolId: null });
+        await updateEquipment(equipmentToUnlink.id, { protocolId: `unlinked-${equipmentToUnlink.id}-${Date.now()}` });
         toast({ title: "Equipo Desvinculado", description: `El equipo ${equipmentToUnlink.name} ya no usa el protocolo base.` });
     } catch (e) {
         console.error("Error unlinking equipment:", e);
@@ -403,7 +403,7 @@ function BaseProtocolManager() {
     setIsBulkUnlinking(true);
     try {
         const unlinkPromises = unlinkSelection.map(id => {
-            return updateEquipment(id, { protocolId: null });
+            return updateEquipment(id, { protocolId: `unlinked-${id}-${Date.now()}` });
         });
         await Promise.all(unlinkPromises);
         toast({ title: "Equipos Desvinculados", description: `${unlinkSelection.length} equipos han sido desvinculados.` });
@@ -597,8 +597,6 @@ function BaseProtocolManager() {
                                     >
                                         <CommandInput 
                                             placeholder="Buscar por nombre, marca, modelo..."
-                                            value={searchQuery}
-                                            onValueChange={setSearchQuery}
                                         />
                                         <CommandList ref={commandListRef}>
                                             <CommandEmpty>No se encontró ningún equipo.</CommandEmpty>
@@ -625,7 +623,7 @@ function BaseProtocolManager() {
                                                             <span className="font-semibold">{eq.name}</span>
                                                             <span className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</span>
                                                             <span className="text-xs text-muted-foreground">
-                                                                ID: {eq.id.substring(0, 5)}... | N/S: {eq.serial || 'N/A'}
+                                                                ID: {eq.id} | N/S: {eq.serial || 'N/A'}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -697,7 +695,7 @@ function BaseProtocolManager() {
                                                 <div className="flex-1">
                                                     <p className="font-semibold">{eq.name}</p>
                                                     <p className="text-xs text-muted-foreground">{eq.type} / {eq.brand} / {eq.model}</p>
-                                                    <p className="text-xs text-muted-foreground">ID: {eq.id.substring(0, 5)}... | N/S: {eq.serial || 'N/A'}</p>
+                                                    <p className="text-xs text-muted-foreground">ID: {eq.id} | N/S: {eq.serial || 'N/A'}</p>
                                                 </div>
                                             </Label>
                                         </div>

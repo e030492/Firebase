@@ -107,9 +107,10 @@ function subscribeToCollection<T>(collectionName: string, setData: (data: T[]) =
 }
 
 async function createDocument<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>, id?: string): Promise<T> {
-    const docRef = id ? doc(db, collectionName, id) : doc(collection(db, collectionName));
+    const docId = id || uuidv4();
+    const docRef = doc(db, collectionName, docId);
     await setDoc(docRef, data);
-    return { id: docRef.id, ...data } as T;
+    return { id: docId, ...data } as T;
 }
 
 

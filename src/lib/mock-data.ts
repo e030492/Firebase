@@ -265,8 +265,9 @@ export const mockEquipments = [
     ipAddress: '',
     configUser: '',
     configPassword: '',
+    protocolId: null,
   },
-    {
+  {
     id: '4',
     name: 'Barrera Infrarroja Perimetral',
     alias: 'Barrera Barda Norte',
@@ -285,6 +286,7 @@ export const mockEquipments = [
     ipAddress: '192.168.2.50',
     configUser: 'service',
     configPassword: 'password',
+    protocolId: null,
   },
 ];
 
