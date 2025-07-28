@@ -149,8 +149,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     error,
     loginUser,
     subscribeToMediaLibrary,
-    uploadFile: uploadFileService,
-    deleteMediaFile: deleteMediaFileService,
+    uploadFile: async (file) => {
+        return await uploadFileService(file);
+    },
+    deleteMediaFile: async (file) => {
+        await deleteMediaFileService(file);
+    },
     updateCompanySettings: updateCompanySettingsService,
     createUser: createUserService,
     updateUser: updateUserService,
