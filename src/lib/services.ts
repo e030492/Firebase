@@ -132,9 +132,11 @@ export async function uploadImageAndGetURL(base64DataUrl: string): Promise<strin
     if (!base64DataUrl || !base64DataUrl.startsWith('data:image')) {
         return base64DataUrl; // It's already a URL or empty/invalid
     }
-    const storageRef = ref(storage, `images/${uuidv4()}`);
-    const uploadResult = await uploadString(storageRef, base64DataUrl, 'data_url');
-    return await getDownloadURL(uploadResult.ref);
+    // This function should handle large base64 strings correctly by uploading to storage
+    // but per user request, we are temporarily disabling it.
+    // For now, we will just return the base64 string and let Firestore handle it.
+    // This will fail if the string is > 1MB.
+    return base64DataUrl;
 }
 
 
@@ -239,18 +241,6 @@ export const createCedula = async (data: Omit<Cedula, 'id'>) => {
 };
 
 export const updateCedula = async (id: string, data: Partial<Cedula>) => {
-    if (data.protocolSteps) {
-        const updatedSteps = await Promise.all(
-            data.protocolSteps.map(async (step) => {
-                if (step.imageUrl && step.imageUrl.startsWith('data:image')) {
-                    const uploadedUrl = await uploadImageAndGetURL(step.imageUrl);
-                    return { ...step, imageUrl: uploadedUrl };
-                }
-                return step;
-            })
-        );
-        data.protocolSteps = updatedSteps;
-    }
     return updateDocument<Cedula>(collections.cedulas, id, data);
 };
 
