@@ -29,7 +29,8 @@ import {
     getCompanySettings,
     subscribeToMediaLibrary as apiSubscribeToMediaLibrary,
     uploadFile as apiUploadFile,
-    deleteMediaFile as apiDeleteMediaFile
+    deleteMediaFile as apiDeleteMediaFile,
+    seedMockUsers
 } from '@/lib/services';
 
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
@@ -88,6 +89,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+
+  useEffect(() => {
+    // This effect runs once on mount to ensure mock users are in Firebase Auth
+    const seedData = async () => {
+        try {
+            await seedMockUsers();
+            console.log("Mock users seeded successfully in Firebase Auth and Firestore.");
+        } catch (error) {
+            console.error("Could not seed mock users:", error);
+        }
+    };
+    seedData();
+  }, []);
 
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
     setLoadingStatus('loading_data');
@@ -243,3 +257,5 @@ export function useData() {
   }
   return context;
 }
+
+    

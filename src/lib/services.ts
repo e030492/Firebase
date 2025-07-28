@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, auth, storage } from './firebase';
+import { mockUsers } from './mock-data';
 
 // Interfaces for our data structures
 export type Plano = { url: string; name: string; size: number };
@@ -121,12 +122,35 @@ export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
     const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userDataToSave } = userData;
-    // @ts-ignore
-    const finalUserData = { ...userDataToSave, firebaseUid: userCredential.user.uid };
-    return createDocument<User>('users', finalUserData);
+    // Use the UID from Auth as the document ID in Firestore for consistency
+    const docRef = doc(db, 'users', userCredential.user.uid);
+    await setDoc(docRef, userDataToSave);
+    return { id: userCredential.user.uid, ...userDataToSave };
 };
 export const updateUser = (userId: string, userData: Partial<User>) => updateDocument<User>('users', userId, userData);
 export const deleteUser = (userId: string) => deleteDocument('users', userId);
+
+export async function seedMockUsers() {
+    const usersCollection = collection(db, 'users');
+    for (const mockUser of mockUsers) {
+        try {
+            // Check if user document exists in Firestore
+            const userDocRef = doc(db, "users", where("email", "==", mockUser.email));
+            const userDoc = await getDoc(userDocRef);
+            
+            // If user does not exist, create them in Auth and Firestore
+            if (!userDoc.exists()) {
+                console.log(`User ${mockUser.email} not found. Creating...`);
+                await createUser(mockUser);
+            }
+        } catch (error: any) {
+            // This will fail if user already exists in Auth, which is fine.
+            if (error.code !== 'auth/email-already-in-use') {
+                 console.error(`Error seeding user ${mockUser.email}:`, error);
+            }
+        }
+    }
+}
 
 // --- CLIENT MUTATIONS ---
 export const createClient = (clientData: Omit<Client, 'id'>) => createDocument<Client>('clients', clientData);
@@ -216,3 +240,5 @@ export async function deleteMediaFile(file: MediaFile): Promise<void> {
     await deleteObject(fileRef);
     await deleteDocument('mediaLibrary', file.id);
 }
+
+    
