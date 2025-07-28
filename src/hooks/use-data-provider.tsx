@@ -126,22 +126,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLoadingStatus('authenticating');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in, now fetch the data.
         await fetchAllData(user);
       } else {
-        // User is signed out.
-        setLoadingStatus('idle');
         setUsers([]);
         setClients([]);
         setSystems([]);
         setEquipments([]);
         setProtocols([]);
         setCedulas([]);
-        setCompanySettings(null);
+        setCompanySettings(null); // Clear settings on logout
         localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+        setLoadingStatus('ready'); // Set to ready to enable login form
       }
     });
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [fetchAllData]);
 
