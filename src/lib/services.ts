@@ -6,8 +6,8 @@ import {
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
     signOut
 } from "firebase/auth";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, auth } from './firebase';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { db, auth, storage } from './firebase';
 
 // Interfaces for our data structures
 export type Plano = { url: string; name: string; size: number };
@@ -32,8 +32,6 @@ export type Cedula = { id: string; folio: string; client: string; equipment: str
 export type CompanySettings = { id: string; logoUrl: string | null };
 export type MediaFile = { id: string; name: string; url: string; type: string; size: number; createdAt: string; };
 
-
-const storage = getStorage();
 
 // --- Firestore Collection Getters ---
 const getCollectionData = async <T extends { id: string }>(collectionName: string): Promise<T[]> => {
@@ -217,3 +215,5 @@ export async function deleteMediaFile(file: MediaFile): Promise<void> {
     await deleteObject(fileRef);
     await deleteDocument('mediaLibrary', file.id);
 }
+
+    

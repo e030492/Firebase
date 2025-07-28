@@ -99,6 +99,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
     setLoadingStatus('loading_data');
     try {
+        // Ensure the user's token is fresh before making authenticated calls.
         await firebaseUser.getIdToken(true); 
 
         const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
@@ -135,6 +136,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setCedulas([]);
         setCompanySettings(null); 
         localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+        // If no user, we are ready to show the login screen.
         setLoadingStatus('ready');
       }
     });
@@ -301,3 +303,5 @@ export function useData() {
   }
   return context;
 }
+
+    
