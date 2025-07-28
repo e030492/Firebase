@@ -1,6 +1,16 @@
-import { v4 as uuidv4 } from 'uuid';
+
 import { 
-    mockUsers, mockClients, mockSystems, mockEquipments, mockProtocols, mockCedulas, ACTIVE_USER_STORAGE_KEY
+    collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit,
+} from "firebase/firestore";
+import { 
+    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    signOut, onAuthStateChanged
+} from "firebase/auth";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { db } from './firebase';
+
+import { 
+    ACTIVE_USER_STORAGE_KEY
 } from './mock-data';
 
 // Interfaces for our data structures
@@ -27,260 +37,217 @@ export type CompanySettings = { id: string; logoUrl: string | null };
 export type MediaFile = { id: string; name: string; url: string; type: string; size: number; createdAt: string; };
 
 
-// --- MOCKED DATA ---
-let users: User[] = mockUsers;
-let clients: Client[] = mockClients;
-let systems: System[] = mockSystems;
-let equipments: Equipment[] = mockEquipments;
-let protocols: Protocol[] = mockProtocols;
-let cedulas: Cedula[] = mockCedulas;
-let companySettings: CompanySettings = { id: '1', logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' };
-let mediaLibrary: MediaFile[] = [];
+const storage = getStorage();
+export const auth = getAuth();
 
-// Simulate API latency
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+// --- Firestore Collection Getters ---
+const getCollectionData = async <T>(collectionName: string): Promise<T[]> => {
+    try {
+        const querySnapshot = await getDocs(collection(db, collectionName));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    } catch (error) {
+        console.error(`Error getting ${collectionName}:`, error);
+        return [];
+    }
+};
+
+export const getUsers = () => getCollectionData<User>('users');
+export const getClients = () => getCollectionData<Client>('clients');
+export const getSystems = () => getCollectionData<System>('systems');
+export const getEquipments = () => getCollectionData<Equipment>('equipments');
+export const getProtocols = () => getCollectionData<Protocol>('protocols');
+export const getCedulas = () => getCollectionData<Cedula>('cedulas');
+export const getMediaLibrary = () => getCollectionData<MediaFile>('mediaLibrary');
 
 // --- AUTH ---
 export async function loginUser(email: string, pass: string): Promise<User | null> {
-    await delay(500);
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
-    if (user) {
-        return { ...user };
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    const firebaseUser = userCredential.user;
+
+    const q = query(collection(db, "users"), where("email", "==", email.toLowerCase()), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        throw new Error("No user document found for this email.");
     }
-    return null;
+    const userDoc = querySnapshot.docs[0];
+    const userData = { id: userDoc.id, ...userDoc.data() } as User;
+    
+    // Do not store password in the active user session
+    const { password, ...userToStore } = userData;
+    localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(userToStore));
+    
+    return userToStore;
 }
 
-// --- GENERIC GETTERS ---
-export const getUsers = async (): Promise<User[]> => { await delay(100); return [...users]; };
-export const getClients = async (): Promise<Client[]> => { await delay(100); return [...clients]; };
-export const getSystems = async (): Promise<System[]> => { await delay(100); return [...systems]; };
-export const getEquipments = async (): Promise<Equipment[]> => { await delay(100); return [...equipments]; };
-export const getProtocols = async (): Promise<Protocol[]> => { await delay(100); return [...protocols]; };
-export const getCedulas = async (): Promise<Cedula[]> => { await delay(100); return [...cedulas]; };
-export const getCompanySettings = async (): Promise<CompanySettings> => { await delay(50); return { ...companySettings }; };
+// --- COMPANY SETTINGS ---
+export async function getCompanySettings(): Promise<CompanySettings> {
+    const docRef = doc(db, 'settings', 'company');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as CompanySettings;
+    } else {
+        // Return a default if not exists
+        return { id: 'company', logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' };
+    }
+}
+
+export async function updateCompanySettings(settingsData: Partial<CompanySettings>): Promise<CompanySettings> {
+    const docRef = doc(db, 'settings', 'company');
+    await setDoc(docRef, settingsData, { merge: true });
+    return getCompanySettings();
+}
+
+// --- GENERIC MUTATIONS ---
+const createDocument = async <T>(collectionName: string, data: Omit<T, 'id'>, id?: string): Promise<T> => {
+    if (id) {
+        const docRef = doc(db, collectionName, id);
+        await setDoc(docRef, data);
+        return { id, ...data } as T;
+    } else {
+        const docRef = await addDoc(collection(db, collectionName), data);
+        return { id: docRef.id, ...data } as T;
+    }
+};
+
+const updateDocument = async <T>(collectionName: string, id: string, data: Partial<T>): Promise<T> => {
+    const docRef = doc(db, collectionName, id);
+    await updateDoc(docRef, data);
+    const updatedDoc = await getDoc(docRef);
+    return { id: updatedDoc.id, ...updatedDoc.data() } as T;
+};
+
+const deleteDocument = async (collectionName: string, id: string): Promise<void> => {
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
+};
+
 
 // --- USER MUTATIONS ---
-export async function createUser(userData: Omit<User, 'id'>): Promise<User> {
-    await delay(300);
-    const newUser: User = { id: uuidv4(), ...userData };
-    users.push(newUser);
-    return newUser;
-}
-
-export async function updateUser(userId: string, userData: Partial<User>): Promise<User> {
-    await delay(300);
-    let updatedUser: User | undefined;
-    users = users.map(u => {
-        if (u.id === userId) {
-            updatedUser = { ...u, ...userData };
-            return updatedUser;
-        }
-        return u;
-    });
-    if (!updatedUser) throw new Error("User not found");
-    return updatedUser;
-}
-
-export async function deleteUser(userId: string): Promise<void> {
-    await delay(300);
-    users = users.filter(u => u.id !== userId);
-}
+export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
+    if (!userData.password) throw new Error("Password is required to create a user.");
+    const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+    const { password, ...userDataToSave } = userData;
+    const userToSave = { ...userDataToSave, firebaseUid: userCredential.user.uid };
+    return createDocument<User>('users', userToSave);
+};
+export const updateUser = (userId: string, userData: Partial<User>) => updateDocument<User>('users', userId, userData);
+export const deleteUser = (userId: string) => deleteDocument('users', userId);
 
 // --- CLIENT MUTATIONS ---
-export async function createClient(clientData: Omit<Client, 'id'>): Promise<Client> {
-    await delay(300);
-    const newClient: Client = { id: uuidv4(), ...clientData };
-    clients.push(newClient);
-    return newClient;
-}
-
-export async function updateClient(clientId: string, clientData: Partial<Client>): Promise<Client> {
-    await delay(300);
-    let updatedClient: Client | undefined;
-    clients = clients.map(c => {
-        if (c.id === clientId) {
-            updatedClient = { ...c, ...clientData };
-            return updatedClient;
-        }
-        return c;
-    });
-    if (!updatedClient) throw new Error("Client not found");
-    return updatedClient;
-}
-
-export async function deleteClient(clientId: string): Promise<void> {
-    await delay(300);
-    clients = clients.filter(c => c.id !== clientId);
-}
+export const createClient = (clientData: Omit<Client, 'id'>) => createDocument<Client>('clients', clientData);
+export const updateClient = (clientId: string, clientData: Partial<Client>) => updateDocument<Client>('clients', clientId, clientData);
+export const deleteClient = (clientId: string) => deleteDocument('clients', clientId);
 
 // --- SYSTEM MUTATIONS ---
-export async function createSystem(systemData: Omit<System, 'id'>): Promise<System> {
-    await delay(300);
-    const newSystem: System = { id: uuidv4(), ...systemData };
-    systems.push(newSystem);
-    return newSystem;
-}
-
-export async function updateSystem(systemId: string, systemData: Partial<System>): Promise<System> {
-    await delay(300);
-    let updatedSystem: System | undefined;
-    systems = systems.map(s => {
-        if (s.id === systemId) {
-            updatedSystem = { ...s, ...systemData };
-            return updatedSystem;
-        }
-        return s;
-    });
-    if (!updatedSystem) throw new Error("System not found");
-    return updatedSystem;
-}
-
-export async function deleteSystem(systemId: string): Promise<void> {
-    await delay(300);
-    systems = systems.filter(s => s.id !== systemId);
-}
+export const createSystem = (systemData: Omit<System, 'id'>) => createDocument<System>('systems', systemData);
+export const updateSystem = (systemId: string, systemData: Partial<System>) => updateDocument<System>('systems', systemId, systemData);
+export const deleteSystem = (systemId: string) => deleteDocument('systems', systemId);
 
 // --- EQUIPMENT MUTATIONS ---
-export async function createEquipment(equipmentData: Omit<Equipment, 'id'>): Promise<Equipment> {
-    await delay(300);
-    const newEquipment: Equipment = { id: uuidv4(), ...equipmentData };
-    equipments.push(newEquipment);
-    return newEquipment;
-}
-
-export async function updateEquipment(equipmentId: string, equipmentData: Partial<Equipment>): Promise<Equipment> {
-    await delay(300);
-    let updatedEquipment: Equipment | undefined;
-    equipments = equipments.map(e => {
-        if (e.id === equipmentId) {
-            updatedEquipment = { ...e, ...equipmentData };
-            return updatedEquipment;
-        }
-        return e;
-    });
-    if (!updatedEquipment) throw new Error("Equipment not found");
-    return updatedEquipment;
-}
-
-export async function deleteEquipment(equipmentId: string): Promise<void> {
-    await delay(300);
-    equipments = equipments.filter(e => e.id !== equipmentId);
-}
+export const createEquipment = (equipmentData: Omit<Equipment, 'id'>) => createDocument<Equipment>('equipments', equipmentData);
+export const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>): Promise<Equipment> => {
+    return updateDocument<Equipment>('equipments', equipmentId, equipmentData);
+};
+export const deleteEquipment = (equipmentId: string) => deleteDocument('equipments', equipmentId);
 
 // --- PROTOCOL MUTATIONS ---
-export async function createProtocol(protocolData: Omit<Protocol, 'id'>, id?: string): Promise<Protocol> {
-    await delay(300);
-    const newProtocol: Protocol = { id: id || uuidv4(), ...protocolData };
-    protocols.push(newProtocol);
-    return newProtocol;
-}
-
-export async function updateProtocol(protocolId: string, protocolData: Partial<Protocol>): Promise<Protocol> {
-    await delay(300);
-    let updatedProtocol: Protocol | undefined;
-    protocols = protocols.map(p => {
-        if (p.id === protocolId) {
-            updatedProtocol = { ...p, ...protocolData };
-            return updatedProtocol;
-        }
-        return p;
-    });
-    if (!updatedProtocol) throw new Error("Protocol not found");
-    return updatedProtocol;
-}
-
-export async function deleteProtocol(protocolId: string): Promise<void> {
-    await delay(300);
-    protocols = protocols.filter(p => p.id !== protocolId);
-}
+export const createProtocol = (protocolData: Omit<Protocol, 'id'>, id?: string) => createDocument<Protocol>('protocols', protocolData, id);
+export const updateProtocol = (protocolId: string, protocolData: Partial<Protocol>) => updateDocument<Protocol>('protocols', protocolId, protocolData);
+export const deleteProtocol = (protocolId: string) => deleteDocument('protocols', protocolId);
 
 // --- CEDULA MUTATIONS ---
-export async function createCedula(cedulaData: Omit<Cedula, 'id'>): Promise<Cedula> {
-    await delay(300);
-    const newCedula: Cedula = { id: uuidv4(), ...cedulaData };
-    cedulas.push(newCedula);
-    return newCedula;
-}
+export const createCedula = (cedulaData: Omit<Cedula, 'id'>) => createDocument<Cedula>('cedulas', cedulaData);
+export const updateCedula = async (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void): Promise<Cedula> => {
+    onStep?.("Iniciando actualización en Firestore...");
+    const updated = await updateDocument<Cedula>('cedulas', cedulaId, cedulaData);
+    onStep?.("Actualización en Firestore completada.");
+    return updated;
+};
+export const deleteCedula = (cedulaId: string) => deleteDocument('cedulas', cedulaId);
 
-export async function updateCedula(cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void): Promise<Cedula> {
-    await delay(500);
-    onStep?.("Iniciando actualización...");
-    
-    let updatedCedula: Cedula | undefined;
-    cedulas = cedulas.map(c => {
-        if (c.id === cedulaId) {
-            onStep?.(`Cédula con folio ${c.folio} encontrada. Aplicando cambios...`);
-            updatedCedula = { ...c, ...cedulaData };
-             onStep?.("Cambios aplicados en memoria.");
-            return updatedCedula;
-        }
-        return c;
-    });
-    
-    if (!updatedCedula) {
-        onStep?.(`ERROR: No se encontró la cédula con ID ${cedulaId}.`);
-        throw new Error("Cedula not found");
-    }
 
-    onStep?.("Actualización finalizada con éxito.");
-    return updatedCedula;
-}
-
-export async function deleteCedula(cedulaId: string): Promise<void> {
-    await delay(300);
-    cedulas = cedulas.filter(c => c.id !== cedulaId);
-}
-
-// --- SETTINGS MUTATIONS ---
-export async function updateCompanySettings(settingsData: Partial<CompanySettings>): Promise<CompanySettings> {
-    await delay(200);
-    companySettings = { ...companySettings, ...settingsData };
-    return { ...companySettings };
-}
-
-// --- MEDIA LIBRARY (MOCKED) ---
+// --- MEDIA LIBRARY ---
 export function subscribeToMediaLibrary(setFiles: (files: MediaFile[]) => void): () => void {
-    const interval = setInterval(() => {
-        setFiles([...mediaLibrary].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    }, 1000); // Simulate real-time updates polling
-    
-    // Initial load
-    setFiles([...mediaLibrary].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    const mediaRef = collection(db, 'mediaLibrary');
+    const q = query(mediaRef); // You can add orderBy here later if needed
 
-    return () => clearInterval(interval);
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const files: MediaFile[] = [];
+        querySnapshot.forEach((doc) => {
+            files.push({ id: doc.id, ...doc.data() } as MediaFile);
+        });
+        // Sort by date client-side
+        files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setFiles(files);
+    }, (error) => {
+        console.error("Error subscribing to media library:", error);
+    });
+
+    return unsubscribe;
 }
+
 
 export async function uploadFile(files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void): Promise<void> {
+    const uploadPromises: Promise<void>[] = [];
+
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        logAudit(`Subiendo ${file.name}...`);
-        
-        // Simulate upload progress
-        let progress = 0;
-        while (progress < 100) {
-            await delay(50); // Simulate network latency
-            progress += Math.random() * 20;
-            if (progress > 100) progress = 100;
-            const overallProgress = ((i + (progress / 100)) / files.length) * 100;
-            onProgress(overallProgress);
-        }
+        const fileId = `${Date.now()}-${file.name}`;
+        const storageRef = ref(storage, `mediaLibrary/${fileId}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
-        const newMediaFile: MediaFile = {
-            id: uuidv4(),
-            name: file.name,
-            url: URL.createObjectURL(file), // Use blob URL for local preview
-            type: file.type,
-            size: file.size,
-            createdAt: new Date().toISOString(),
-        };
-        mediaLibrary.push(newMediaFile);
-        logAudit(`${file.name} subido exitosamente.`);
+        const promise = new Promise<void>((resolve, reject) => {
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    logAudit(`Progreso de ${file.name}: ${progress.toFixed(2)}%`);
+                    // Note: This progress is per-file. A more complex calculation is needed for overall progress.
+                },
+                (error) => {
+                    logAudit(`ERROR al subir ${file.name}: ${error.message}`);
+                    console.error("Upload error for file: ", file.name, error);
+                    reject(error);
+                },
+                async () => {
+                    logAudit(`${file.name} subido, obteniendo URL de descarga...`);
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    const mediaFileData: Omit<MediaFile, 'id'> = {
+                        name: file.name,
+                        url: downloadURL,
+                        type: file.type,
+                        size: file.size,
+                        createdAt: new Date().toISOString(),
+                    };
+                    logAudit(`Guardando metadatos de ${file.name} en Firestore...`);
+                    await addDoc(collection(db, 'mediaLibrary'), mediaFileData);
+                    logAudit(`Metadatos de ${file.name} guardados.`);
+                    resolve();
+                }
+            );
+        });
+        uploadPromises.push(promise);
     }
+
+    // A simple way to report overall progress
+    let completed = 0;
+    uploadPromises.forEach(p => {
+        p.then(() => {
+            completed++;
+            const overallProgress = (completed / files.length) * 100;
+            onProgress(overallProgress);
+        });
+    });
+
+    await Promise.all(uploadPromises);
 }
 
+
 export async function deleteMediaFile(file: MediaFile): Promise<void> {
-    await delay(300);
-    mediaLibrary = mediaLibrary.filter(f => f.id !== file.id);
-    // In a real scenario, you'd also revoke the object URL if it's a blob URL
-    // URL.revokeObjectURL(file.url);
+    // 1. Delete the file from Cloud Storage
+    const fileRef = ref(storage, file.url);
+    await deleteObject(fileRef);
+
+    // 2. Delete the metadata from Firestore
+    await deleteDocument('mediaLibrary', file.id);
 }

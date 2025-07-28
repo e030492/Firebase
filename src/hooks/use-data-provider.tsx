@@ -27,8 +27,10 @@ import {
     getCompanySettings,
     subscribeToMediaLibrary as apiSubscribeToMediaLibrary,
     uploadFile as apiUploadFile,
-    deleteMediaFile as apiDeleteMediaFile
+    deleteMediaFile as apiDeleteMediaFile,
+    auth // Import auth instance
 } from '@/lib/services';
+import { onAuthStateChanged } from "firebase/auth";
 
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
@@ -115,8 +117,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    setLoading(true);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // User is signed in, see docs for a list of available properties
+            // https://firebase.google.com/docs/reference/js/firebase.User
+            fetchData();
+        } else {
+            // User is signed out
+            setLoading(false); // Not fetching data if not logged in
+        }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, [fetchData]);
+
 
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
       const user = await apiLoginUser(email, pass);
