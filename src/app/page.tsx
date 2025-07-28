@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -32,11 +33,10 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
-    // Asegurarse de que la autenticación esté lista antes de intentar iniciar sesión
     if (!isAuthReady) {
       console.warn("Attempted login before Firebase Auth was ready.");
       setIsLoading(false);
-      setError("La autenticación de Firebase no está lista. Intente de nuevo.");
+      setError("El servicio de autenticación no está listo. Intente de nuevo.");
       return;
     }
 
@@ -46,12 +46,18 @@ export default function LoginPage() {
       if (user) {
         router.push('/dashboard/dashboard');
       } else {
+        // This case might not be reached if loginUser always throws on failure.
         setError('Usuario o contraseña incorrectos.');
       }
     } catch (err: any) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error("Login failed:", err);
-      setError(`Error crítico durante el login: ${errorMessage}`);
+        console.error("Login failed:", err);
+        // Check for the specific Firebase auth error code
+        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+            setError('Usuario o contraseña incorrectos.');
+        } else {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            setError(`Error: ${errorMessage}`);
+        }
     } finally {
       setIsLoading(false);
     }
