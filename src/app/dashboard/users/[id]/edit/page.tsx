@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
@@ -165,7 +166,6 @@ export default function EditUserPage() {
     setRole(newRoleValue);
     const newPermissions = defaultPermissionsByRole[newRoleValue] || initialPermissions;
     setPermissions(newPermissions);
-    // Reset selectedClientId when role changes if it's not 'cliente'
     if (newRoleValue !== 'cliente') {
         setSelectedClientId(undefined);
     }
@@ -213,23 +213,26 @@ export default function EditUserPage() {
         };
 
         if (role === 'cliente') {
-            updatedData.clientId = selectedClientId || '';
+            if (!selectedClientId) {
+                 alert('Por favor, seleccione un cliente para el rol de Cliente.');
+                 setIsSaving(false);
+                 return;
+            }
+            updatedData.clientId = selectedClientId;
         } else {
-            // Ensure clientId is not part of the update if the role is not 'cliente'
-            // This prevents sending `undefined` to Firestore.
-            delete (updatedData as Partial<User & { clientId: any }>).clientId;
+            updatedData.clientId = ''; // Explicitly clear the client ID
         }
-
+        
         if (password) {
             updatedData.password = password;
         }
 
-        await updateUser(userId, updatedData); // Se pasa updatedData a updateUser
+        await updateUser(userId, updatedData);
         alert('Usuario actualizado con éxito.');
         router.push('/dashboard/users');
     } catch (error) {
         console.error("Failed to update user:", error);
-        alert("Error al actualizar el usuario.");
+        alert("Error al actualizar el usuario. Revise las reglas de seguridad de Firestore.");
     } finally {
         setIsSaving(false);
     }
@@ -480,3 +483,5 @@ export default function EditUserPage() {
     </form>
   );
 }
+
+    
