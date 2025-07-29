@@ -1,10 +1,9 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,15 +17,31 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useData } from '@/hooks/use-data-provider';
+import { useData, LoadingStatus } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser, loadingStatus, companySettings } = useData(); 
+  const { loginUser, loadingStatus, companySettings, seedAdminUser } = useData(); 
   const [email, setEmail] = useState('admin@escuadramx.com');
   const [password, setPassword] = useState('admin123');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [seeding, setSeeding] = useState(true);
+
+  useEffect(() => {
+    async function performSeeding() {
+        try {
+            await seedAdminUser();
+        } catch (err) {
+            console.error("Seeding failed", err);
+            setError("Error al configurar la cuenta de administrador.");
+        } finally {
+            setSeeding(false);
+        }
+    }
+    performSeeding();
+  }, [seedAdminUser]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,19 +62,19 @@ export default function LoginPage() {
         if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
             setError('Usuario o contraseña incorrectos.');
         } else {
-            setError(`Error: ${err.message}`);
+            setError(`Error: ${err.message || 'Ocurrió un error inesperado.'}`);
         }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isFormDisabled = isLoading || loadingStatus !== 'ready';
+  const isFormDisabled = isLoading || loadingStatus !== 'ready' || seeding;
 
   const getButtonText = () => {
+    if (seeding) return "Verificando cuenta de administrador...";
     if (isLoading) return "Accediendo...";
     switch(loadingStatus) {
-        case 'seeding': return "Verificando cuenta de administrador...";
         case 'authenticating': return "Autenticando...";
         case 'loading_data': return "Cargando datos...";
         case 'error': return "Error. Intente de nuevo.";
@@ -106,7 +121,7 @@ export default function LoginPage() {
               </CardContent>
               <CardFooter className="flex-col gap-4">
                 <Button type="submit" className="w-full" disabled={isFormDisabled}>
-                  {(isLoading || loadingStatus !== 'ready') && (
+                  {(isFormDisabled) && (
                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   <span>{getButtonText()}</span>

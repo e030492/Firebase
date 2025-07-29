@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -92,19 +91,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
-      async function initialize() {
+      async function initializeApp() {
           setLoadingStatus('seeding');
           try {
               await seedMockUsers();
+              setIsAuthReady(true); // Now we are ready to check auth state
           } catch (seedError) {
-              console.error("Failed to seed admin user:", seedError);
+              console.error("Critical error during admin user seeding:", seedError);
               setError("Error al configurar la cuenta de administrador.");
               setLoadingStatus('error');
-              return;
           }
-          setIsAuthReady(true);
       }
-      initialize();
+      initializeApp();
   }, []);
 
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
