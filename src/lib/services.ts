@@ -94,8 +94,6 @@ export async function seedAdminUser() {
         } catch (error: any) {
             if (error.code === 'auth/email-already-in-use') {
                  console.warn(`User ${adminEmail} already exists in Auth but not in Firestore. This might indicate a partially failed previous setup. The login for this user might not work as expected without manual intervention in the Firebase console.`);
-                 // In a real app, you might want to try and link the auth user to a new firestore doc here,
-                 // but that requires more complex logic and admin privileges.
             } else {
                  console.error(`Failed to create admin user ${adminEmail}:`, error);
                  throw error;
