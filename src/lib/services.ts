@@ -1,5 +1,4 @@
 
-
 import { 
     collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit, onSnapshot
 } from "firebase/firestore";
@@ -42,7 +41,7 @@ const getCollectionData = async <T extends { id: string }>(collectionName: strin
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     } catch (error) {
         console.error(`Error getting ${collectionName}:`, error);
-        throw error; // Re-throw the original error to be caught by the caller
+        throw error;
     }
 };
 
@@ -63,8 +62,6 @@ export async function loginUser(email: string, pass: string): Promise<User | nul
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-        // This case might happen if a user exists in Auth but not in Firestore.
-        // For this app's logic, we sign them out and deny access.
         await signOut(auth);
         throw new Error("No user document found for this email.");
     }
@@ -84,7 +81,6 @@ export async function getCompanySettings(): Promise<CompanySettings> {
     if (docSnap.exists()) {
         return { id: docSnap.id, ...docSnap.data() } as CompanySettings;
     } else {
-        // Provide a default fallback if the document doesn't exist
         return { id: 'company', logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' };
     }
 }
@@ -134,28 +130,28 @@ export const updateUser = (userId: string, userData: Partial<User>) => updateDoc
 export const deleteUser = (userId: string) => deleteDocument('users', userId);
 
 export async function seedMockUsers() {
+    console.log("Starting user sync process...");
     for (const mockUser of mockUsers) {
         try {
-            // Check if user document exists in Firestore using a query
-            const q = query(collection(db, "users"), where("email", "==", mockUser.email), limit(1));
+            const q = query(collection(db, "users"), where("email", "==", mockUser.email.toLowerCase()), limit(1));
             const querySnapshot = await getDocs(q);
             
-            // If user does not exist in Firestore, create them in Auth and then Firestore
             if (querySnapshot.empty) {
-                console.log(`User ${mockUser.email} not found in Firestore. Creating...`);
-                // This will create the user in Auth and Firestore
+                console.log(`User ${mockUser.email} not found. Creating...`);
                 await createUser(mockUser);
+                console.log(`User ${mockUser.email} created successfully.`);
+            } else {
+                console.log(`User ${mockUser.email} already exists.`);
             }
         } catch (error: any) {
-            // This will fail if user already exists in Auth, which is fine if they also exist in Firestore.
-            // But if they exist in Auth and not in Firestore, it's an inconsistent state we don't handle here.
-            if (error.code !== 'auth/email-already-in-use') {
-                 console.error(`Error seeding user ${mockUser.email}:`, error);
+            if (error.code === 'auth/email-already-in-use') {
+                console.log(`Auth user for ${mockUser.email} already exists. Skipping creation.`);
             } else {
-                 console.log(`User ${mockUser.email} already exists in Auth.`);
+                 console.error(`Error processing user ${mockUser.email}:`, error);
             }
         }
     }
+    console.log("User sync process finished.");
 }
 
 // --- CLIENT MUTATIONS ---
@@ -211,7 +207,7 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
         return new Promise<void>((resolve, reject) => {
             uploadTask.on('state_changed',
                 (snapshot) => {
-                    // This progress is per-file, overall progress is calculated below
+                    // Per-file progress is handled here, but we use a custom overall progress
                 },
                 (error) => {
                     logAudit(`ERROR al subir ${file.name}: ${error.message}`);
@@ -221,9 +217,10 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
                     totalUploaded += file.size;
                     const overallProgress = (totalUploaded / totalSize) * 100;
                     onProgress(overallProgress);
-                    logAudit(`Progreso total: ${overallProgress.toFixed(2)}%`);
                     
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    logAudit(`Archivo ${file.name} subido, URL obtenida.`);
+                    
                     const mediaFileData: Omit<MediaFile, 'id'> = {
                         name: file.name,
                         url: downloadURL,
@@ -232,6 +229,7 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
                         createdAt: new Date().toISOString(),
                     };
                     await addDoc(collection(db, 'mediaLibrary'), mediaFileData);
+                    logAudit(`Metadatos de ${file.name} guardados en Firestore.`);
                     resolve();
                 }
             );

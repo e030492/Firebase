@@ -32,21 +32,20 @@ export default function LoginPage() {
   useEffect(() => {
     // This effect runs once on mount to ensure mock users are in Firebase Auth & Firestore
     const seedData = async () => {
+        if (!isAuthReady) return;
         setIsSeeding(true);
         try {
             await seedMockUsers();
-            console.log("Mock users seeded successfully.");
+            console.log("User sync process completed.");
         } catch (error) {
-            console.error("Could not seed mock users:", error);
+            console.error("Could not sync mock users:", error);
             setError("Error al sincronizar usuarios de prueba.");
         } finally {
             setIsSeeding(false);
         }
     };
     
-    if (isAuthReady) {
-      seedData();
-    }
+    seedData();
   }, [isAuthReady]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -54,28 +53,22 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
-    if (!isAuthReady) {
-      console.warn("Attempted login before Firebase Auth was ready.");
-      setIsLoading(false);
-      setError("El servicio de autenticación no está listo. Intente de nuevo.");
-      return;
-    }
-
     try {
       const user = await loginUser(email, password);
 
       if (user) {
         router.push('/dashboard/dashboard');
       } else {
+        // This case should ideally not be hit if the catch block is working.
         setError('Usuario o contraseña incorrectos.');
       }
     } catch (err: any) {
         console.error("Login failed:", err);
-        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        // Specifically check for 'invalid-credential' which covers user not found, wrong password, etc.
+        if (err.code === 'auth/invalid-credential') {
             setError('Usuario o contraseña incorrectos.');
         } else {
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            setError(`Error: ${errorMessage}`);
+            setError(`Error: ${err.message}`);
         }
     } finally {
       setIsLoading(false);
@@ -128,21 +121,11 @@ export default function LoginPage() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>Sincronizando usuarios...</span>
                     </>
-                  ) : dataLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Cargando datos...</span>
-                    </>
                   ) : isLoading ? (
                      <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>Accediendo...</span>
                     </>
-                  ) : !isAuthReady ? (
-                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Inicializando...</span>
-                     </>
                   ) : 'Acceder'}
                 </Button>
                  <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">

@@ -92,7 +92,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
     setLoadingStatus('loading_data');
     try {
-        // Force token refresh to ensure permissions are up to date for Firestore rules.
         await firebaseUser.getIdToken(true); 
 
         const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
@@ -130,7 +129,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setCedulas([]);
         setCompanySettings(null); 
         localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-        setLoadingStatus('ready'); // Set to ready to enable login screen
+        setLoadingStatus('ready');
       }
     });
     return () => unsubscribe();
@@ -138,14 +137,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
-      if (!isAuthReady) {
-        console.warn("Attempted login before Firebase Auth was ready.");
-        throw new Error("La autenticación de Firebase no está lista. Intente de nuevo.");
-      }
       const user = await apiLoginUser(email, pass);
       if (user) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-          // After successful login, onAuthStateChanged will trigger fetchAllData
+          // onAuthStateChanged will trigger data fetch.
       }
       return user;
   };
@@ -157,33 +152,97 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return newUser;
   };
 
-  const updateUser = (userId: string, userData: Partial<User>) => apiUpdateUser(userId, userData);
-  const deleteUser = (userId: string) => apiDeleteUser(userId);
+  const updateUser = async (userId: string, userData: Partial<User>): Promise<User> => {
+      const updatedUser = await apiUpdateUser(userId, userData);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updatedUser } : u));
+      return updatedUser;
+  };
+  
+  const deleteUser = async (userId: string): Promise<void> => {
+      await apiDeleteUser(userId);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
 
   // --- CLIENT MUTATIONS ---
-  const createClient = (clientData: Omit<Client, 'id'>) => apiCreateClient(clientData);
-  const updateClient = (clientId: string, clientData: Partial<Client>) => apiUpdateClient(clientId, clientData);
-  const deleteClient = (clientId: string) => apiDeleteClient(clientId);
+  const createClient = async (clientData: Omit<Client, 'id'>) => {
+    const newClient = await apiCreateClient(clientData);
+    setClients(prev => [...prev, newClient]);
+    return newClient;
+  };
+
+  const updateClient = async (clientId: string, clientData: Partial<Client>) => {
+    const updatedClient = await apiUpdateClient(clientId, clientData);
+    setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
+    return updatedClient;
+  };
+
+  const deleteClient = async (clientId: string) => {
+    await apiDeleteClient(clientId);
+    setClients(prev => prev.filter(c => c.id !== clientId));
+  };
 
   // --- SYSTEM MUTATIONS ---
-  const createSystem = (systemData: Omit<System, 'id'>) => apiCreateSystem(systemData);
-  const updateSystem = (systemId: string, systemData: Partial<System>) => apiUpdateSystem(systemId, systemData);
-  const deleteSystem = (systemId: string) => apiDeleteSystem(systemId);
+  const createSystem = async (systemData: Omit<System, 'id'>) => {
+    const newSystem = await apiCreateSystem(systemData);
+    setSystems(prev => [...prev, newSystem]);
+    return newSystem;
+  };
+
+  const updateSystem = async (systemId: string, systemData: Partial<System>) => {
+    const updatedSystem = await apiUpdateSystem(systemId, systemData);
+    setSystems(prev => prev.map(s => s.id === systemId ? updatedSystem : s));
+    return updatedSystem;
+  };
+  const deleteSystem = async (systemId: string) => {
+    await apiDeleteSystem(systemId);
+    setSystems(prev => prev.filter(s => s.id !== systemId));
+  };
 
   // --- EQUIPMENT MUTATIONS ---
-  const createEquipment = (equipmentData: Omit<Equipment, 'id'>) => apiCreateEquipment(equipmentData);
-  const updateEquipment = (equipmentId: string, equipmentData: Partial<Equipment>) => apiUpdateEquipment(equipmentId, equipmentData);
-  const deleteEquipment = (equipmentId: string) => apiDeleteEquipment(equipmentId);
+  const createEquipment = async (equipmentData: Omit<Equipment, 'id'>) => {
+    const newEquipment = await apiCreateEquipment(equipmentData);
+    setEquipments(prev => [...prev, newEquipment]);
+    return newEquipment;
+  };
+  const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>) => {
+    await apiUpdateEquipment(equipmentId, equipmentData);
+    // No need to return from update, state will be updated via snapshot or refetch
+  };
+  const deleteEquipment = async (equipmentId: string) => {
+    await apiDeleteEquipment(equipmentId);
+    setEquipments(prev => prev.filter(e => e.id !== equipmentId));
+  };
 
   // --- PROTOCOL MUTATIONS ---
-  const createProtocol = (protocolData: Omit<Protocol, 'id'>, id?: string) => apiCreateProtocol(protocolData, id);
-  const updateProtocol = (protocolId: string, protocolData: Partial<Protocol>) => apiUpdateProtocol(protocolId, protocolData);
-  const deleteProtocol = (protocolId: string) => apiDeleteProtocol(protocolId);
+  const createProtocol = async (protocolData: Omit<Protocol, 'id'>, id?: string) => {
+    const newProtocol = await apiCreateProtocol(protocolData, id);
+    setProtocols(prev => [...prev, newProtocol]);
+    return newProtocol;
+  };
+  const updateProtocol = async (protocolId: string, protocolData: Partial<Protocol>) => {
+    const updatedProtocol = await apiUpdateProtocol(protocolId, protocolData);
+    setProtocols(prev => prev.map(p => p.id === protocolId ? updatedProtocol : p));
+    return updatedProtocol;
+  };
+  const deleteProtocol = async (protocolId: string) => {
+    await apiDeleteProtocol(protocolId);
+    setProtocols(prev => prev.filter(p => p.id !== protocolId));
+  };
 
   // --- CEDULA MUTATIONS ---
-  const createCedula = (cedulaData: Omit<Cedula, 'id'>) => apiCreateCedula(cedulaData);
-  const updateCedula = (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => apiUpdateCedula(cedulaId, cedulaData, onStep);
-  const deleteCedula = (cedulaId: string) => apiDeleteCedula(cedulaId);
+  const createCedula = async (cedulaData: Omit<Cedula, 'id'>) => {
+    const newCedula = await apiCreateCedula(cedulaData);
+    setCedulas(prev => [...prev, newCedula]);
+    return newCedula;
+  };
+  const updateCedula = async (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => {
+     await apiUpdateCedula(cedulaId, cedulaData, onStep);
+  };
+  const deleteCedula = async (cedulaId: string) => {
+    await apiDeleteCedula(cedulaId);
+    setCedulas(prev => prev.filter(c => c.id !== cedulaId));
+  };
 
   // --- MEDIA LIBRARY ---
   const subscribeToMediaLibrary = (setFiles: (files: MediaFile[]) => void) => apiSubscribeToMediaLibrary(setFiles);
