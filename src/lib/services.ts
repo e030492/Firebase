@@ -139,27 +139,9 @@ export const updateUser = (userId: string, userData: Partial<User>) => updateDoc
 export const deleteUser = (userId: string) => deleteDocument('users', userId);
 
 export async function seedMockUsers() {
-    console.log("Starting user sync process...");
-    for (const mockUser of mockUsers) {
-        try {
-            const q = query(collection(db, "users"), where("email", "==", mockUser.email.toLowerCase()), limit(1));
-            const querySnapshot = await getDocs(q);
-            
-            if (querySnapshot.empty) {
-                console.log(`User ${mockUser.email} not found in Firestore. Creating...`);
-                // This will create the user in Auth and then in Firestore
-                await createUser(mockUser);
-                console.log(`User ${mockUser.email} created successfully in Auth and Firestore.`);
-            }
-        } catch (error: any) {
-            if (error.code === 'auth/email-already-in-use') {
-                console.log(`Auth user for ${mockUser.email} already exists. Skipping Auth creation.`);
-            } else {
-                 console.error(`Error processing user ${mockUser.email}:`, error);
-            }
-        }
-    }
-    console.log("User sync process finished.");
+    // This function is being deprecated in favor of manual user creation through the UI
+    // to ensure Auth and Firestore are always in sync.
+    console.log("User seeding has been disabled.");
 }
 
 

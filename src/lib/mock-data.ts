@@ -7,7 +7,7 @@ export const mockUsers = [
     name: 'Erick (Admin)',
     email: 'erick@escuadramx.com',
     role: 'Administrador',
-    password: 'admin123',
+    // Password is intentionally omitted. It should be managed in Firebase Auth Console.
     signatureUrl: '',
     photoUrl: 'https://placehold.co/100x100.png',
     permissions: {
@@ -15,57 +15,6 @@ export const mockUsers = [
         equipments: { create: true, update: true, delete: true },
         systems: { create: true, update: true, delete: true },
         users: { create: true, update: true, delete: true },
-        protocols: { create: true, update: true, delete: true },
-        cedulas: { create: true, update: true, delete: true },
-    }
-  },
-  {
-    id: '5',
-    name: 'Admin User',
-    email: 'admin@escuadra.com',
-    role: 'Administrador',
-    password: 'admin123',
-    signatureUrl: '',
-    photoUrl: 'https://placehold.co/100x100.png',
-    permissions: {
-        clients: { create: true, update: true, delete: true },
-        equipments: { create: true, update: true, delete: true },
-        systems: { create: true, update: true, delete: true },
-        users: { create: true, update: true, delete: true },
-        protocols: { create: true, update: true, delete: true },
-        cedulas: { create: true, update: true, delete: true },
-    }
-  },
-  {
-    id: '2',
-    name: 'Blanca (Técnico)',
-    email: 'blanca@escuadra.com',
-    role: 'Técnico',
-    password: 'admin123',
-    signatureUrl: '',
-    photoUrl: 'https://placehold.co/100x100.png',
-    permissions: {
-        clients: { create: false, update: false, delete: false },
-        equipments: { create: false, update: true, delete: false },
-        systems: { create: false, update: false, delete: false },
-        users: { create: false, update: false, delete: false },
-        protocols: { create: true, update: true, delete: false },
-        cedulas: { create: true, update: true, delete: false },
-    }
-  },
-    {
-    id: '4',
-    name: 'Supervisor General',
-    email: 'supervisor@escuadra.com',
-    role: 'Supervisor',
-    password: 'admin123',
-    signatureUrl: '',
-    photoUrl: 'https://placehold.co/100x100.png',
-    permissions: {
-        clients: { create: true, update: true, delete: false },
-        equipments: { create: true, update: true, delete: false },
-        systems: { create: true, update: true, delete: false },
-        users: { create: false, update: false, delete: false },
         protocols: { create: true, update: true, delete: true },
         cedulas: { create: true, update: true, delete: true },
     }

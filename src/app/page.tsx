@@ -24,29 +24,9 @@ export default function LoginPage() {
   const router = useRouter();
   const { loginUser, loading: dataLoading, companySettings, isAuthReady } = useData(); 
   const [email, setEmail] = useState('erick@escuadramx.com');
-  const [password, setPassword] = useState('admin123');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(true);
   const [error, setError] = useState('');
-  
-  useEffect(() => {
-    // This effect runs once on mount to ensure mock users are in Firebase Auth & Firestore
-    const seedData = async () => {
-        if (!isAuthReady) return;
-        setIsSeeding(true);
-        try {
-            await seedMockUsers();
-            console.log("User sync process completed.");
-        } catch (error) {
-            console.error("Could not sync mock users:", error);
-            setError("Error al sincronizar usuarios de prueba.");
-        } finally {
-            setIsSeeding(false);
-        }
-    };
-    
-    seedData();
-  }, [isAuthReady]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +55,7 @@ export default function LoginPage() {
     }
   };
 
-  const isFormDisabled = isLoading || dataLoading || !isAuthReady || isSeeding;
+  const isFormDisabled = isLoading || dataLoading || !isAuthReady;
 
   return (
     <>
@@ -110,18 +90,13 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
-                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isFormDisabled} placeholder="admin123"/>
+                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isFormDisabled} placeholder="Contraseña"/>
                 </div>
                 {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
               </CardContent>
               <CardFooter className="flex-col gap-4">
                 <Button type="submit" className="w-full" disabled={isFormDisabled}>
-                  {isSeeding ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Sincronizando usuarios...</span>
-                    </>
-                  ) : isLoading ? (
+                  {isLoading ? (
                      <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>Accediendo...</span>
