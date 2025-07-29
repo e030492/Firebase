@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -18,32 +19,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useData } from '@/hooks/use-data-provider';
-import { seedMockUsers } from '@/lib/services';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser, loading: dataLoading, companySettings, isAuthReady } = useData(); 
+  const { loginUser, loadingStatus, companySettings } = useData(); 
   const [email, setEmail] = useState('admin@escuadramx.com');
   const [password, setPassword] = useState('admin123');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isSeeding, setIsSeeding] = useState(true);
-
-  useEffect(() => {
-    async function runSeed() {
-      if (isAuthReady) {
-        try {
-          await seedMockUsers();
-        } catch (seedError) {
-          console.error("Failed to seed admin user:", seedError);
-          setError("Error al configurar la cuenta de administrador.");
-        } finally {
-          setIsSeeding(false);
-        }
-      }
-    }
-    runSeed();
-  }, [isAuthReady]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,12 +54,17 @@ export default function LoginPage() {
     }
   };
 
-  const isFormDisabled = isLoading || dataLoading || !isAuthReady || isSeeding;
+  const isFormDisabled = isLoading || loadingStatus !== 'ready';
 
   const getButtonText = () => {
-    if (isSeeding) return "Verificando cuenta de administrador...";
     if (isLoading) return "Accediendo...";
-    return "Acceder";
+    switch(loadingStatus) {
+        case 'seeding': return "Verificando cuenta de administrador...";
+        case 'authenticating': return "Autenticando...";
+        case 'loading_data': return "Cargando datos...";
+        case 'error': return "Error. Intente de nuevo.";
+        default: return "Acceder";
+    }
   }
 
   return (
@@ -118,7 +106,7 @@ export default function LoginPage() {
               </CardContent>
               <CardFooter className="flex-col gap-4">
                 <Button type="submit" className="w-full" disabled={isFormDisabled}>
-                  {(isLoading || isSeeding) && (
+                  {(isLoading || loadingStatus !== 'ready') && (
                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   <span>{getButtonText()}</span>

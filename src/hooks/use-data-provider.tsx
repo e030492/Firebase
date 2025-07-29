@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -36,7 +37,7 @@ import {
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
 import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 
-export type LoadingStatus = 'idle' | 'authenticating' | 'loading_data' | 'ready' | 'error';
+export type LoadingStatus = 'idle' | 'seeding' | 'authenticating' | 'loading_data' | 'ready' | 'error';
 
 type DataContextType = {
   users: User[];
@@ -90,6 +91,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
+  useEffect(() => {
+      async function initialize() {
+          setLoadingStatus('seeding');
+          try {
+              await seedMockUsers();
+          } catch (seedError) {
+              console.error("Failed to seed admin user:", seedError);
+              setError("Error al configurar la cuenta de administrador.");
+              setLoadingStatus('error');
+              return;
+          }
+          setIsAuthReady(true);
+          setLoadingStatus('idle'); // Ready for auth check
+      }
+      initialize();
+  }, []);
+
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
     setLoadingStatus('loading_data');
     try {
@@ -116,9 +134,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!isAuthReady) return;
+
     setLoadingStatus('authenticating');
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthReady(true);
       if (user) {
         fetchAllData(user);
       } else {
@@ -134,7 +153,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
     });
     return () => unsubscribe();
-  }, [fetchAllData]);
+  }, [isAuthReady, fetchAllData]);
 
 
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
@@ -265,7 +284,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     protocols,
     cedulas,
     companySettings,
-    loading: loadingStatus !== 'ready' || !isAuthReady,
+    loading: loadingStatus !== 'ready',
     loadingStatus,
     error,
     isAuthReady,

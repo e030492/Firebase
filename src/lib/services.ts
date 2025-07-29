@@ -1,4 +1,5 @@
 
+
 import { 
     collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit, onSnapshot
 } from "firebase/firestore";
@@ -133,6 +134,7 @@ export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
     // Return the complete user object with the correct ID
     return { id: authUid, ...userDataToSave };
 };
+
 export const updateUser = (userId: string, userData: Partial<User>) => updateDocument<User>('users', userId, userData);
 export const deleteUser = async (userId: string) => {
     // This is a simplified delete. In a real app, you'd need a Cloud Function
