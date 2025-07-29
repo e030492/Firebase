@@ -3,7 +3,7 @@ export const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
 
 export const mockUsers = [
   {
-    id: '1',
+    id: '1', // This ID might be overwritten by Firebase Auth UID
     name: 'Erick (Admin)',
     email: 'erick@escuadramx.com',
     role: 'Administrador',

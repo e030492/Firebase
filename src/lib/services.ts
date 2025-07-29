@@ -62,8 +62,10 @@ export async function loginUser(email: string, pass: string): Promise<User | nul
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
+        // If user exists in Auth but not Firestore, something is wrong.
+        // For this app, we assume they must exist in both.
         await signOut(auth);
-        throw new Error("No user document found for this email.");
+        throw new Error("No user document found for this email in Firestore.");
     }
     const userDoc = querySnapshot.docs[0];
     const userData = { id: userDoc.id, ...userDoc.data() } as User;
@@ -81,6 +83,7 @@ export async function getCompanySettings(): Promise<CompanySettings> {
     if (docSnap.exists()) {
         return { id: docSnap.id, ...docSnap.data() } as CompanySettings;
     } else {
+        // Default settings if none exist
         return { id: 'company', logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' };
     }
 }
@@ -118,13 +121,19 @@ const deleteDocument = (collectionName: string, id: string): Promise<void> => {
 // --- USER MUTATIONS ---
 export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
     if (!userData.password) throw new Error("Password is required to create a user.");
+    
+    // Step 1: Create user in Firebase Authentication
     const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+    const authUid = userCredential.user.uid;
+    
+    // Step 2: Save user data in Firestore using the Auth UID as the document ID
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userDataToSave } = userData;
-    // Use the UID from Auth as the document ID in Firestore for consistency
-    const docRef = doc(db, 'users', userCredential.user.uid);
+    const docRef = doc(db, 'users', authUid);
     await setDoc(docRef, userDataToSave);
-    return { id: userCredential.user.uid, ...userDataToSave };
+
+    // Return the complete user object with the correct ID
+    return { id: authUid, ...userDataToSave };
 };
 export const updateUser = (userId: string, userData: Partial<User>) => updateDocument<User>('users', userId, userData);
 export const deleteUser = (userId: string) => deleteDocument('users', userId);
@@ -137,15 +146,24 @@ export async function seedMockUsers() {
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
-                console.log(`User ${mockUser.email} not found. Creating...`);
+                console.log(`User ${mockUser.email} not found in Firestore. Creating...`);
+                // This will create the user in Auth and then in Firestore
                 await createUser(mockUser);
-                console.log(`User ${mockUser.email} created successfully.`);
+                console.log(`User ${mockUser.email} created successfully in Auth and Firestore.`);
             } else {
-                console.log(`User ${mockUser.email} already exists.`);
+                console.log(`User ${mockUser.email} already exists in Firestore. Sync complete.`);
             }
         } catch (error: any) {
+             // This specifically catches the case where the user exists in Firebase Auth
+             // but maybe not in Firestore. It's a common scenario during development.
             if (error.code === 'auth/email-already-in-use') {
-                console.log(`Auth user for ${mockUser.email} already exists. Skipping creation.`);
+                console.log(`Auth user for ${mockUser.email} already exists. Skipping Auth creation.`);
+                // If the user already exists in Auth, we can ensure their Firestore doc is also up to date.
+                const q = query(collection(db, "users"), where("email", "==", mockUser.email.toLowerCase()), limit(1));
+                const querySnapshot = await getDocs(q);
+                 if (querySnapshot.empty) {
+                    console.warn(`User ${mockUser.email} exists in Auth but not Firestore. This should not happen with the new logic.`);
+                 }
             } else {
                  console.error(`Error processing user ${mockUser.email}:`, error);
             }

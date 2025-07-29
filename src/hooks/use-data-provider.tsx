@@ -207,7 +207,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>) => {
     await apiUpdateEquipment(equipmentId, equipmentData);
-    // No need to return from update, state will be updated via snapshot or refetch
+    setEquipments(prev => prev.map(eq => eq.id === equipmentId ? {...eq, ...equipmentData} : eq));
   };
   const deleteEquipment = async (equipmentId: string) => {
     await apiDeleteEquipment(equipmentId);
@@ -238,6 +238,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
   const updateCedula = async (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => {
      await apiUpdateCedula(cedulaId, cedulaData, onStep);
+     setCedulas(prev => prev.map(c => c.id === cedulaId ? {...c, ...cedulaData} : c));
   };
   const deleteCedula = async (cedulaId: string) => {
     await apiDeleteCedula(cedulaId);
