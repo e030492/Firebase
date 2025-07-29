@@ -30,7 +30,7 @@ import {
     subscribeToMediaLibrary as apiSubscribeToMediaLibrary,
     uploadFile as apiUploadFile,
     deleteMediaFile as apiDeleteMediaFile,
-    seedMockUsers
+    seedAdminUser
 } from '@/lib/services';
 
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
@@ -88,11 +88,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
+  const fetchAllData = useCallback(async () => {
     setLoadingStatus('loading_data');
     try {
-        await firebaseUser.getIdToken(true); 
-
         const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
             getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
         ]);
@@ -114,193 +112,91 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    async function initializeApp() {
+    const initializeApp = async () => {
         setLoadingStatus('seeding');
         try {
-            await seedMockUsers();
-            
-            setLoadingStatus('authenticating');
-            const unsubscribe = onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    fetchAllData(user);
-                } else {
-                    setUsers([]);
-                    setClients([]);
-                    setSystems([]);
-                    setEquipments([]);
-                    setProtocols([]);
-                    setCedulas([]);
-                    setCompanySettings(null);
-                    localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-                    setLoadingStatus('ready');
-                }
-            });
-            return () => unsubscribe();
+            await seedAdminUser();
         } catch (err) {
-            console.error("Initialization failed:", err);
-            setError("Error al configurar la aplicación.");
+            console.error("Seeding failed", err);
+            setError("Error al configurar la cuenta de administrador.");
             setLoadingStatus('error');
+            return;
         }
-    }
+
+        setLoadingStatus('authenticating');
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                fetchAllData();
+            } else {
+                setUsers([]);
+                setClients([]);
+                setSystems([]);
+                setEquipments([]);
+                setProtocols([]);
+                setCedulas([]);
+                setCompanySettings(null);
+                localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+                setLoadingStatus('ready');
+            }
+        });
+
+        return () => unsubscribe();
+    };
 
     initializeApp();
   }, [fetchAllData]);
-
 
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
       const user = await apiLoginUser(email, pass);
       if (user) {
           localStorage.setItem(ACTIVE_USER_STORAGE_KEY, JSON.stringify(user));
-          // onAuthStateChanged will trigger data fetch.
       }
       return user;
   };
 
-  // --- USER MUTATIONS ---
-  const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
-    const newUser = await apiCreateUser(userData);
-    setUsers(prev => [...prev, newUser]);
-    return newUser;
-  };
+  // --- CRUD MUTATIONS ---
+  const createUser = (userData: Omit<User, 'id'>) => apiCreateUser(userData).then(newUser => { setUsers(p => [...p, newUser]); return newUser; });
+  const updateUser = (userId: string, userData: Partial<User>) => apiUpdateUser(userId, userData).then(updatedUser => { setUsers(p => p.map(u => u.id === userId ? updatedUser : u)); return updatedUser; });
+  const deleteUser = (userId: string) => apiDeleteUser(userId).then(() => setUsers(p => p.filter(u => u.id !== userId)));
 
-  const updateUser = async (userId: string, userData: Partial<User>): Promise<User> => {
-      const updatedUser = await apiUpdateUser(userId, userData);
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updatedUser } : u));
-      return updatedUser;
-  };
+  const createClient = (data: Omit<Client, 'id'>) => apiCreateClient(data).then(n => { setClients(p => [...p, n]); return n; });
+  const updateClient = (id: string, data: Partial<Client>) => apiUpdateClient(id, data).then(u => { setClients(p => p.map(c => c.id === id ? u : c)); return u; });
+  const deleteClient = (id: string) => apiDeleteClient(id).then(() => setClients(p => p.filter(c => c.id !== id)));
+
+  const createSystem = (data: Omit<System, 'id'>) => apiCreateSystem(data).then(n => { setSystems(p => [...p, n]); return n; });
+  const updateSystem = (id: string, data: Partial<System>) => apiUpdateSystem(id, data).then(u => { setSystems(p => p.map(s => s.id === id ? u : s)); return u; });
+  const deleteSystem = (id: string) => apiDeleteSystem(id).then(() => setSystems(p => p.filter(s => s.id !== id)));
   
-  const deleteUser = async (userId: string): Promise<void> => {
-      await apiDeleteUser(userId);
-      setUsers(prev => prev.filter(u => u.id !== userId));
-  };
+  const createEquipment = (data: Omit<Equipment, 'id'>) => apiCreateEquipment(data).then(n => { setEquipments(p => [...p, n]); return n; });
+  const updateEquipment = (id: string, data: Partial<Equipment>) => apiUpdateEquipment(id, data).then(() => setEquipments(p => p.map(e => e.id === id ? {...e, ...data} : e)));
+  const deleteEquipment = (id: string) => apiDeleteEquipment(id).then(() => setEquipments(p => p.filter(e => e.id !== id)));
 
+  const createProtocol = (data: Omit<Protocol, 'id'>, id?: string) => apiCreateProtocol(data, id).then(n => { setProtocols(p => [...p, n]); return n; });
+  const updateProtocol = (id: string, data: Partial<Protocol>) => apiUpdateProtocol(id, data).then(u => { setProtocols(p => p.map(proto => proto.id === id ? u : proto)); return u; });
+  const deleteProtocol = (id: string) => apiDeleteProtocol(id).then(() => setProtocols(p => p.filter(proto => proto.id !== id)));
 
-  // --- CLIENT MUTATIONS ---
-  const createClient = async (clientData: Omit<Client, 'id'>) => {
-    const newClient = await apiCreateClient(clientData);
-    setClients(prev => [...prev, newClient]);
-    return newClient;
-  };
+  const createCedula = (data: Omit<Cedula, 'id'>) => apiCreateCedula(data).then(n => { setCedulas(p => [...p, n]); return n; });
+  const updateCedula = (id: string, data: Partial<Cedula>, onStep?: (log: string) => void) => apiUpdateCedula(id, data, onStep).then(() => setCedulas(p => p.map(c => c.id === id ? {...c, ...data} : c)));
+  const deleteCedula = (id: string) => apiDeleteCedula(id).then(() => setCedulas(p => p.filter(c => c.id !== id)));
 
-  const updateClient = async (clientId: string, clientData: Partial<Client>) => {
-    const updatedClient = await apiUpdateClient(clientId, clientData);
-    setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
-    return updatedClient;
-  };
-
-  const deleteClient = async (clientId: string) => {
-    await apiDeleteClient(clientId);
-    setClients(prev => prev.filter(c => c.id !== clientId));
-  };
-
-  // --- SYSTEM MUTATIONS ---
-  const createSystem = async (systemData: Omit<System, 'id'>) => {
-    const newSystem = await apiCreateSystem(systemData);
-    setSystems(prev => [...prev, newSystem]);
-    return newSystem;
-  };
-
-  const updateSystem = async (systemId: string, systemData: Partial<System>) => {
-    const updatedSystem = await apiUpdateSystem(systemId, systemData);
-    setSystems(prev => prev.map(s => s.id === systemId ? updatedSystem : s));
-    return updatedSystem;
-  };
-  const deleteSystem = async (systemId: string) => {
-    await apiDeleteSystem(systemId);
-    setSystems(prev => prev.filter(s => s.id !== systemId));
-  };
-
-  // --- EQUIPMENT MUTATIONS ---
-  const createEquipment = async (equipmentData: Omit<Equipment, 'id'>) => {
-    const newEquipment = await apiCreateEquipment(equipmentData);
-    setEquipments(prev => [...prev, newEquipment]);
-    return newEquipment;
-  };
-  const updateEquipment = async (equipmentId: string, equipmentData: Partial<Equipment>) => {
-    await apiUpdateEquipment(equipmentId, equipmentData);
-    setEquipments(prev => prev.map(eq => eq.id === equipmentId ? {...eq, ...equipmentData} : eq));
-  };
-  const deleteEquipment = async (equipmentId: string) => {
-    await apiDeleteEquipment(equipmentId);
-    setEquipments(prev => prev.filter(e => e.id !== equipmentId));
-  };
-
-  // --- PROTOCOL MUTATIONS ---
-  const createProtocol = async (protocolData: Omit<Protocol, 'id'>, id?: string) => {
-    const newProtocol = await apiCreateProtocol(protocolData, id);
-    setProtocols(prev => [...prev, newProtocol]);
-    return newProtocol;
-  };
-  const updateProtocol = async (protocolId: string, protocolData: Partial<Protocol>) => {
-    const updatedProtocol = await apiUpdateProtocol(protocolId, protocolData);
-    setProtocols(prev => prev.map(p => p.id === protocolId ? updatedProtocol : p));
-    return updatedProtocol;
-  };
-  const deleteProtocol = async (protocolId: string) => {
-    await apiDeleteProtocol(protocolId);
-    setProtocols(prev => prev.filter(p => p.id !== protocolId));
-  };
-
-  // --- CEDULA MUTATIONS ---
-  const createCedula = async (cedulaData: Omit<Cedula, 'id'>) => {
-    const newCedula = await apiCreateCedula(cedulaData);
-    setCedulas(prev => [...prev, newCedula]);
-    return newCedula;
-  };
-  const updateCedula = async (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => {
-     await apiUpdateCedula(cedulaId, cedulaData, onStep);
-     setCedulas(prev => prev.map(c => c.id === cedulaId ? {...c, ...cedulaData} : c));
-  };
-  const deleteCedula = async (cedulaId: string) => {
-    await apiDeleteCedula(cedulaId);
-    setCedulas(prev => prev.filter(c => c.id !== cedulaId));
-  };
-
-  // --- MEDIA LIBRARY ---
+  const updateCompanySettings = (data: Partial<CompanySettings>) => apiUpdateCompanySettings(data).then(newSettings => setCompanySettings(newSettings));
   const subscribeToMediaLibrary = (setFiles: (files: MediaFile[]) => void) => apiSubscribeToMediaLibrary(setFiles);
-  const uploadFile = (files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void) => apiUploadFile(files, onProgress, logAudit);
+  const uploadFile = (files: File[], onProgress: (p: number) => void, logAudit: (m: string) => void) => apiUploadFile(files, onProgress, logAudit);
   const deleteMediaFile = (file: MediaFile) => apiDeleteMediaFile(file);
-
-
-  const updateCompanySettings = async (settingsData: Partial<CompanySettings>): Promise<void> => {
-      const newSettings = await apiUpdateCompanySettings(settingsData);
-      setCompanySettings(newSettings);
-  };
   
   const value: DataContextType = {
-    users,
-    clients,
-    systems,
-    equipments,
-    protocols,
-    cedulas,
-    companySettings,
+    users, clients, systems, equipments, protocols, cedulas, companySettings,
     loading: loadingStatus !== 'ready',
-    loadingStatus,
-    error,
+    loadingStatus, error,
     loginUser,
-    subscribeToMediaLibrary,
-    uploadFile,
-    deleteMediaFile,
+    subscribeToMediaLibrary, uploadFile, deleteMediaFile,
     updateCompanySettings,
-    createUser,
-    deleteUser,
-    updateUser,
-    createClient,
-    updateClient,
-    deleteClient,
-    createSystem,
-    updateSystem,
-    deleteSystem,
-    createEquipment,
-    updateEquipment,
-    deleteEquipment,
-    createProtocol,
-    updateProtocol,
-    deleteProtocol,
-    createCedula,
-    updateCedula,
-    deleteCedula,
+    createUser, deleteUser, updateUser,
+    createClient, updateClient, deleteClient,
+    createSystem, updateSystem, deleteSystem,
+    createEquipment, updateEquipment, deleteEquipment,
+    createProtocol, updateProtocol, deleteProtocol,
+    createCedula, updateCedula, deleteCedula,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

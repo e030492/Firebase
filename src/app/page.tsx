@@ -18,12 +18,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useData, LoadingStatus } from '@/hooks/use-data-provider';
+import { adminUser } from '@/lib/mock-data';
 
 export default function LoginPage() {
   const router = useRouter();
   const { loginUser, loadingStatus, error: dataError, companySettings } = useData(); 
-  const [email, setEmail] = useState('admin@escuadramx.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState(adminUser.email);
+  const [password, setPassword] = useState(adminUser.password);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -73,7 +74,7 @@ export default function LoginPage() {
             <div className="mb-4 flex items-center justify-center h-72 w-72">
               <Image 
                 src={companySettings?.logoUrl || "https://placehold.co/200x200.png"} 
-                alt="Escuadra Technology Logo" 
+                alt="Logo" 
                 width={200} 
                 height={200} 
                 data-ai-hint="logo" 

@@ -220,11 +220,14 @@ export default function EditUserPage() {
             }
             updatedData.clientId = selectedClientId;
         } else {
-            updatedData.clientId = ''; // Explicitly clear the client ID
+            updatedData.clientId = undefined;
         }
         
         if (password) {
-            updatedData.password = password;
+            // In a real app, you would need a Cloud Function to update the password for an existing user.
+            // Firestore rules prevent updating the password field directly for security reasons.
+            // For this prototype, we'll just show an alert.
+            alert("La funcionalidad para cambiar la contraseña no está implementada en este prototipo.");
         }
 
         await updateUser(userId, updatedData);
@@ -232,7 +235,7 @@ export default function EditUserPage() {
         router.push('/dashboard/users');
     } catch (error) {
         console.error("Failed to update user:", error);
-        alert("Error al actualizar el usuario. Revise las reglas de seguridad de Firestore.");
+        alert("Error al actualizar el usuario.");
     } finally {
         setIsSaving(false);
     }

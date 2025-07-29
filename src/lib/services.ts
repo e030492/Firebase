@@ -1,6 +1,5 @@
-
 import { 
-    collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit, onSnapshot
+    collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit, onSnapshot, writeBatch
 } from "firebase/firestore";
 import { 
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -8,7 +7,7 @@ import {
 } from "firebase/auth";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, auth, storage } from './firebase';
-import { mockUsers } from './mock-data';
+import { adminUser } from './mock-data';
 
 // Interfaces for our data structures
 export type Plano = { url: string; name: string; size: number };
@@ -51,28 +50,63 @@ export const getSystems = () => getCollectionData<System>('systems');
 export const getEquipments = () => getCollectionData<Equipment>('equipments');
 export const getProtocols = () => getCollectionData<Protocol>('protocols');
 export const getCedulas = () => getCollectionData<Cedula>('cedulas');
-export const getMediaLibrary = () => getCollectionData<MediaFile>('mediaLibrary');
 
-
-// --- AUTH ---
+// --- AUTH & ADMIN SEEDING ---
 export async function loginUser(email: string, pass: string): Promise<User | null> {
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    const authUid = userCredential.user.uid;
     
-    const q = query(collection(db, "users"), where("email", "==", email.toLowerCase()), limit(1));
-    const querySnapshot = await getDocs(q);
+    const userDocRef = doc(db, "users", authUid);
+    const userDocSnap = await getDoc(userDocRef);
 
-    if (querySnapshot.empty) {
+    if (!userDocSnap.exists()) {
         await signOut(auth);
-        throw new Error("No user document found for this email in Firestore.");
+        throw new Error("No user document found for this UID in Firestore.");
     }
-    const userDoc = querySnapshot.docs[0];
-    const userData = { id: userDoc.id, ...userDoc.data() } as User;
+    const userData = { id: userDocSnap.id, ...userDocSnap.data() } as User;
     
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userToStore } = userData;
-    
     return userToStore;
 }
+
+export async function seedAdminUser() {
+    console.log("Verifying admin user...");
+    const adminEmail = adminUser.email;
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("email", "==", adminEmail), limit(1));
+    
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        console.log(`Admin user '${adminEmail}' not found in Firestore. Creating...`);
+        try {
+            // This assumes you are running this with temporary elevated privileges
+            // or that your security rules allow the creation of the first user.
+            // A more robust solution for production would be a Cloud Function.
+            const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminUser.password);
+            const authUid = userCredential.user.uid;
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { password, id, ...adminDataToSave } = adminUser;
+            
+            const docRef = doc(db, 'users', authUid);
+            await setDoc(docRef, adminDataToSave);
+            console.log(`Successfully created admin user ${adminEmail} in Auth and Firestore.`);
+        } catch (error: any) {
+            // If user already exists in Auth but not Firestore (e.g., from a failed previous attempt)
+            if (error.code === 'auth/email-already-in-use') {
+                 console.warn(`User ${adminEmail} already exists in Auth. Will not create in Firestore.`);
+            } else {
+                 console.error(`Failed to create admin user ${adminEmail}:`, error);
+                 throw error;
+            }
+        }
+    } else {
+        console.log(`Admin user ${adminEmail} already exists.`);
+    }
+}
+
 
 // --- COMPANY SETTINGS ---
 export async function getCompanySettings(): Promise<CompanySettings> {
@@ -81,8 +115,7 @@ export async function getCompanySettings(): Promise<CompanySettings> {
     if (docSnap.exists()) {
         return { id: docSnap.id, ...docSnap.data() } as CompanySettings;
     } else {
-        // Default settings if none exist
-        return { id: 'company', logoUrl: 'https://storage.googleapis.com/builder-prod.appspot.com/assets%2Fescudo.png?alt=media&token=e179a63c-3965-4f7c-a25e-315135118742' };
+        return { id: 'company', logoUrl: null };
     }
 }
 
@@ -91,6 +124,35 @@ export async function updateCompanySettings(settingsData: Partial<CompanySetting
     await setDoc(docRef, settingsData, { merge: true });
     return getCompanySettings();
 }
+
+// --- USER MUTATIONS ---
+export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
+    if (!userData.password) throw new Error("Password is required to create a user.");
+    
+    const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+    const authUid = userCredential.user.uid;
+    
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userDataToSave } = userData;
+    const docRef = doc(db, 'users', authUid);
+    await setDoc(docRef, userDataToSave);
+
+    return { id: authUid, ...userDataToSave };
+};
+
+export const updateUser = async (userId: string, userData: Partial<User>): Promise<User> => {
+    const docRef = doc(db, 'users', userId);
+    await updateDoc(docRef, userData);
+    const updatedDoc = await getDoc(docRef);
+    return { id: updatedDoc.id, ...updatedDoc.data() } as User;
+};
+
+export const deleteUser = async (userId: string) => {
+    // IMPORTANT: This only deletes the Firestore document. Deleting the Firebase Auth
+    // user requires admin privileges, typically from a backend/cloud function.
+    await deleteDoc(doc(db, "users", userId));
+};
+
 
 // --- GENERIC MUTATIONS ---
 const createDocument = async <T extends {id: string}>(collectionName: string, data: Omit<T, 'id'>, id?: string): Promise<T> => {
@@ -114,57 +176,6 @@ const updateDocument = async <T extends {id: string}>(collectionName: string, id
 const deleteDocument = (collectionName: string, id: string): Promise<void> => {
     return deleteDoc(doc(db, collectionName, id));
 };
-
-
-// --- USER MUTATIONS ---
-export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
-    if (!userData.password) throw new Error("Password is required to create a user.");
-    
-    // Step 1: Create user in Firebase Authentication
-    const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-    const authUid = userCredential.user.uid;
-    
-    // Step 2: Save user data in Firestore using the Auth UID as the document ID
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userDataToSave } = userData;
-    const docRef = doc(db, 'users', authUid);
-    await setDoc(docRef, userDataToSave);
-
-    // Return the complete user object with the correct ID
-    return { id: authUid, ...userDataToSave };
-};
-
-export const updateUser = (userId: string, userData: Partial<User>) => updateDocument<User>('users', userId, userData);
-export const deleteUser = async (userId: string) => {
-    // This is a simplified delete. In a real app, you'd need a Cloud Function
-    // to delete the corresponding Firebase Auth user.
-    await deleteDocument('users', userId);
-};
-
-export async function seedMockUsers() {
-    console.log("Checking for mock users...");
-    for (const mockUser of mockUsers) {
-        const userQuery = query(collection(db, "users"), where("email", "==", mockUser.email), limit(1));
-        const userSnapshot = await getDocs(userQuery);
-
-        if (userSnapshot.empty) {
-            console.log(`User ${mockUser.email} not found in Firestore. Creating...`);
-            try {
-                await createUser(mockUser);
-                console.log(`Successfully created user ${mockUser.email} in Auth and Firestore.`);
-            } catch (error: any) {
-                if (error.code === 'auth/email-already-in-use') {
-                    console.warn(`User ${mockUser.email} already exists in Auth but not Firestore. This may indicate an inconsistent state. The system will proceed.`);
-                } else {
-                    console.error(`Failed to create mock user ${mockUser.email}:`, error);
-                    throw error; // Re-throw to be caught by the DataProvider
-                }
-            }
-        } else {
-            console.log(`User ${mockUser.email} already exists.`);
-        }
-    }
-}
 
 
 // --- CLIENT MUTATIONS ---
@@ -211,16 +222,17 @@ export function subscribeToMediaLibrary(setFiles: (files: MediaFile[]) => void):
 export async function uploadFile(files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void): Promise<void> {
     const totalSize = files.reduce((acc, file) => acc + file.size, 0);
     let totalUploaded = 0;
+    const batch = writeBatch(db);
 
     const uploadPromises = files.map(file => {
-        const fileId = `${Date.now()}-${file.name}`;
+        const fileId = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
         const storageRef = ref(storage, `mediaLibrary/${fileId}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
         return new Promise<void>((resolve, reject) => {
             uploadTask.on('state_changed',
                 (snapshot) => {
-                    // Per-file progress is handled here, but we use a custom overall progress
+                    // This part is tricky for overall progress. We calculate it after each success.
                 },
                 (error) => {
                     logAudit(`ERROR al subir ${file.name}: ${error.message}`);
@@ -234,15 +246,18 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                     logAudit(`Archivo ${file.name} subido, URL obtenida.`);
                     
-                    const mediaFileData: Omit<MediaFile, 'id'> = {
+                    const docId = doc(collection(db, "mediaLibrary")).id;
+                    const mediaFileRef = doc(db, 'mediaLibrary', docId);
+
+                    batch.set(mediaFileRef, {
                         name: file.name,
                         url: downloadURL,
                         type: file.type,
                         size: file.size,
                         createdAt: new Date().toISOString(),
-                    };
-                    await addDoc(collection(db, 'mediaLibrary'), mediaFileData);
-                    logAudit(`Metadatos de ${file.name} guardados en Firestore.`);
+                    });
+                    
+                    logAudit(`Metadatos de ${file.name} preparados para guardar.`);
                     resolve();
                 }
             );
@@ -250,6 +265,8 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
     });
 
     await Promise.all(uploadPromises);
+    await batch.commit();
+    logAudit('Todos los metadatos guardados en Firestore.');
 }
 
 export async function deleteMediaFile(file: MediaFile): Promise<void> {

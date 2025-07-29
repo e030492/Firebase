@@ -42,7 +42,7 @@ import { useData } from '@/hooks/use-data-provider';
 type SortableKey = 'name' | 'email' | 'role';
 
 export default function UsersPage() {
-  const { users, loading, deleteUser: deleteUserFromProvider } from useData();
+  const { users, loading, deleteUser: deleteUserFromProvider } = useData();
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const { can, user: activeUser } = usePermissions();
