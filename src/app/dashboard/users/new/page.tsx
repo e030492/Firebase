@@ -193,7 +193,7 @@ export default function NewUserPage() {
         const newUser: Omit<User, 'id'> = {
             name,
             email,
-            role: valueToRoleMap[role],
+            role: valueToRoleMap[role] as User['role'],
             password,
             permissions,
             signatureUrl: signatureUrl || null,

@@ -2,9 +2,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode, Dispatch, SetStateAction } from "react";
-import { ACTIVE_USER_STORAGE_KEY, mockUsers } from "@/lib/mock-data";
+import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
+import { User } from '@/lib/services';
 
-type User = typeof mockUsers[0];
 type Permissions = User['permissions'];
 type ModuleKey = keyof Permissions;
 type ActionKey = keyof Permissions[ModuleKey];

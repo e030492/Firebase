@@ -1,8 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
@@ -18,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useData, LoadingStatus } from '@/hooks/use-data-provider';
+import Link from 'next/link';
 import { adminUser } from '@/lib/mock-data';
 
 export default function LoginPage() {

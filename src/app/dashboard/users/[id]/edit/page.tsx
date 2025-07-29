@@ -206,7 +206,7 @@ export default function EditUserPage() {
         const updatedData: Partial<User> = {
             name,
             email,
-            role: valueToRoleMap[role],
+            role: valueToRoleMap[role] as User['role'],
             permissions,
             signatureUrl: signatureUrl || null,
             photoUrl: photoUrl || null,

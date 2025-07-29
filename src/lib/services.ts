@@ -1,3 +1,4 @@
+
 import { 
     collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit, onSnapshot, writeBatch
 } from "firebase/firestore";
@@ -79,11 +80,8 @@ export async function seedAdminUser() {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-        console.log(`Admin user '${adminEmail}' not found in Firestore. Creating...`);
+        console.log(`Admin user '${adminEmail}' not found in Firestore. Attempting to create...`);
         try {
-            // This assumes you are running this with temporary elevated privileges
-            // or that your security rules allow the creation of the first user.
-            // A more robust solution for production would be a Cloud Function.
             const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminUser.password);
             const authUid = userCredential.user.uid;
 
@@ -94,16 +92,17 @@ export async function seedAdminUser() {
             await setDoc(docRef, adminDataToSave);
             console.log(`Successfully created admin user ${adminEmail} in Auth and Firestore.`);
         } catch (error: any) {
-            // If user already exists in Auth but not Firestore (e.g., from a failed previous attempt)
             if (error.code === 'auth/email-already-in-use') {
-                 console.warn(`User ${adminEmail} already exists in Auth. Will not create in Firestore.`);
+                 console.warn(`User ${adminEmail} already exists in Auth but not in Firestore. This might indicate a partially failed previous setup. The login for this user might not work as expected without manual intervention in the Firebase console.`);
+                 // In a real app, you might want to try and link the auth user to a new firestore doc here,
+                 // but that requires more complex logic and admin privileges.
             } else {
                  console.error(`Failed to create admin user ${adminEmail}:`, error);
                  throw error;
             }
         }
     } else {
-        console.log(`Admin user ${adminEmail} already exists.`);
+        console.log(`Admin user ${adminEmail} already exists in Firestore.`);
     }
 }
 
