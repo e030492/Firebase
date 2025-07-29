@@ -14,7 +14,6 @@ import {
   FlaskConical,
 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 

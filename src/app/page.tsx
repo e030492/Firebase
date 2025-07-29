@@ -11,15 +11,11 @@ export default function RootPage() {
     const { loading, error } = useData();
 
     useEffect(() => {
-        // Once data loading is complete (and there's no error), redirect to the dashboard.
         if (!loading) {
             router.replace('/dashboard/dashboard');
         }
     }, [loading, router]);
 
-    // This component will now show a loading state until the DataProvider is ready.
-    // If there's an error fetching data (e.g., due to incorrect Firestore rules),
-    // it will display an error message.
     return (
         <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
             {error ? (

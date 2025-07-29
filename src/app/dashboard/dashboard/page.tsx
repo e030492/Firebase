@@ -8,12 +8,9 @@ import { BarChart, Bar, Rectangle, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 import { Building, HardHat, FileCheck, Users, ShieldCheck } from "lucide-react";
 import { useData } from '@/hooks/use-data-provider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePermissions } from '@/hooks/use-permissions';
-import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
     const { clients, equipments, cedulas, loading } = useData();
-    const { user } = usePermissions();
 
     const stats = useMemo(() => {
         const totalClients = clients.length;
@@ -72,7 +69,7 @@ export default function DashboardPage() {
                     <div className="p-3 bg-primary/20 rounded-full w-fit">
                         <ShieldCheck className="w-10 h-10 text-primary"/>
                     </div>
-                    <CardTitle className="text-3xl font-bold">Bienvenido, {user?.name || 'Usuario'}</CardTitle>
+                    <CardTitle className="text-3xl font-bold">Bienvenido al Sistema de Control</CardTitle>
                     <CardDescription className="text-base text-muted-foreground">
                         Este es su panel de control para la gestión de seguridad y mantenimiento.
                     </CardDescription>

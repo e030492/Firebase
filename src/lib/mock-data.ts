@@ -1,4 +1,4 @@
 
-// This file can be removed or left empty, as user seeding is no longer handled by the app.
-// Keeping it for potential future use if a different, more robust seeding strategy is needed.
+// Este archivo ya no es necesario y se ha vaciado.
+// Se mantiene por si en el futuro se necesita una estrategia de siembra de datos.
 export {};

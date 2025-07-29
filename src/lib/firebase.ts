@@ -1,11 +1,9 @@
-// Import the functions you need from the SDKs you need
+
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration - This is safe to be public
+// Configuración de Firebase de la aplicación web. Es segura para ser pública.
 export const firebaseConfig = {
   "projectId": "guardian-shield-k9g9l",
   "appId": "1:224891357938:web:399bcf1f064bdf7bdf9e6b",
@@ -16,11 +14,10 @@ export const firebaseConfig = {
   "messagingSenderId": "224891357938"
 };
 
-
-// Initialize Firebase
+// Inicializar Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Auth is no longer needed in this simplified version
+// El módulo de Auth ya no es necesario
 export { db, app, storage };

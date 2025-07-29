@@ -57,7 +57,7 @@ type DataContextType = {
   updateProtocol: (protocolId: string, protocolData: Partial<Protocol>) => Promise<Protocol>;
   deleteProtocol: (protocolId: string) => Promise<void>;
   createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<Cedula>;
-  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => Promise<void>;
+  updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
 };
 
@@ -118,7 +118,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteProtocol = (id: string) => apiDeleteProtocol(id).then(() => setProtocols(p => p.filter(proto => proto.id !== id)));
 
   const createCedula = (data: Omit<Cedula, 'id'>) => apiCreateCedula(data).then(n => { setCedulas(p => [...p, n]); return n; });
-  const updateCedula = (id: string, data: Partial<Cedula>, onStep?: (log: string) => void) => apiUpdateCedula(id, data, onStep).then(() => { const updatedCedula = { ...cedulas.find(c=>c.id===id)!, ...data }; setCedulas(p => p.map(c => c.id === id ? updatedCedula as Cedula : c))});
+  const updateCedula = (id: string, data: Partial<Cedula>) => apiUpdateCedula(id, data).then(() => { const updatedCedula = { ...cedulas.find(c=>c.id===id)!, ...data }; setCedulas(p => p.map(c => c.id === id ? updatedCedula as Cedula : c))});
   const deleteCedula = (id: string) => apiDeleteCedula(id).then(() => setCedulas(p => p.filter(c => c.id !== id)));
 
   const updateCompanySettings = (data: Partial<CompanySettings>) => apiUpdateCompanySettings(data).then(newSettings => setCompanySettings(newSettings));

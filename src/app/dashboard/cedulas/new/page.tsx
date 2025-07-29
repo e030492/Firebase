@@ -33,7 +33,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Protocol, Cedula, Client, Equipment, User, System, ProtocolStep } from '@/lib/services';
+import { Protocol, Cedula, Client, Equipment, System, ProtocolStep } from '@/lib/services';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CardDescription } from '@/components/ui/card';
 import { useData } from '@/hooks/use-data-provider';
@@ -44,15 +44,15 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function NewCedulaPage() {
   const router = useRouter();
-  const { clients, systems: allSystems, equipments: allEquipments, users, protocols, createCedula, loading } = useData();
+  const { clients, systems: allSystems, equipments: allEquipments, protocols, createCedula, loading } = useData();
   const { toast } = useToast();
 
   const [folio, setFolio] = useState(`C-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`);
   const [clientId, setClientId] = useState('');
   const [systemId, setSystemId] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
-  const [technicianId, setTechnicianId] = useState('');
-  const [supervisorId, setSupervisorId] = useState('');
+  const [technician, setTechnician] = useState('');
+  const [supervisor, setSupervisor] = useState('');
   const [creationDate, setCreationDate] = useState<Date | undefined>(new Date());
   const [creationTime, setCreationTime] = useState<string>(format(new Date(), 'HH:mm'));
   const [description, setDescription] = useState('');
@@ -61,8 +61,6 @@ export default function NewCedulaPage() {
 
   const [filteredSystems, setFilteredSystems] = useState<System[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
-  const [technicians, setTechnicians] = useState<User[]>([]);
-  const [supervisors, setSupervisors] = useState<User[]>([]);
   
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
   
@@ -71,10 +69,6 @@ export default function NewCedulaPage() {
   const [isSuggestingProtocol, setIsSuggestingProtocol] = useState(false);
   const [suggestedProtocol, setSuggestedProtocol] = useState<SuggestBaseProtocolOutput | null>(null);
 
-  useEffect(() => {
-    setTechnicians(users.filter(user => user.role === 'Técnico'));
-    setSupervisors(users.filter(user => user.role === 'Supervisor'));
-  }, [users]);
 
   useEffect(() => {
     if (clientId) {
@@ -191,7 +185,7 @@ export default function NewCedulaPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!folio || !clientId || !equipmentId || !technicianId || !supervisorId || !creationDate || !description) {
+    if (!folio || !clientId || !equipmentId || !technician || !supervisor || !creationDate || !description) {
         alert('Por favor, complete todos los campos.');
         return;
     }
@@ -199,8 +193,6 @@ export default function NewCedulaPage() {
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(eq => eq.id === equipmentId)?.name || '';
-    const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
-    const supervisorName = supervisors.find(s => s.id === supervisorId)?.name || '';
 
     const finalDate = new Date(creationDate);
     const [hours, minutes] = creationTime.split(':');
@@ -211,8 +203,8 @@ export default function NewCedulaPage() {
       folio,
       client: clientName,
       equipment: equipmentName,
-      technician: technicianName,
-      supervisor: supervisorName,
+      technician,
+      supervisor,
       creationDate: finalDate.toISOString(),
       status: status as Cedula['status'],
       description,
@@ -232,8 +224,8 @@ export default function NewCedulaPage() {
     }
   };
 
-  const getSemaforoInfo = (semaforo: string) => {
-    switch (semaforo) {
+  const getSemaforoInfo = (semaforoValue: string) => {
+    switch (semaforoValue) {
         case 'Verde':
             return { color: 'bg-green-500 text-white', text: 'Verde (Óptimo)' };
         case 'Naranja':
@@ -432,29 +424,11 @@ export default function NewCedulaPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-3">
                     <Label htmlFor="technician">Técnico Asignado</Label>
-                    <Select onValueChange={setTechnicianId} required disabled={isSaving}>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un técnico" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {technicians.map(t => (
-                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
+                    <Input id="technician" value={technician} onChange={e => setTechnician(e.target.value)} required disabled={isSaving}/>
                     </div>
                     <div className="grid gap-3">
                     <Label htmlFor="supervisor">Supervisor</Label>
-                    <Select onValueChange={setSupervisorId} required disabled={isSaving}>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un supervisor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {supervisors.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
+                    <Input id="supervisor" value={supervisor} onChange={e => setSupervisor(e.target.value)} required disabled={isSaving}/>
                     </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -665,5 +639,3 @@ export default function NewCedulaPage() {
     </>
   );
 }
-
-    

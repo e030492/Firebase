@@ -3,12 +3,12 @@
 
 import { createContext, useContext, ReactNode } from "react";
 
-// Dado que hemos eliminado a los usuarios, el concepto de permisos por rol ya no aplica.
-// Sin embargo, mantenemos un proveedor de contexto simple para que los componentes
-// que usan el hook `usePermissions` no fallen. Esto simplifica la transición.
+// Como hemos eliminado el sistema de autenticación, este proveedor de permisos
+// simplemente devuelve 'true' para cualquier verificación. Esto nos permite mantener
+// el hook `usePermissions` en el código (por si se necesita en el futuro) sin que
+// cause problemas.
 
 type PermissionsContextType = {
-  // La función `can` siempre devolverá `true`, dando acceso total a todas las funciones.
   can: (action: string, module: string) => boolean;
 };
 
@@ -17,7 +17,7 @@ const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   
-  const can = (action: string, module: string): boolean => {
+  const can = (): boolean => {
     // Con la eliminación de la autenticación, siempre se conceden los permisos.
     return true;
   };

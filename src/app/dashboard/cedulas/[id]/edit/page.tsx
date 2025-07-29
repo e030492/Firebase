@@ -36,20 +36,16 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { usePermissions } from '@/hooks/use-permissions';
-import { Cedula, Client, Equipment, User, System, Protocol, ProtocolStep } from '@/lib/services';
+import { Cedula, Client, Equipment, System, ProtocolStep } from '@/lib/services';
 import { useData } from '@/hooks/use-data-provider';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
 
 
 export default function EditCedulaPage() {
   const params = useParams();
   const router = useRouter();
   const cedulaId = params.id as string;
-  const { can } = usePermissions();
   const { 
-      cedulas, clients, equipments: allEquipments, users, systems, protocols, 
+      cedulas, clients, equipments: allEquipments, systems, protocols, 
       loading, updateCedula 
   } = useData();
 
@@ -58,8 +54,8 @@ export default function EditCedulaPage() {
   const [clientId, setClientId] = useState('');
   const [systemId, setSystemId] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
-  const [technicianId, setTechnicianId] = useState('');
-  const [supervisorId, setSupervisorId] = useState('');
+  const [technician, setTechnician] = useState('');
+  const [supervisor, setSupervisor] = useState('');
   const [creationDate, setCreationDate] = useState<Date>();
   const [creationTime, setCreationTime] = useState<string>('');
   const [description, setDescription] = useState('');
@@ -67,8 +63,6 @@ export default function EditCedulaPage() {
   const [semaforo, setSemaforo] = useState('');
 
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
-  const [technicians, setTechnicians] = useState<User[]>([]);
-  const [supervisors, setSupervisors] = useState<User[]>([]);
 
   const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
   
@@ -76,7 +70,6 @@ export default function EditCedulaPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   
-  const [auditLog, setAuditLog] = useState<string[]>([]);
 
   useEffect(() => {
     if (loading) return;
@@ -93,6 +86,8 @@ export default function EditCedulaPage() {
     setDescription(cedulaData.description);
     setStatus(cedulaData.status);
     setSemaforo(cedulaData.semaforo || '');
+    setTechnician(cedulaData.technician);
+    setSupervisor(cedulaData.supervisor);
   
     if (cedulaData.creationDate) {
       const dateObj = new Date(cedulaData.creationDate);
@@ -100,19 +95,8 @@ export default function EditCedulaPage() {
       setCreationTime(format(dateObj, 'HH:mm'));
     }
   
-    const currentTechnicians = users.filter(u => u.role === 'Técnico');
-    const currentSupervisors = users.filter(u => u.role === 'Supervisor');
-    setTechnicians(currentTechnicians);
-    setSupervisors(currentSupervisors);
-  
     const foundClient = clients.find(c => c.name === cedulaData.client);
     if (foundClient) setClientId(foundClient.id);
-  
-    const foundTechnician = currentTechnicians.find(u => u.name === cedulaData.technician);
-    if (foundTechnician) setTechnicianId(foundTechnician.id);
-  
-    const foundSupervisor = currentSupervisors.find(s => s.name === cedulaData.supervisor);
-    if (foundSupervisor) setSupervisorId(foundSupervisor.id);
   
     const foundEquipment = allEquipments.find(e => e.name === cedulaData.equipment && e.client === cedulaData.client);
     if (foundEquipment) {
@@ -149,7 +133,7 @@ export default function EditCedulaPage() {
   
     setPageLoading(false);
   
-  }, [cedulaId, cedulas, clients, allEquipments, users, systems, protocols, loading]);
+  }, [cedulaId, cedulas, clients, allEquipments, systems, protocols, loading]);
   
 
   useEffect(() => {
@@ -207,12 +191,9 @@ export default function EditCedulaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    setAuditLog([]);
     
     const clientName = clients.find(c => c.id === clientId)?.name || '';
     const equipmentName = allEquipments.find(e => e.id === equipmentId)?.name || '';
-    const technicianName = technicians.find(t => t.id === technicianId)?.name || '';
-    const supervisorName = supervisors.find(s => s.id === supervisorId)?.name || '';
 
     const finalDateTime = creationDate ? new Date(creationDate) : new Date();
     if (creationTime) {
@@ -225,8 +206,8 @@ export default function EditCedulaPage() {
         folio,
         client: clientName,
         equipment: equipmentName,
-        technician: technicianName,
-        supervisor: supervisorName,
+        technician: technician,
+        supervisor: supervisor,
         creationDate: creationDate ? finalDateTime.toISOString() : '',
         status: status as Cedula['status'],
         description,
@@ -235,9 +216,7 @@ export default function EditCedulaPage() {
     };
       
     try {
-        await updateCedula(cedulaId, updatedData, (log) => {
-            setAuditLog(prev => [...prev, `${new Date().toLocaleTimeString()}: ${log}`]);
-        });
+        await updateCedula(cedulaId, updatedData);
         alert('Cédula actualizada con éxito.');
         router.push('/dashboard/cedulas');
     } catch (error) {
@@ -248,8 +227,8 @@ export default function EditCedulaPage() {
     }
   }
 
-  const getSemaforoInfo = (semaforo: string) => {
-    switch (semaforo) {
+  const getSemaforoInfo = (semaforoValue: string) => {
+    switch (semaforoValue) {
         case 'Verde':
             return { color: 'bg-green-500 text-white', text: 'Verde (Óptimo)' };
         case 'Naranja':
@@ -262,7 +241,6 @@ export default function EditCedulaPage() {
   }
   const semaforoInfo = getSemaforoInfo(semaforo);
 
-  const canUpdateCedulas = can('update', 'cedulas');
 
   if (pageLoading || loading) {
     return (
@@ -376,7 +354,7 @@ export default function EditCedulaPage() {
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="folio">Folio</Label>
-                   <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required disabled={!canUpdateCedulas || isSaving} />
+                   <Input id="folio" value={folio} onChange={e => setFolio(e.target.value)} required disabled={isSaving} />
                  </div>
                  <div className="grid gap-3">
                     <Label htmlFor="creationDate">Fecha y Hora de Creación</Label>
@@ -389,7 +367,7 @@ export default function EditCedulaPage() {
                                         "w-full justify-start text-left font-normal",
                                         !creationDate && "text-muted-foreground"
                                     )}
-                                    disabled={!canUpdateCedulas || isSaving}
+                                    disabled={isSaving}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {creationDate ? format(creationDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
@@ -410,7 +388,7 @@ export default function EditCedulaPage() {
                             className="w-auto"
                             value={creationTime}
                             onChange={e => setCreationTime(e.target.value)}
-                            disabled={!canUpdateCedulas || isSaving}
+                            disabled={isSaving}
                         />
                     </div>
                 </div>
@@ -418,7 +396,7 @@ export default function EditCedulaPage() {
               <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                   <Label htmlFor="client">Cliente</Label>
-                  <Select value={clientId} onValueChange={handleClientChange} required disabled={!canUpdateCedulas || isSaving}>
+                  <Select value={clientId} onValueChange={handleClientChange} required disabled={isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un cliente" />
                     </SelectTrigger>
@@ -431,7 +409,7 @@ export default function EditCedulaPage() {
                 </div>
                 <div className="grid gap-3">
                    <Label htmlFor="system">Sistema</Label>
-                   <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId || !canUpdateCedulas || isSaving}>
+                   <Select value={systemId} onValueChange={handleSystemChange} required disabled={!clientId || isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un sistema" />
                     </SelectTrigger>
@@ -445,7 +423,7 @@ export default function EditCedulaPage() {
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="equipment">Equipo</Label>
-                <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || !canUpdateCedulas || isSaving}>
+                <Select value={equipmentId} onValueChange={handleEquipmentChange} required disabled={!systemId || isSaving}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccione un equipo" />
                   </SelectTrigger>
@@ -463,35 +441,17 @@ export default function EditCedulaPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-3">
                    <Label htmlFor="technician">Técnico Asignado</Label>
-                   <Select value={technicianId} onValueChange={setTechnicianId} required disabled={!canUpdateCedulas || isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un técnico" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {technicians.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Input id="technician" value={technician} onChange={e => setTechnician(e.target.value)} required disabled={isSaving}/>
                  </div>
                  <div className="grid gap-3">
                    <Label htmlFor="supervisor">Supervisor</Label>
-                   <Select value={supervisorId} onValueChange={setSupervisorId} required disabled={!canUpdateCedulas || isSaving}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un supervisor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {supervisors.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Input id="supervisor" value={supervisor} onChange={e => setSupervisor(e.target.value)} required disabled={isSaving}/>
                  </div>
                </div>
                <div className="grid md:grid-cols-2 gap-4">
                  <div className="grid gap-3">
                    <Label htmlFor="status">Estado</Label>
-                   <Select value={status} onValueChange={setStatus} required disabled={!canUpdateCedulas || isSaving}>
+                   <Select value={status} onValueChange={setStatus} required disabled={isSaving}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un estado" />
                     </SelectTrigger>
@@ -504,7 +464,7 @@ export default function EditCedulaPage() {
                  </div>
                  <div className="grid gap-3">
                     <Label htmlFor="semaforo">Semáforo de Cumplimiento</Label>
-                    <Select value={semaforo} onValueChange={setSemaforo} disabled={!canUpdateCedulas || isSaving}>
+                    <Select value={semaforo} onValueChange={setSemaforo} disabled={isSaving}>
                         <SelectTrigger id="semaforo" className="w-full">
                             <SelectValue placeholder="Seleccione un estado" />
                         </SelectTrigger>
@@ -533,7 +493,7 @@ export default function EditCedulaPage() {
                </div>
                 <div className="grid gap-3">
                   <Label htmlFor="description">Descripción del Trabajo</Label>
-                  <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" disabled={!canUpdateCedulas || isSaving}/>
+                  <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describa el trabajo a realizar" required className="min-h-32" disabled={isSaving}/>
                 </div>
             </div>
           </CardContent>
@@ -562,7 +522,7 @@ export default function EditCedulaPage() {
                                         value={step.notes || ''}
                                         onChange={(e) => handleStepChange(index, 'notes', e.target.value)}
                                         className="min-h-24"
-                                        disabled={!canUpdateCedulas || isSaving}
+                                        disabled={isSaving}
                                     />
                                 </div>
                                 <div className="grid gap-3">
@@ -570,7 +530,7 @@ export default function EditCedulaPage() {
                                     <Select
                                         value={String(step.completion || '0')}
                                         onValueChange={(value) => handleStepChange(index, 'completion', Number(value))}
-                                        disabled={!canUpdateCedulas || isSaving}
+                                        disabled={isSaving}
                                     >
                                         <SelectTrigger id={`step-percentage-${index}`} className="w-48">
                                             <SelectValue placeholder="% Ejecutado" />
@@ -596,12 +556,12 @@ export default function EditCedulaPage() {
                                     </div>
                                 )}
                                 <div className="flex items-center gap-2">
-                                    <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={!canUpdateCedulas || isSaving}>
+                                    <Button type="button" variant="outline" className="w-full" onClick={() => document.getElementById(`image-upload-${index}`)?.click()} disabled={isSaving}>
                                         <Camera className="mr-2 h-4 w-4" />
                                         {step.imageUrl ? 'Cambiar Foto' : 'Tomar o Subir Foto'}
                                     </Button>
                                     {step.imageUrl && (
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => handleImageDelete(index)} disabled={!canUpdateCedulas || isSaving}>
+                                        <Button type="button" variant="destructive" size="icon" onClick={() => handleImageDelete(index)} disabled={isSaving}>
                                             <Trash2 className="h-4 w-4" />
                                             <span className="sr-only">Eliminar Foto</span>
                                         </Button>
@@ -614,7 +574,7 @@ export default function EditCedulaPage() {
                                     capture="environment"
                                     onChange={(e) => handleImageChange(index, e)}
                                     className="hidden"
-                                    disabled={!canUpdateCedulas || isSaving}
+                                    disabled={isSaving}
                                 />
                             </div>
                         </div>
@@ -630,29 +590,12 @@ export default function EditCedulaPage() {
                 {semaforoInfo.text}
             </div>
         )}
-        
-        {isSaving && (
-            <Alert>
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Auditoría de Guardado</AlertTitle>
-                <AlertDescription>
-                    <pre className="mt-2 w-full rounded-md bg-slate-950 p-4">
-                        <code className="text-white text-xs">
-                            {auditLog.join('\n')}
-                        </code>
-                    </pre>
-                </AlertDescription>
-            </Alert>
-        )}
 
-
-        {canUpdateCedulas && (
-            <div className="flex justify-start">
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving ? "Guardando..." : "Guardar Cambios"}
-                </Button>
-            </div>
-        )}
+        <div className="flex justify-start">
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Guardando..." : "Guardar Cambios"}
+            </Button>
+        </div>
 
         </div>
       </div>

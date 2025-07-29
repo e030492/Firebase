@@ -1,10 +1,11 @@
+
 import { 
     collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query
 } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from './firebase';
 
-// Interfaces for our data structures
+// Interfaces para nuestras estructuras de datos
 export type Plano = { url: string; name: string; size: number };
 export type Almacen = { nombre: string; direccion: string; };
 export type Client = { id: string; name: string; responsable: string; direccion: string; phone1?: string; phone2?: string; almacenes: Almacen[] };
@@ -17,14 +18,14 @@ export type CompanySettings = { id: string; logoUrl: string | null };
 export type MediaFile = { id: string; name: string; url: string; type: string; size: number; createdAt: string; };
 
 
-// --- Firestore Collection Getters ---
+// --- Lectores de Colecciones de Firestore ---
 const getCollectionData = async <T extends { id: string }>(collectionName: string): Promise<T[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, collectionName));
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     } catch (error) {
-        console.error(`Error getting ${collectionName}:`, error);
-        throw new Error(`Failed to fetch ${collectionName}. Check Firestore rules and network connection.`);
+        console.error(`Error obteniendo ${collectionName}:`, error);
+        throw new Error(`Fallo al cargar ${collectionName}. Revisa las reglas de Firestore y la conexión de red.`);
     }
 };
 
@@ -34,7 +35,7 @@ export const getEquipments = () => getCollectionData<Equipment>('equipments');
 export const getProtocols = () => getCollectionData<Protocol>('protocols');
 export const getCedulas = () => getCollectionData<Cedula>('cedulas');
 
-// --- COMPANY SETTINGS ---
+// --- Configuración de la Compañía ---
 export async function getCompanySettings(): Promise<CompanySettings> {
     const docRef = doc(db, 'settings', 'company');
     const docSnap = await getDoc(docRef);
@@ -53,7 +54,7 @@ export async function updateCompanySettings(settingsData: Partial<CompanySetting
     return getCompanySettings();
 }
 
-// --- GENERIC MUTATIONS ---
+// --- Mutaciones Genéricas ---
 const createDocument = async <T extends {id: string}>(collectionName: string, data: Omit<T, 'id'>, id?: string): Promise<T> => {
     if (id) {
         const docRef = doc(db, collectionName, id);
@@ -77,32 +78,32 @@ const deleteDocument = (collectionName: string, id: string): Promise<void> => {
 };
 
 
-// --- CLIENT MUTATIONS ---
+// --- Mutaciones de Clientes ---
 export const createClient = (clientData: Omit<Client, 'id'>) => createDocument<Client>('clients', clientData);
 export const updateClient = (clientId: string, clientData: Partial<Client>) => updateDocument<Client>('clients', clientId, clientData);
 export const deleteClient = (clientId: string) => deleteDocument('clients', clientId);
 
-// --- SYSTEM MUTATIONS ---
+// --- Mutaciones de Sistemas ---
 export const createSystem = (systemData: Omit<System, 'id'>) => createDocument<System>('systems', systemData);
 export const updateSystem = (systemId: string, systemData: Partial<System>) => updateDocument<System>('systems', systemId, systemData);
 export const deleteSystem = (systemId: string) => deleteDocument('systems', systemId);
 
-// --- EQUIPMENT MUTATIONS ---
+// --- Mutaciones de Equipos ---
 export const createEquipment = (equipmentData: Omit<Equipment, 'id'>) => createDocument<Equipment>('equipments', equipmentData);
 export const updateEquipment = (equipmentId: string, equipmentData: Partial<Equipment>) => updateDocument<Equipment>('equipments', equipmentId, equipmentData);
 export const deleteEquipment = (equipmentId: string) => deleteDocument('equipments', equipmentId);
 
-// --- PROTOCOL MUTATIONS ---
+// --- Mutaciones de Protocolos ---
 export const createProtocol = (protocolData: Omit<Protocol, 'id'>, id?: string) => createDocument<Protocol>('protocols', protocolData, id);
 export const updateProtocol = (protocolId: string, protocolData: Partial<Protocol>) => updateDocument<Protocol>('protocols', protocolId, protocolData);
 export const deleteProtocol = (protocolId: string) => deleteDocument('protocols', protocolId);
 
-// --- CEDULA MUTATIONS ---
+// --- Mutaciones de Cédulas ---
 export const createCedula = (cedulaData: Omit<Cedula, 'id'>) => createDocument<Cedula>('cedulas', cedulaData);
-export const updateCedula = (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => updateDocument<Cedula>('cedulas', cedulaId, cedulaData);
+export const updateCedula = (cedulaId: string, cedulaData: Partial<Cedula>) => updateDocument<Cedula>('cedulas', cedulaId, cedulaData);
 export const deleteCedula = (cedulaId: string) => deleteDocument('cedulas', cedulaId);
 
-// --- MEDIA LIBRARY ---
+// --- Librería Multimedia ---
 export function subscribeToMediaLibrary(setFiles: (files: MediaFile[]) => void): () => void {
     const mediaRef = collection(db, 'mediaLibrary');
     const q = query(mediaRef);
@@ -112,7 +113,7 @@ export function subscribeToMediaLibrary(setFiles: (files: MediaFile[]) => void):
         files.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setFiles(files);
     }, (error) => {
-        console.error("Error subscribing to media library:", error);
+        console.error("Error al suscribirse a la librería multimedia:", error);
     });
 
     return unsubscribe;
@@ -130,7 +131,6 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
         await new Promise<void>((resolve, reject) => {
             uploadTask.on('state_changed',
                 (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                     const overallProgress = ((totalUploaded + snapshot.bytesTransferred) / totalSize) * 100;
                     onProgress(overallProgress);
                 },
