@@ -10,17 +10,6 @@ export type Almacen = { nombre: string; direccion: string; };
 export type Client = { id: string; name: string; responsable: string; direccion: string; phone1?: string; phone2?: string; almacenes: Almacen[] };
 export type Equipment = { id: string; name: string; alias?: string; description: string; brand: string; model: string; type: string; serial: string; client: string; system: string; location: string; status: 'Activo' | 'Inactivo' | 'En Mantenimiento'; maintenanceStartDate?: string; maintenancePeriodicity?: string; imageUrl?: string | null; ipAddress?: string; configUser?: string; configPassword?: string; protocolId?: string | null; };
 export type System = { id: string; name: string; description: string; color: string; };
-export type User = { 
-    id: string; 
-    name: string; 
-    email: string; 
-    role: 'Administrador' | 'Supervisor' | 'Técnico' | 'Cliente'; 
-    password?: string; 
-    permissions: any; 
-    clientId?: string; 
-    photoUrl?: string | null; 
-    signatureUrl?: string | null; 
-};
 export type ProtocolStep = { step: string; priority: 'baja' | 'media' | 'alta'; percentage: number; completion: number; notes: string; imageUrl?: string | null; };
 export type Protocol = { id: string; type: string; brand: string; model: string; steps: ProtocolStep[]; };
 export type Cedula = { id: string; folio: string; client: string; equipment: string; technician: string; supervisor: string; creationDate: string; status: 'Pendiente' | 'En Progreso' | 'Completada'; description: string; protocolSteps: ProtocolStep[]; semaforo: 'Verde' | 'Naranja' | 'Rojo' | ''; };
@@ -44,8 +33,6 @@ export const getSystems = () => getCollectionData<System>('systems');
 export const getEquipments = () => getCollectionData<Equipment>('equipments');
 export const getProtocols = () => getCollectionData<Protocol>('protocols');
 export const getCedulas = () => getCollectionData<Cedula>('cedulas');
-// Users are no longer managed by the app, so this is removed.
-export const getUsers = async (): Promise<User[]> => Promise.resolve([]);
 
 // --- COMPANY SETTINGS ---
 export async function getCompanySettings(): Promise<CompanySettings> {
@@ -114,12 +101,6 @@ export const deleteProtocol = (protocolId: string) => deleteDocument('protocols'
 export const createCedula = (cedulaData: Omit<Cedula, 'id'>) => createDocument<Cedula>('cedulas', cedulaData);
 export const updateCedula = (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => updateDocument<Cedula>('cedulas', cedulaId, cedulaData);
 export const deleteCedula = (cedulaId: string) => deleteDocument('cedulas', cedulaId);
-
-// Since users are no longer managed, all user-related functions are removed.
-export const createUser = (userData: Omit<User, 'id'>) => Promise.reject("User management is disabled.");
-export const updateUser = (userId: string, userData: Partial<User>) => Promise.reject("User management is disabled.");
-export const deleteUser = (userId: string) => Promise.reject("User management is disabled.");
-
 
 // --- MEDIA LIBRARY ---
 export function subscribeToMediaLibrary(setFiles: (files: MediaFile[]) => void): () => void {

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User as UserIcon, Settings, Upload, Save } from 'lucide-react';
+import { Settings, Upload, Save, Building2 } from 'lucide-react';
 import { DashboardNav } from '@/components/dashboard-nav';
 import {
   SidebarProvider,
@@ -26,7 +25,6 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import type { User } from '@/lib/services';
 import { PermissionsProvider, usePermissions } from '@/hooks/use-permissions';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { useData } from '@/hooks/use-data-provider';
@@ -116,15 +114,9 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
 
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
-  const { user } = usePermissions();
   const { companySettings } = useData();
 
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
-  
-  const getInitials = (name: string) => {
-    if (!name) return <UserIcon className="h-5 w-5" />;
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
   
   return (
       <SidebarProvider>
@@ -135,7 +127,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               className="group flex h-auto items-center justify-center gap-3 rounded-lg px-2 text-lg font-semibold"
             >
               <div className="w-full p-2">
-                <Image src={companySettings?.logoUrl || "https://placehold.co/400x400.png"} alt="Escuadra Technology Logo" width={400} height={400} data-ai-hint="logo" className="object-contain w-full h-auto" />
+                <Image src={companySettings?.logoUrl || "https://placehold.co/400x400.png"} alt="Logo de la empresa" width={400} height={400} data-ai-hint="logo" className="object-contain w-full h-auto" />
               </div>
             </Link>
           </SidebarHeader>
@@ -150,26 +142,18 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <SidebarTrigger />
 
             <div className="flex items-center gap-3">
-              {user && <span className="hidden text-sm font-medium text-foreground sm:inline-block">{user.name}</span>}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-                    <Avatar>
-                      <AvatarImage
-                        src={user?.photoUrl || undefined}
-                        alt="User avatar"
-                        data-ai-hint="user avatar"
-                      />
-                      <AvatarFallback>{getInitials(user?.name || '')}</AvatarFallback>
-                    </Avatar>
-                  </Button>
+                   <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
+                       <Building2 className="h-5 w-5" />
+                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                  <DropdownMenuLabel>Ajustes</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                      <DropdownMenuItem onSelect={() => setSettingsPanelOpen(true)}>
                         <Settings className="mr-2 h-4 w-4"/>
-                        Cambiar Logo
+                        Configuración
                     </DropdownMenuItem>
                   <DropdownMenuItem>Soporte</DropdownMenuItem>
                 </DropdownMenuContent>

@@ -26,7 +26,9 @@ import {
     deleteMediaFile as apiDeleteMediaFile
 } from '@/lib/services';
 
-import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
+import type { Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
+
+export type LoadingStatus = 'idle' | 'loading_data' | 'ready' | 'error';
 
 type DataContextType = {
   clients: Client[];
@@ -37,6 +39,7 @@ type DataContextType = {
   companySettings: CompanySettings | null;
   loading: boolean;
   error: string | null;
+  loadingStatus: LoadingStatus;
   subscribeToMediaLibrary: (setFiles: (files: MediaFile[]) => void) => () => void;
   uploadFile: (files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void) => Promise<void>;
   deleteMediaFile: (file: MediaFile) => Promise<void>;
@@ -68,11 +71,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   
-  const [loading, setLoading] = useState(true);
+  const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
   const fetchAllData = useCallback(async () => {
-    setLoading(true);
+    setLoadingStatus('loading_data');
     try {
         const [clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
             getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
@@ -84,12 +87,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setCedulas(cedulasData);
         setCompanySettings(settingsData);
         setError(null);
+        setLoadingStatus('ready');
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during data fetching";
         setError(errorMessage);
+        setLoadingStatus('error');
         console.error("Data fetching error:", err);
-    } finally {
-        setLoading(false);
     }
   }, []);
 
@@ -125,7 +128,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   
   const value: DataContextType = {
     clients, systems, equipments, protocols, cedulas, companySettings,
-    loading, error,
+    loading: loadingStatus !== 'ready' && loadingStatus !== 'error', 
+    error,
+    loadingStatus,
     subscribeToMediaLibrary, uploadFile, deleteMediaFile,
     updateCompanySettings,
     createClient, updateClient, deleteClient,
