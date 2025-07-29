@@ -62,8 +62,6 @@ export async function loginUser(email: string, pass: string): Promise<User | nul
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-        // If user exists in Auth but not Firestore, something is wrong.
-        // For this app, we assume they must exist in both.
         await signOut(auth);
         throw new Error("No user document found for this email in Firestore.");
     }
@@ -136,12 +134,37 @@ export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
     return { id: authUid, ...userDataToSave };
 };
 export const updateUser = (userId: string, userData: Partial<User>) => updateDocument<User>('users', userId, userData);
-export const deleteUser = (userId: string) => deleteDocument('users', userId);
+export const deleteUser = async (userId: string) => {
+    // This is a simplified delete. In a real app, you'd need a Cloud Function
+    // to delete the corresponding Firebase Auth user.
+    await deleteDocument('users', userId);
+};
 
 export async function seedMockUsers() {
-    // This function is being deprecated in favor of manual user creation through the UI
-    // to ensure Auth and Firestore are always in sync.
-    console.log("User seeding has been disabled.");
+    console.log("Checking for mock users...");
+    for (const mockUser of mockUsers) {
+        // 1. Check if user exists in Firestore by email
+        const userQuery = query(collection(db, "users"), where("email", "==", mockUser.email), limit(1));
+        const userSnapshot = await getDocs(userQuery);
+
+        if (userSnapshot.empty) {
+            console.log(`User ${mockUser.email} not found. Creating...`);
+            // User does not exist, so create them in Auth and Firestore
+            try {
+                await createUser(mockUser);
+                console.log(`Successfully created user ${mockUser.email}`);
+            } catch (error: any) {
+                // If user already exists in Auth but not Firestore (e.g. from a failed previous attempt)
+                if (error.code === 'auth/email-already-in-use') {
+                    console.warn(`User ${mockUser.email} already exists in Auth. You may need to delete them from the Firebase Console to re-seed.`);
+                } else {
+                    console.error(`Failed to create user ${mockUser.email}:`, error);
+                }
+            }
+        } else {
+            console.log(`User ${mockUser.email} already exists.`);
+        }
+    }
 }
 
 

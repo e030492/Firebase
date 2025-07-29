@@ -4,10 +4,10 @@ export const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
 export const mockUsers = [
   {
     id: '1', // This ID will be replaced by the actual Firebase Auth UID upon creation
-    name: 'Erick (Admin)',
-    email: 'erick@escuadramx.com',
+    name: 'Administrador Principal',
+    email: 'admin@escuadramx.com',
     role: 'Administrador',
-    // Password is intentionally omitted. It should be managed in Firebase Auth Console.
+    password: 'admin123',
     signatureUrl: '',
     photoUrl: 'https://placehold.co/100x100.png',
     permissions: {

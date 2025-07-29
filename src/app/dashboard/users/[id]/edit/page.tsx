@@ -69,9 +69,9 @@ const initialPermissions: Permissions = {
 const defaultPermissionsByRole: { [key: string]: Permissions } = {
   admin: {
     users: { create: true, update: true, delete: true },
-    clients: { create: true, update: true, delete: false }, // Ajustado de ejemplo
-    systems: { create: true, update: true, delete: false }, // Ajustado de ejemplo
-    equipments: { create: true, update: true, delete: false }, // Ajustado de ejemplo
+    clients: { create: true, update: true, delete: true },
+    systems: { create: true, update: true, delete: true },
+    equipments: { create: true, update: true, delete: true },
     protocols: { create: true, update: true, delete: true },
     cedulas: { create: true, update: true, delete: true },
   },
@@ -483,5 +483,3 @@ export default function EditUserPage() {
     </form>
   );
 }
-
-    

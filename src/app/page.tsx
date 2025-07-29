@@ -23,10 +23,27 @@ import { seedMockUsers } from '@/lib/services';
 export default function LoginPage() {
   const router = useRouter();
   const { loginUser, loading: dataLoading, companySettings, isAuthReady } = useData(); 
-  const [email, setEmail] = useState('erick@escuadramx.com');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@escuadramx.com');
+  const [password, setPassword] = useState('admin123');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isSeeding, setIsSeeding] = useState(true);
+
+  useEffect(() => {
+    async function runSeed() {
+      if (isAuthReady) {
+        try {
+          await seedMockUsers();
+        } catch (seedError) {
+          console.error("Failed to seed admin user:", seedError);
+          setError("Error al configurar la cuenta de administrador.");
+        } finally {
+          setIsSeeding(false);
+        }
+      }
+    }
+    runSeed();
+  }, [isAuthReady]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +61,7 @@ export default function LoginPage() {
       }
     } catch (err: any) {
         console.error("Login failed:", err);
-        // Specifically check for 'invalid-credential' which covers user not found, wrong password, etc.
-        if (err.code === 'auth/invalid-credential') {
+        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
             setError('Usuario o contraseña incorrectos.');
         } else {
             setError(`Error: ${err.message}`);
@@ -55,7 +71,13 @@ export default function LoginPage() {
     }
   };
 
-  const isFormDisabled = isLoading || dataLoading || !isAuthReady;
+  const isFormDisabled = isLoading || dataLoading || !isAuthReady || isSeeding;
+
+  const getButtonText = () => {
+    if (isSeeding) return "Verificando cuenta de administrador...";
+    if (isLoading) return "Accediendo...";
+    return "Acceder";
+  }
 
   return (
     <>
@@ -86,22 +108,20 @@ export default function LoginPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="erick@escuadramx.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isFormDisabled} />
+                  <Input id="email" type="email" placeholder="admin@escuadramx.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isFormDisabled} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
-                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isFormDisabled} placeholder="Contraseña"/>
+                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isFormDisabled} placeholder="admin123"/>
                 </div>
                 {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
               </CardContent>
               <CardFooter className="flex-col gap-4">
                 <Button type="submit" className="w-full" disabled={isFormDisabled}>
-                  {isLoading ? (
-                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Accediendo...</span>
-                    </>
-                  ) : 'Acceder'}
+                  {(isLoading || isSeeding) && (
+                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  <span>{getButtonText()}</span>
                 </Button>
                  <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
                   ¿Olvidó su contraseña?

@@ -45,7 +45,7 @@ export default function UsersPage() {
   const { users, loading, deleteUser: deleteUserFromProvider } = useData();
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
-  const { can } = usePermissions();
+  const { can, user: activeUser } = usePermissions();
   
   const sortedUsers = useMemo(() => {
     let sortableItems = [...users];
@@ -182,7 +182,7 @@ export default function UsersPage() {
                         <TableCell>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <Button aria-haspopup="true" size="icon" variant="ghost" disabled={user.id === activeUser?.id && user.role === 'Administrador'}>
                                 <MoreHorizontal className="h-4 w-4" />
                                 <span className="sr-only">Toggle menu</span>
                             </Button>
@@ -198,6 +198,7 @@ export default function UsersPage() {
                                 <DropdownMenuItem
                                     className="text-destructive focus:text-destructive"
                                     onSelect={() => setUserToDelete(user)}
+                                    disabled={user.id === activeUser?.id}
                                 >
                                     Eliminar
                                 </DropdownMenuItem>
