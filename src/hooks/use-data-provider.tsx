@@ -49,7 +49,6 @@ type DataContextType = {
   loading: boolean;
   loadingStatus: LoadingStatus;
   error: string | null;
-  isAuthReady: boolean;
   loginUser: (email: string, pass: string) => Promise<User | null>;
   subscribeToMediaLibrary: (setFiles: (files: MediaFile[]) => void) => () => void;
   uploadFile: (files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void) => Promise<void>;
@@ -73,7 +72,6 @@ type DataContextType = {
   createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<Cedula>;
   updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
-  seedAdminUser: () => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -89,20 +87,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   
   const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-
-  const seedAdminUser = useCallback(async () => {
-    setLoadingStatus('seeding');
-    try {
-      await seedMockUsers();
-      // After seeding, we can continue the auth process.
-      setIsAuthReady(true);
-    } catch (seedError) {
-      console.error("Critical error during admin user seeding:", seedError);
-      setError("Error al configurar la cuenta de administrador.");
-      setLoadingStatus('error');
-    }
-  }, []);
 
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
     setLoadingStatus('loading_data');
@@ -130,26 +114,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthReady) return;
+    async function initializeApp() {
+        setLoadingStatus('seeding');
+        try {
+            await seedMockUsers();
+            
+            setLoadingStatus('authenticating');
+            const unsubscribe = onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    fetchAllData(user);
+                } else {
+                    setUsers([]);
+                    setClients([]);
+                    setSystems([]);
+                    setEquipments([]);
+                    setProtocols([]);
+                    setCedulas([]);
+                    setCompanySettings(null);
+                    localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+                    setLoadingStatus('ready');
+                }
+            });
+            return () => unsubscribe();
+        } catch (err) {
+            console.error("Initialization failed:", err);
+            setError("Error al configurar la aplicación.");
+            setLoadingStatus('error');
+        }
+    }
 
-    setLoadingStatus('authenticating');
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        fetchAllData(user);
-      } else {
-        setUsers([]);
-        setClients([]);
-        setSystems([]);
-        setEquipments([]);
-        setProtocols([]);
-        setCedulas([]);
-        setCompanySettings(null); 
-        localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-        setLoadingStatus('ready');
-      }
-    });
-    return () => unsubscribe();
-  }, [isAuthReady, fetchAllData]);
+    initializeApp();
+  }, [fetchAllData]);
 
 
   const loginUser = async (email: string, pass: string): Promise<User | null> => {
@@ -283,7 +278,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loading: loadingStatus !== 'ready',
     loadingStatus,
     error,
-    isAuthReady,
     loginUser,
     subscribeToMediaLibrary,
     uploadFile,
@@ -307,7 +301,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     createCedula,
     updateCedula,
     deleteCedula,
-    seedAdminUser,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

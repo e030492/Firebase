@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ShieldCheck, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,27 +21,11 @@ import { useData, LoadingStatus } from '@/hooks/use-data-provider';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser, loadingStatus, companySettings, seedAdminUser } = useData(); 
+  const { loginUser, loadingStatus, error: dataError, companySettings } = useData(); 
   const [email, setEmail] = useState('admin@escuadramx.com');
   const [password, setPassword] = useState('admin123');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [seeding, setSeeding] = useState(true);
-
-  useEffect(() => {
-    async function performSeeding() {
-        try {
-            await seedAdminUser();
-        } catch (err) {
-            console.error("Seeding failed", err);
-            setError("Error al configurar la cuenta de administrador.");
-        } finally {
-            setSeeding(false);
-        }
-    }
-    performSeeding();
-  }, [seedAdminUser]);
-
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,12 +52,12 @@ export default function LoginPage() {
     }
   };
 
-  const isFormDisabled = isLoading || loadingStatus !== 'ready' || seeding;
+  const isFormDisabled = isLoading || loadingStatus !== 'ready';
 
   const getButtonText = () => {
-    if (seeding) return "Verificando cuenta de administrador...";
     if (isLoading) return "Accediendo...";
     switch(loadingStatus) {
+        case 'seeding': return "Verificando cuenta de administrador...";
         case 'authenticating': return "Autenticando...";
         case 'loading_data': return "Cargando datos...";
         case 'error': return "Error. Intente de nuevo.";
@@ -116,7 +100,7 @@ export default function LoginPage() {
                   <Label htmlFor="password">Contraseña</Label>
                   <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required disabled={isFormDisabled} placeholder="admin123"/>
                 </div>
-                {error && <p className="text-sm font-medium text-destructive pt-2">{error}</p>}
+                {(error || dataError) && <p className="text-sm font-medium text-destructive pt-2">{error || dataError}</p>}
               </CardContent>
               <CardFooter className="flex-col gap-4">
                 <Button type="submit" className="w-full" disabled={isFormDisabled}>
