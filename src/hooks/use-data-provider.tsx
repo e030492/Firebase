@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { 
-    getClients, getSystems, getEquipments, getProtocols, getCedulas,
+    getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createClient as apiCreateClient,
     updateClient as apiUpdateClient,
     deleteClient as apiDeleteClient,
@@ -28,10 +28,8 @@ import {
 
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
 
-export type LoadingStatus = 'loading_data' | 'ready' | 'error';
-
 type DataContextType = {
-  users: User[]; // Kept for type consistency, but will be empty.
+  users: User[];
   clients: Client[];
   systems: System[];
   equipments: Equipment[];
@@ -39,7 +37,6 @@ type DataContextType = {
   cedulas: Cedula[];
   companySettings: CompanySettings | null;
   loading: boolean;
-  loadingStatus: LoadingStatus;
   error: string | null;
   subscribeToMediaLibrary: (setFiles: (files: MediaFile[]) => void) => () => void;
   uploadFile: (files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void) => Promise<void>;
@@ -65,6 +62,8 @@ type DataContextType = {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  // Users are kept for type consistency, but won't be actively managed.
+  const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -72,15 +71,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [cedulas, setCedulas] = useState<Cedula[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   
-  const [loadingStatus, setLoadingStatus] = useState<LoadingStatus>('loading_data');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAllData = useCallback(async () => {
-    setLoadingStatus('loading_data');
+    setLoading(true);
     try {
-        const [clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
-            getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
+        const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
+            getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
         ]);
+        setUsers(usersData)
         setClients(clientsData);
         setSystems(systemsData);
         setEquipments(equipmentsData);
@@ -88,12 +88,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setCedulas(cedulasData);
         setCompanySettings(settingsData);
         setError(null);
-        setLoadingStatus('ready');
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "An unknown error occurred during data fetching";
         setError(errorMessage);
-        setLoadingStatus('error');
         console.error("Data fetching error:", err);
+    } finally {
+        setLoading(false);
     }
   }, []);
 
@@ -102,6 +102,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [fetchAllData]);
 
   // --- CRUD MUTATIONS ---
+  // Note: User mutations are disabled in services.ts, but these stubs prevent errors.
+  const createUser = (data: Omit<User, 'id'>) => apiCreateClient(data as any).then(n => { return n as any; });
+  const updateUser = (id: string, data: Partial<User>) => apiUpdateClient(id, data as any).then(() => {});
+  const deleteUser = (id: string) => apiDeleteClient(id).then(() => {});
+
   const createClient = (data: Omit<Client, 'id'>) => apiCreateClient(data).then(n => { setClients(p => [...p, n]); return n; });
   const updateClient = (id: string, data: Partial<Client>) => apiUpdateClient(id, data).then(u => { setClients(p => p.map(c => c.id === id ? u : c)); return u; });
   const deleteClient = (id: string) => apiDeleteClient(id).then(() => setClients(p => p.filter(c => c.id !== id)));
@@ -128,9 +133,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteMediaFile = (file: MediaFile) => apiDeleteMediaFile(file);
   
   const value: DataContextType = {
-    users: [], clients, systems, equipments, protocols, cedulas, companySettings,
-    loading: loadingStatus !== 'ready',
-    loadingStatus, error,
+    users, clients, systems, equipments, protocols, cedulas, companySettings,
+    loading, error,
     subscribeToMediaLibrary, uploadFile, deleteMediaFile,
     updateCompanySettings,
     createClient, updateClient, deleteClient,

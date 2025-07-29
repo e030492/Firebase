@@ -116,7 +116,6 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
 
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const { user } = usePermissions();
   const { companySettings } = useData();
 

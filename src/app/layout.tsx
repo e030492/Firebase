@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { DataProvider } from '@/hooks/use-data-provider';
+import { PermissionsProvider } from '@/hooks/use-permissions';
 
 
 export const metadata: Metadata = {
@@ -26,10 +27,12 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
+        <PermissionsProvider>
           <DataProvider>
             {children}
             <Toaster />
           </DataProvider>
+        </PermissionsProvider>
       </body>
     </html>
   );

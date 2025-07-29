@@ -1,6 +1,5 @@
-
 import { 
-    collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc
+    collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query
 } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from './firebase';
@@ -36,14 +35,11 @@ const getCollectionData = async <T extends { id: string }>(collectionName: strin
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     } catch (error) {
         console.error(`Error getting ${collectionName}:`, error);
-        // Since we removed auth, we will return empty arrays on permission errors for now
-        // A more robust solution would be to implement read rules in Firestore
-        return [];
+        throw new Error(`Failed to fetch ${collectionName}. Check Firestore rules and network connection.`);
     }
 };
 
-// No longer need getUsers as we removed the user management module
-// export const getUsers = () => getCollectionData<User>('users');
+export const getUsers = () => getCollectionData<User>('users');
 export const getClients = () => getCollectionData<Client>('clients');
 export const getSystems = () => getCollectionData<System>('systems');
 export const getEquipments = () => getCollectionData<Equipment>('equipments');
@@ -58,7 +54,6 @@ export async function getCompanySettings(): Promise<CompanySettings> {
     if (docSnap.exists()) {
         return { id: docSnap.id, ...docSnap.data() } as CompanySettings;
     } else {
-        // Create default settings if they don't exist
         const defaultSettings = { logoUrl: null };
         await setDoc(docRef, defaultSettings);
         return { id: 'company', ...defaultSettings };
@@ -120,6 +115,13 @@ export const createCedula = (cedulaData: Omit<Cedula, 'id'>) => createDocument<C
 export const updateCedula = (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => updateDocument<Cedula>('cedulas', cedulaId, cedulaData);
 export const deleteCedula = (cedulaId: string) => deleteDocument('cedulas', cedulaId);
 
+// Since users are no longer managed, we only need the type definition.
+// The CRUD functions are removed.
+export const createUser = (userData: Omit<User, 'id'>) => Promise.reject("User management is disabled.");
+export const updateUser = (userId: string, userData: Partial<User>) => Promise.reject("User management is disabled.");
+export const deleteUser = (userId: string) => Promise.reject("User management is disabled.");
+
+
 // --- MEDIA LIBRARY ---
 export function subscribeToMediaLibrary(setFiles: (files: MediaFile[]) => void): () => void {
     const mediaRef = collection(db, 'mediaLibrary');
@@ -139,17 +141,18 @@ export function subscribeToMediaLibrary(setFiles: (files: MediaFile[]) => void):
 export async function uploadFile(files: File[], onProgress: (percentage: number) => void, logAudit: (message: string) => void): Promise<void> {
     const totalSize = files.reduce((acc, file) => acc + file.size, 0);
     let totalUploaded = 0;
-    const batch = writeBatch(db);
 
-    const uploadPromises = files.map(file => {
+    for (const file of files) {
         const fileId = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
         const storageRef = ref(storage, `mediaLibrary/${fileId}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
-        return new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
             uploadTask.on('state_changed',
                 (snapshot) => {
-                    // This part is tricky for overall progress. We calculate it after each success.
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    const overallProgress = ((totalUploaded + snapshot.bytesTransferred) / totalSize) * 100;
+                    onProgress(overallProgress);
                 },
                 (error) => {
                     logAudit(`ERROR al subir ${file.name}: ${error.message}`);
@@ -157,33 +160,24 @@ export async function uploadFile(files: File[], onProgress: (percentage: number)
                 },
                 async () => {
                     totalUploaded += file.size;
-                    const overallProgress = (totalUploaded / totalSize) * 100;
-                    onProgress(overallProgress);
-                    
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                     logAudit(`Archivo ${file.name} subido, URL obtenida.`);
                     
-                    const docId = doc(collection(db, "mediaLibrary")).id;
-                    const mediaFileRef = doc(db, 'mediaLibrary', docId);
-
-                    batch.set(mediaFileRef, {
+                    const docData = {
                         name: file.name,
                         url: downloadURL,
                         type: file.type,
                         size: file.size,
                         createdAt: new Date().toISOString(),
-                    });
+                    };
+                    await addDoc(collection(db, "mediaLibrary"), docData);
                     
-                    logAudit(`Metadatos de ${file.name} preparados para guardar.`);
+                    logAudit(`Metadatos de ${file.name} guardados.`);
                     resolve();
                 }
             );
         });
-    });
-
-    await Promise.all(uploadPromises);
-    await batch.commit();
-    logAudit('Todos los metadatos guardados en Firestore.');
+    }
 }
 
 export async function deleteMediaFile(file: MediaFile): Promise<void> {
