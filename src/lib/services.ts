@@ -1,14 +1,9 @@
 
 import { 
-    collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc, where, query, limit, onSnapshot, writeBatch
+    collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, setDoc
 } from "firebase/firestore";
-import { 
-    signInWithEmailAndPassword, createUserWithEmailAndPassword,
-    signOut
-} from "firebase/auth";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, auth, storage } from './firebase';
-import { adminUser } from './mock-data';
+import { db, storage } from './firebase';
 
 // Interfaces for our data structures
 export type Plano = { url: string; name: string; size: number };
@@ -41,68 +36,19 @@ const getCollectionData = async <T extends { id: string }>(collectionName: strin
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     } catch (error) {
         console.error(`Error getting ${collectionName}:`, error);
-        throw error;
+        // Since we removed auth, we will return empty arrays on permission errors for now
+        // A more robust solution would be to implement read rules in Firestore
+        return [];
     }
 };
 
-export const getUsers = () => getCollectionData<User>('users');
+// No longer need getUsers as we removed the user management module
+// export const getUsers = () => getCollectionData<User>('users');
 export const getClients = () => getCollectionData<Client>('clients');
 export const getSystems = () => getCollectionData<System>('systems');
 export const getEquipments = () => getCollectionData<Equipment>('equipments');
 export const getProtocols = () => getCollectionData<Protocol>('protocols');
 export const getCedulas = () => getCollectionData<Cedula>('cedulas');
-
-// --- AUTH & ADMIN SEEDING ---
-export async function loginUser(email: string, pass: string): Promise<User | null> {
-    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    const authUid = userCredential.user.uid;
-    
-    const userDocRef = doc(db, "users", authUid);
-    const userDocSnap = await getDoc(userDocRef);
-
-    if (!userDocSnap.exists()) {
-        await signOut(auth);
-        throw new Error("No user document found for this UID in Firestore.");
-    }
-    const userData = { id: userDocSnap.id, ...userDocSnap.data() } as User;
-    
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userToStore } = userData;
-    return userToStore;
-}
-
-export async function seedAdminUser() {
-    console.log("Verifying admin user...");
-    const adminEmail = adminUser.email;
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("email", "==", adminEmail), limit(1));
-    
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-        console.log(`Admin user '${adminEmail}' not found in Firestore. Attempting to create...`);
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminUser.password);
-            const authUid = userCredential.user.uid;
-
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { password, id, ...adminDataToSave } = adminUser;
-            
-            const docRef = doc(db, 'users', authUid);
-            await setDoc(docRef, adminDataToSave);
-            console.log(`Successfully created admin user ${adminEmail} in Auth and Firestore.`);
-        } catch (error: any) {
-            if (error.code === 'auth/email-already-in-use') {
-                 console.warn(`User ${adminEmail} already exists in Auth but not in Firestore. This might indicate a partially failed previous setup. The login for this user might not work as expected without manual intervention in the Firebase console.`);
-            } else {
-                 console.error(`Failed to create admin user ${adminEmail}:`, error);
-                 throw error;
-            }
-        }
-    } else {
-        console.log(`Admin user ${adminEmail} already exists in Firestore.`);
-    }
-}
 
 
 // --- COMPANY SETTINGS ---
@@ -112,7 +58,10 @@ export async function getCompanySettings(): Promise<CompanySettings> {
     if (docSnap.exists()) {
         return { id: docSnap.id, ...docSnap.data() } as CompanySettings;
     } else {
-        return { id: 'company', logoUrl: null };
+        // Create default settings if they don't exist
+        const defaultSettings = { logoUrl: null };
+        await setDoc(docRef, defaultSettings);
+        return { id: 'company', ...defaultSettings };
     }
 }
 
@@ -121,35 +70,6 @@ export async function updateCompanySettings(settingsData: Partial<CompanySetting
     await setDoc(docRef, settingsData, { merge: true });
     return getCompanySettings();
 }
-
-// --- USER MUTATIONS ---
-export const createUser = async (userData: Omit<User, 'id'>): Promise<User> => {
-    if (!userData.password) throw new Error("Password is required to create a user.");
-    
-    const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-    const authUid = userCredential.user.uid;
-    
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userDataToSave } = userData;
-    const docRef = doc(db, 'users', authUid);
-    await setDoc(docRef, userDataToSave);
-
-    return { id: authUid, ...userDataToSave };
-};
-
-export const updateUser = async (userId: string, userData: Partial<User>): Promise<User> => {
-    const docRef = doc(db, 'users', userId);
-    await updateDoc(docRef, userData);
-    const updatedDoc = await getDoc(docRef);
-    return { id: updatedDoc.id, ...updatedDoc.data() } as User;
-};
-
-export const deleteUser = async (userId: string) => {
-    // IMPORTANT: This only deletes the Firestore document. Deleting the Firebase Auth
-    // user requires admin privileges, typically from a backend/cloud function.
-    await deleteDoc(doc(db, "users", userId));
-};
-
 
 // --- GENERIC MUTATIONS ---
 const createDocument = async <T extends {id: string}>(collectionName: string, data: Omit<T, 'id'>, id?: string): Promise<T> => {

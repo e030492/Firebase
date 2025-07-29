@@ -1,8 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode, Dispatch, SetStateAction } from "react";
-import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
+import { createContext, useContext, useState, ReactNode, Dispatch, SetStateAction } from "react";
 import { User } from '@/lib/services';
 
 type Permissions = User['permissions'];
@@ -15,39 +14,24 @@ type PermissionsContextType = {
   can: (action: ActionKey, module: ModuleKey) => boolean;
 };
 
+// Create a mock admin user that will always be "logged in"
+const mockAdmin: User = {
+    id: 'mock-admin-id',
+    name: 'Administrador',
+    email: 'admin@escuadramx.com',
+    role: 'Administrador',
+    permissions: {} // Not needed, as can() will always return true
+};
+
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
 export function PermissionsProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  // The user is always the mock admin, so we don't need a setter from outside.
+  const [user, setUser] = useState<User | null>(mockAdmin);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        if (!user || user.id !== parsedUser.id) {
-            setUser(parsedUser);
-        }
-      } catch (error) {
-        console.error("Failed to parse active user for permissions", error);
-        setUser(null);
-      }
-    }
-  }, [user]);
-
+  // The 'can' function is now simplified: it always returns true.
   const can = (action: ActionKey, module: ModuleKey): boolean => {
-    if (!user) {
-      return false;
-    }
-    // Admin can do everything
-    if (user.role === 'Administrador') {
-        return true;
-    }
-    const modulePermissions = user.permissions?.[module];
-    if (modulePermissions) {
-      return modulePermissions[action] ?? false;
-    }
-    return false;
+    return true;
   };
 
   return (

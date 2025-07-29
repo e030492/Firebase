@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShieldCheck, User as UserIcon, Settings, Upload, Save } from 'lucide-react';
+import { User as UserIcon, Settings, Upload, Save } from 'lucide-react';
 import { DashboardNav } from '@/components/dashboard-nav';
 import {
   SidebarProvider,
@@ -27,7 +27,6 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import type { User } from '@/lib/services';
-import { ACTIVE_USER_STORAGE_KEY } from '@/lib/mock-data';
 import { PermissionsProvider, usePermissions } from '@/hooks/use-permissions';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { useData } from '@/hooks/use-data-provider';
@@ -118,35 +117,11 @@ function CompanySettingsPanel({ open, onOpenChange }: { open: boolean, onOpenCha
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, setUser, can } = usePermissions();
+  const { user } = usePermissions();
   const { companySettings } = useData();
 
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem(ACTIVE_USER_STORAGE_KEY);
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        if (!user || user.id !== parsedUser.id) {
-            setUser(parsedUser);
-        }
-      } catch (error) {
-        console.error("Failed to parse active user from localStorage", error);
-        setUser(null);
-        router.push('/');
-      }
-    } else {
-        router.push('/');
-    }
-  }, [router, setUser, user]);
   
-  const handleLogout = () => {
-      localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
-      setUser(null);
-      router.push('/');
-  };
-
   const getInitials = (name: string) => {
     if (!name) return <UserIcon className="h-5 w-5" />;
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -193,17 +168,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {can('update', 'users') && (
                      <DropdownMenuItem onSelect={() => setSettingsPanelOpen(true)}>
                         <Settings className="mr-2 h-4 w-4"/>
                         Cambiar Logo
                     </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem>Soporte</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={handleLogout}>
-                    Cerrar Sesión
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
