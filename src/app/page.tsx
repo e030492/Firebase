@@ -54,7 +54,6 @@ export default function LoginPage() {
       if (user) {
         router.push('/dashboard/dashboard');
       } else {
-        // This case should ideally not be hit if the catch block is working.
         setError('Usuario o contraseña incorrectos.');
       }
     } catch (err: any) {

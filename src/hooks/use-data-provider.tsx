@@ -73,6 +73,7 @@ type DataContextType = {
   createCedula: (cedulaData: Omit<Cedula, 'id'>) => Promise<Cedula>;
   updateCedula: (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => Promise<void>;
   deleteCedula: (cedulaId: string) => Promise<void>;
+  seedAdminUser: () => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -90,19 +91,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
-  useEffect(() => {
-      async function initializeApp() {
-          setLoadingStatus('seeding');
-          try {
-              await seedMockUsers();
-              setIsAuthReady(true); // Now we are ready to check auth state
-          } catch (seedError) {
-              console.error("Critical error during admin user seeding:", seedError);
-              setError("Error al configurar la cuenta de administrador.");
-              setLoadingStatus('error');
-          }
-      }
-      initializeApp();
+  const seedAdminUser = useCallback(async () => {
+    setLoadingStatus('seeding');
+    try {
+      await seedMockUsers();
+      // After seeding, we can continue the auth process.
+      setIsAuthReady(true);
+    } catch (seedError) {
+      console.error("Critical error during admin user seeding:", seedError);
+      setError("Error al configurar la cuenta de administrador.");
+      setLoadingStatus('error');
+    }
   }, []);
 
   const fetchAllData = useCallback(async (firebaseUser: FirebaseUser) => {
@@ -308,6 +307,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     createCedula,
     updateCedula,
     deleteCedula,
+    seedAdminUser,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
