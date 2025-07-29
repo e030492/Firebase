@@ -145,22 +145,20 @@ export const deleteUser = async (userId: string) => {
 export async function seedMockUsers() {
     console.log("Checking for mock users...");
     for (const mockUser of mockUsers) {
-        // 1. Check if user exists in Firestore by email
         const userQuery = query(collection(db, "users"), where("email", "==", mockUser.email), limit(1));
         const userSnapshot = await getDocs(userQuery);
 
         if (userSnapshot.empty) {
-            console.log(`User ${mockUser.email} not found. Creating...`);
-            // User does not exist, so create them in Auth and Firestore
+            console.log(`User ${mockUser.email} not found in Firestore. Creating...`);
             try {
                 await createUser(mockUser);
-                console.log(`Successfully created user ${mockUser.email}`);
+                console.log(`Successfully created user ${mockUser.email} in Auth and Firestore.`);
             } catch (error: any) {
-                // If user already exists in Auth but not Firestore (e.g. from a failed previous attempt)
                 if (error.code === 'auth/email-already-in-use') {
-                    console.warn(`User ${mockUser.email} already exists in Auth. You may need to delete them from the Firebase Console to re-seed.`);
+                    console.warn(`User ${mockUser.email} already exists in Auth but not Firestore. This may indicate an inconsistent state. The system will proceed.`);
                 } else {
-                    console.error(`Failed to create user ${mockUser.email}:`, error);
+                    console.error(`Failed to create mock user ${mockUser.email}:`, error);
+                    throw error; // Re-throw to be caught by the DataProvider
                 }
             }
         } else {

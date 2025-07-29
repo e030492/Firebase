@@ -103,7 +103,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
               return;
           }
           setIsAuthReady(true);
-          setLoadingStatus('idle'); // Ready for auth check
       }
       initialize();
   }, []);
