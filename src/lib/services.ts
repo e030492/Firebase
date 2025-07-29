@@ -39,13 +39,13 @@ const getCollectionData = async <T extends { id: string }>(collectionName: strin
     }
 };
 
-export const getUsers = () => getCollectionData<User>('users');
 export const getClients = () => getCollectionData<Client>('clients');
 export const getSystems = () => getCollectionData<System>('systems');
 export const getEquipments = () => getCollectionData<Equipment>('equipments');
 export const getProtocols = () => getCollectionData<Protocol>('protocols');
 export const getCedulas = () => getCollectionData<Cedula>('cedulas');
-
+// Users are no longer managed by the app, so this is removed.
+export const getUsers = async (): Promise<User[]> => Promise.resolve([]);
 
 // --- COMPANY SETTINGS ---
 export async function getCompanySettings(): Promise<CompanySettings> {
@@ -115,8 +115,7 @@ export const createCedula = (cedulaData: Omit<Cedula, 'id'>) => createDocument<C
 export const updateCedula = (cedulaId: string, cedulaData: Partial<Cedula>, onStep?: (log: string) => void) => updateDocument<Cedula>('cedulas', cedulaId, cedulaData);
 export const deleteCedula = (cedulaId: string) => deleteDocument('cedulas', cedulaId);
 
-// Since users are no longer managed, we only need the type definition.
-// The CRUD functions are removed.
+// Since users are no longer managed, all user-related functions are removed.
 export const createUser = (userData: Omit<User, 'id'>) => Promise.reject("User management is disabled.");
 export const updateUser = (userId: string, userData: Partial<User>) => Promise.reject("User management is disabled.");
 export const deleteUser = (userId: string) => Promise.reject("User management is disabled.");

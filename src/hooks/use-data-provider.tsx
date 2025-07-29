@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { 
-    getUsers, getClients, getSystems, getEquipments, getProtocols, getCedulas,
+    getClients, getSystems, getEquipments, getProtocols, getCedulas,
     createClient as apiCreateClient,
     updateClient as apiUpdateClient,
     deleteClient as apiDeleteClient,
@@ -29,7 +29,6 @@ import {
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';
 
 type DataContextType = {
-  users: User[];
   clients: Client[];
   systems: System[];
   equipments: Equipment[];
@@ -62,8 +61,6 @@ type DataContextType = {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  // Users are kept for type consistency, but won't be actively managed.
-  const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [systems, setSystems] = useState<System[]>([]);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -77,10 +74,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-        const [usersData, clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
-            getUsers(), getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
+        const [clientsData, systemsData, equipmentsData, protocolsData, cedulasData, settingsData] = await Promise.all([
+            getClients(), getSystems(), getEquipments(), getProtocols(), getCedulas(), getCompanySettings()
         ]);
-        setUsers(usersData)
         setClients(clientsData);
         setSystems(systemsData);
         setEquipments(equipmentsData);
@@ -102,11 +98,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [fetchAllData]);
 
   // --- CRUD MUTATIONS ---
-  // Note: User mutations are disabled in services.ts, but these stubs prevent errors.
-  const createUser = (data: Omit<User, 'id'>) => apiCreateClient(data as any).then(n => { return n as any; });
-  const updateUser = (id: string, data: Partial<User>) => apiUpdateClient(id, data as any).then(() => {});
-  const deleteUser = (id: string) => apiDeleteClient(id).then(() => {});
-
   const createClient = (data: Omit<Client, 'id'>) => apiCreateClient(data).then(n => { setClients(p => [...p, n]); return n; });
   const updateClient = (id: string, data: Partial<Client>) => apiUpdateClient(id, data).then(u => { setClients(p => p.map(c => c.id === id ? u : c)); return u; });
   const deleteClient = (id: string) => apiDeleteClient(id).then(() => setClients(p => p.filter(c => c.id !== id)));
@@ -116,7 +107,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteSystem = (id: string) => apiDeleteSystem(id).then(() => setSystems(p => p.filter(s => s.id !== id)));
   
   const createEquipment = (data: Omit<Equipment, 'id'>) => apiCreateEquipment(data).then(n => { setEquipments(p => [...p, n]); return n; });
-  const updateEquipment = (id: string, data: Partial<Equipment>) => apiUpdateEquipment(id, data).then(() => setEquipments(p => p.map(e => e.id === id ? {...e, ...data} : e)));
+  const updateEquipment = (id: string, data: Partial<Equipment>) => apiUpdateEquipment(id, data).then(() => { const updatedEquipment = { ...equipments.find(e=>e.id===id)!, ...data }; setEquipments(p => p.map(e => e.id === id ? updatedEquipment as Equipment : e))});
   const deleteEquipment = (id: string) => apiDeleteEquipment(id).then(() => setEquipments(p => p.filter(e => e.id !== id)));
 
   const createProtocol = (data: Omit<Protocol, 'id'>, id?: string) => apiCreateProtocol(data, id).then(n => { setProtocols(p => [...p, n]); return n; });
@@ -124,7 +115,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteProtocol = (id: string) => apiDeleteProtocol(id).then(() => setProtocols(p => p.filter(proto => proto.id !== id)));
 
   const createCedula = (data: Omit<Cedula, 'id'>) => apiCreateCedula(data).then(n => { setCedulas(p => [...p, n]); return n; });
-  const updateCedula = (id: string, data: Partial<Cedula>, onStep?: (log: string) => void) => apiUpdateCedula(id, data, onStep).then(() => setCedulas(p => p.map(c => c.id === id ? {...c, ...data} : c)));
+  const updateCedula = (id: string, data: Partial<Cedula>, onStep?: (log: string) => void) => apiUpdateCedula(id, data, onStep).then(() => { const updatedCedula = { ...cedulas.find(c=>c.id===id)!, ...data }; setCedulas(p => p.map(c => c.id === id ? updatedCedula as Cedula : c))});
   const deleteCedula = (id: string) => apiDeleteCedula(id).then(() => setCedulas(p => p.filter(c => c.id !== id)));
 
   const updateCompanySettings = (data: Partial<CompanySettings>) => apiUpdateCompanySettings(data).then(newSettings => setCompanySettings(newSettings));
@@ -133,7 +124,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteMediaFile = (file: MediaFile) => apiDeleteMediaFile(file);
   
   const value: DataContextType = {
-    users, clients, systems, equipments, protocols, cedulas, companySettings,
+    clients, systems, equipments, protocols, cedulas, companySettings,
     loading, error,
     subscribeToMediaLibrary, uploadFile, deleteMediaFile,
     updateCompanySettings,
