@@ -3,7 +3,7 @@ export const ACTIVE_USER_STORAGE_KEY = 'guardian_shield_active_user';
 
 export const mockUsers = [
   {
-    id: '1', // This ID might be overwritten by Firebase Auth UID
+    id: '1', // This ID will be replaced by the actual Firebase Auth UID upon creation
     name: 'Erick (Admin)',
     email: 'erick@escuadramx.com',
     role: 'Administrador',
@@ -19,7 +19,7 @@ export const mockUsers = [
         cedulas: { create: true, update: true, delete: true },
     }
   },
-   {
+  {
     id: '5',
     name: 'Admin User',
     email: 'admin@escuadra.com',

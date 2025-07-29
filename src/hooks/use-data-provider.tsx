@@ -30,6 +30,7 @@ import {
     subscribeToMediaLibrary as apiSubscribeToMediaLibrary,
     uploadFile as apiUploadFile,
     deleteMediaFile as apiDeleteMediaFile,
+    seedMockUsers
 } from '@/lib/services';
 
 import type { User, Client, System, Equipment, Protocol, Cedula, CompanySettings, MediaFile } from '@/lib/services';

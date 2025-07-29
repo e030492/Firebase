@@ -150,20 +150,10 @@ export async function seedMockUsers() {
                 // This will create the user in Auth and then in Firestore
                 await createUser(mockUser);
                 console.log(`User ${mockUser.email} created successfully in Auth and Firestore.`);
-            } else {
-                console.log(`User ${mockUser.email} already exists in Firestore. Sync complete.`);
             }
         } catch (error: any) {
-             // This specifically catches the case where the user exists in Firebase Auth
-             // but maybe not in Firestore. It's a common scenario during development.
             if (error.code === 'auth/email-already-in-use') {
                 console.log(`Auth user for ${mockUser.email} already exists. Skipping Auth creation.`);
-                // If the user already exists in Auth, we can ensure their Firestore doc is also up to date.
-                const q = query(collection(db, "users"), where("email", "==", mockUser.email.toLowerCase()), limit(1));
-                const querySnapshot = await getDocs(q);
-                 if (querySnapshot.empty) {
-                    console.warn(`User ${mockUser.email} exists in Auth but not Firestore. This should not happen with the new logic.`);
-                 }
             } else {
                  console.error(`Error processing user ${mockUser.email}:`, error);
             }
@@ -171,6 +161,7 @@ export async function seedMockUsers() {
     }
     console.log("User sync process finished.");
 }
+
 
 // --- CLIENT MUTATIONS ---
 export const createClient = (clientData: Omit<Client, 'id'>) => createDocument<Client>('clients', clientData);
