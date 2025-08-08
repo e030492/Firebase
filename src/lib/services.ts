@@ -165,3 +165,34 @@ export async function deleteMediaFile(file: MediaFile): Promise<void> {
     await deleteObject(fileRef);
     await deleteDocument('mediaLibrary', file.id);
 }
+
+export async function uploadEquipmentImage(
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<string> {
+  // Generate a simple unique filename using timestamp and original name
+  const fileName = `${Date.now()}-${file.name}`;
+  const storageRef = ref(storage, `equipments/${fileName}`);
+
+  return await new Promise((resolve, reject) => {
+    const uploadTask = uploadBytesResumable(storageRef, file);
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        if (onProgress) {
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          onProgress(progress);
+        }
+      },
+      (error) => {
+        reject(error);
+      },
+      async () => {
+        const url = await getDownloadURL(uploadTask.snapshot.ref);
+        if (onProgress) onProgress(100);
+        resolve(url);
+      }
+    );
+  });
+}
